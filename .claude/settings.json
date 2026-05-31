@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {},
+  "includeCoAuthoredBy": true,
+  "permissions": {
+    "allow": [
+      "mcp__*",
+      "Read",
+      "Edit",
+      "Write",
+      "TodoRead",
+      "TodoWrite",
+      "Skills",
+      "Task",
+      "Bash(docker:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker compose exec:*)",
+      "Bash(docker compose exec app:*)",
+      "Bash(tree:*)",
+      "Bash(bun run:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill -9)",
+      "Bash(find:*)",
+      "WebSearch",
+      "Bash(.gitignore)",
+      "Bash(nslookup:*)",
+      "Bash(timeout 5 nc:*)",
+      "Bash(echo:*)",
+      "Bash(nc:*)",
+      "Bash(mkdir:*)",
+      "Bash(mkdir -p:*)",
+      "Bash(touch:*)",
+      "Bash(ls*)",
+      "Bash(cat:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ],
+    "deny": [
+      "Bash(rm:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(bun add:*)",
+      "Bash(bun remove:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "context7",
+    "serena",
+    "chrome-devtools",
+    "kiri",
+    "laravel-boost"
+  ],
+  "enabledPlugins": {
+    "example-skills@anthropic-agent-skills": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "php-lsp@claude-plugins-official": true,
+    "claude-mem@thedotmack": true,
+    "context7@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
+    "laravel-simplifier@laravel": true
+  },
+  "extraKnownMarketplaces": {
+    "anthropic-agent-skills": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/skills"
+      }
+    },
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      }
+    },
+    "thedotmack": {
+      "source": {
+        "source": "github",
+        "repo": "thedotmack/claude-mem"
+      }
+    },
+    "laravel": {
+      "source": {
+        "source": "github",
+        "repo": "laravel/claude-code"
+      }
+    }
+  },
+  "alwaysThinkingEnabled": true,
+  "learnMode": true
+}

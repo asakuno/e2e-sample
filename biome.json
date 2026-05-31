@@ -1,0 +1,128 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.3.10/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true,
+    "defaultBranch": "main"
+  },
+  "files": {
+    "includes": [
+      "**/resources/js/**/*.ts",
+      "**/resources/js/**/*.tsx",
+      "!**/node_modules",
+      "!**/vendor",
+      "!**/public",
+      "!**/storage",
+      "!**/dist",
+      "!**/resources/js/types/generated.d.ts",
+      "!**/resources/js/types/model.d.ts",
+      "!**/resources/js/actions/**",
+      "!**/resources/js/routes/**"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "lineEnding": "lf"
+  },
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "a11y": {
+        "recommended": true,
+        "useAltText": "error",
+        "useKeyWithClickEvents": "error"
+      },
+      "complexity": {
+        "recommended": true,
+        "noExtraBooleanCast": "error",
+        "noUselessCatch": "error",
+        "noUselessConstructor": "error",
+        "noUselessLabel": "error",
+        "noUselessLoneBlockStatements": "error",
+        "noUselessRename": "error",
+        "noUselessTernary": "error",
+        "noVoid": "error",
+        "useLiteralKeys": "error",
+        "useOptionalChain": "error",
+        "noAdjacentSpacesInRegex": "error"
+      },
+      "correctness": {
+        "recommended": true,
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error",
+        "useExhaustiveDependencies": "warn",
+        "useHookAtTopLevel": "error"
+      },
+      "style": {
+        "recommended": true,
+        "noNegationElse": "off",
+        "useBlockStatements": "error",
+        "useCollapsedElseIf": "error",
+        "useConsistentArrayType": {
+          "level": "error",
+          "options": {
+            "syntax": "shorthand"
+          }
+        },
+        "useForOf": "error",
+        "useFragmentSyntax": "error",
+        "useShorthandAssign": "error",
+        "useSingleVarDeclarator": "error",
+        "useTemplate": "error"
+      },
+      "suspicious": {
+        "recommended": true,
+        "noArrayIndexKey": "warn",
+        "noConfusingVoidType": "error",
+        "noDoubleEquals": "error",
+        "noEmptyBlockStatements": "error",
+        "noExplicitAny": "error",
+        "noShadowRestrictedNames": "error",
+        "noWith": "error",
+        "noConsole": { "level": "warn", "options": { "allow": ["log"] } }
+      },
+      "nursery": {
+        "useSortedClasses": {
+          "level": "error",
+          "options": {
+            "attributes": ["classList"],
+            "functions": ["clsx", "cn", "cva"]
+          }
+        }
+      },
+      "security": {
+        "noBlankTarget": "error"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "double",
+      "trailingCommas": "all",
+      "semicolons": "always",
+      "arrowParentheses": "always",
+      "bracketSpacing": true,
+      "bracketSameLine": false
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/resources/js/**/*.test.ts", "**/resources/js/**/*.test.tsx"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": { "level": "off", "options": { "allow": ["log"] } }
+          }
+        }
+      }
+    }
+  ]
+}
