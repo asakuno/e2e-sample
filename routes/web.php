@@ -41,6 +41,9 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'verified', 'precognitive'])->group(function () {
     Route::get('/dashboard', DashboardPageController::class)->name('dashboard');
     Route::get('/stocks', StocksPageController::class)->name('stocks.index');
+    Route::get('/stocks/{stock}', [StocksPageController::class, 'show'])
+        ->whereNumber('stock')
+        ->name('stocks.show');
     Route::get('/watchlist', WatchlistPageController::class)->name('watchlist.index');
     Route::get('/news', NewsPageController::class)->name('news.index');
 });
