@@ -43,4 +43,13 @@ describe('AuthenticatedLayout', () => {
     );
     expect(screen.getByRole('main')).toBeInTheDocument();
   });
+
+  it('投資助言ではない旨の注意表示が表示されること', () => {
+    render(
+      <AuthenticatedLayout>
+        <p>コンテンツ</p>
+      </AuthenticatedLayout>,
+    );
+    expect(screen.getAllByText(/投資助言/).length).toBeGreaterThan(0);
+  });
 });

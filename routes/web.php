@@ -3,6 +3,9 @@
 use App\Http\Controllers\Web\AuthPageController;
 use App\Http\Controllers\Web\DashboardPageController;
 use App\Http\Controllers\Web\EmailVerificationPageController;
+use App\Http\Controllers\Web\NewsPageController;
+use App\Http\Controllers\Web\StocksPageController;
+use App\Http\Controllers\Web\WatchlistPageController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -37,4 +40,7 @@ Route::middleware(['auth'])->group(function () {
 // 認証済み + メール認証済みユーザー用
 Route::middleware(['auth', 'verified', 'precognitive'])->group(function () {
     Route::get('/dashboard', DashboardPageController::class)->name('dashboard');
+    Route::get('/stocks', StocksPageController::class)->name('stocks.index');
+    Route::get('/watchlist', WatchlistPageController::class)->name('watchlist.index');
+    Route::get('/news', NewsPageController::class)->name('news.index');
 });

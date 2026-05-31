@@ -10,9 +10,11 @@ interface WelcomeBannerProps {
 
 export function WelcomeBanner({ userName }: WelcomeBannerProps) {
   return (
-    <div className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 p-6 text-white">
-      <h2 className="font-bold text-xl">おかえりなさい、{userName}さん</h2>
-      <p className="mt-1 text-blue-100">今日も良い一日をお過ごしください。</p>
+    <div className="rounded-xl bg-gradient-to-r from-slate-900 to-blue-700 p-6 text-white">
+      <h2 className="font-bold text-xl">マーケットダッシュボード</h2>
+      <p className="mt-1 text-blue-100">
+        {userName}さんのウォッチ銘柄、主要指数、最新ニュースを確認できます。
+      </p>
     </div>
   );
 }

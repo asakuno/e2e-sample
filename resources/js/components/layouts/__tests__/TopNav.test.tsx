@@ -29,7 +29,7 @@ describe('TopNav', () => {
 
   it('検索バーが表示されること', () => {
     render(<TopNav />);
-    expect(screen.getByPlaceholderText('検索...')).toBeInTheDocument();
+    expect(screen.getByLabelText('銘柄・ニュース検索')).toBeInTheDocument();
   });
 
   it('ユーザー名が表示されること', () => {
@@ -44,7 +44,7 @@ describe('TopNav', () => {
 
   it('通知バッジに aria-label が設定されること', () => {
     render(<TopNav />);
-    expect(screen.getByLabelText('通知')).toBeInTheDocument();
+    expect(screen.getByLabelText('アラート通知')).toBeInTheDocument();
   });
 
   it('ログアウトボタンクリックでモーダルが表示されること', async () => {

@@ -11,8 +11,8 @@ describe('WelcomeBanner', () => {
     expect(screen.getByText(/田中太郎/)).toBeInTheDocument();
   });
 
-  it('ウェルカムメッセージが表示されること', () => {
+  it('マーケットダッシュボードの見出しが表示されること', () => {
     render(<WelcomeBanner userName="田中太郎" />);
-    expect(screen.getByText(/おかえりなさい/)).toBeInTheDocument();
+    expect(screen.getByText('マーケットダッシュボード')).toBeInTheDocument();
   });
 });

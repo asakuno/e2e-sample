@@ -25,28 +25,28 @@ import Dashboard from '../Dashboard';
 
 const stats: StatCardData[] = [
   {
-    label: '総ユーザー数',
-    value: '1,234',
-    change: '+12%',
+    label: 'S&P 500',
+    value: '5,842.91',
+    change: '+24.3',
     changeDirection: 'up',
-    icon: 'group',
+    icon: 'show_chart',
     iconColorClass: 'text-blue-500',
   },
   {
-    label: 'アクティブ',
-    value: '567',
-    change: '+5%',
-    changeDirection: 'up',
-    icon: 'trending_up',
-    iconColorClass: 'text-green-500',
+    label: '日経平均',
+    value: '39,812.24',
+    change: '-0.18%',
+    changeDirection: 'down',
+    icon: 'candlestick_chart',
+    iconColorClass: 'text-red-500',
   },
   {
-    label: '新規登録',
-    value: '89',
-    change: '-2%',
-    changeDirection: 'down',
-    icon: 'person_add',
-    iconColorClass: 'text-purple-500',
+    label: 'ウォッチリスト',
+    value: '12',
+    change: '+2銘柄',
+    changeDirection: 'up',
+    icon: 'visibility',
+    iconColorClass: 'text-green-500',
   },
 ];
 
@@ -62,7 +62,13 @@ const recentTrend: TrendData = {
 };
 
 const recentActivities: ActivityItemData[] = [
-  { id: 1, title: 'タスク完了', description: 'タスクAを完了', timeAgo: '1分前', dotColor: 'green' },
+  {
+    id: 1,
+    title: 'AAPL が高値を更新',
+    description: 'ウォッチ銘柄の Apple が直近30日の高値を更新しました',
+    timeAgo: '10分前',
+    dotColor: 'green',
+  },
 ];
 
 const defaultProps = {
@@ -83,14 +89,14 @@ describe('Dashboard', () => {
 
   it('WelcomeBanner が表示されること', () => {
     render(<Dashboard {...defaultProps} />);
-    expect(screen.getByText(/おかえりなさい/)).toBeInTheDocument();
+    expect(screen.getByText('マーケットダッシュボード')).toBeInTheDocument();
   });
 
   it('StatCard が3枚表示されること', () => {
     render(<Dashboard {...defaultProps} />);
-    expect(screen.getByText('総ユーザー数')).toBeInTheDocument();
-    expect(screen.getByText('アクティブ')).toBeInTheDocument();
-    expect(screen.getByText('新規登録')).toBeInTheDocument();
+    expect(screen.getByText('S&P 500')).toBeInTheDocument();
+    expect(screen.getByText('日経平均')).toBeInTheDocument();
+    expect(screen.getByText('ウォッチリスト')).toBeInTheDocument();
   });
 
   it('TrendChart が表示されること', () => {
@@ -101,7 +107,7 @@ describe('Dashboard', () => {
   it('RecentActivity が表示されること', () => {
     render(<Dashboard {...defaultProps} />);
     expect(screen.getByText('最近のアクティビティ')).toBeInTheDocument();
-    expect(screen.getByText('タスク完了')).toBeInTheDocument();
+    expect(screen.getByText('AAPL が高値を更新')).toBeInTheDocument();
   });
 
   it('main 要素が存在すること', () => {

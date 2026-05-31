@@ -1,17 +1,17 @@
 /**
  * サイドナビゲーションコンポーネント
  *
- * アプリケーションのメインナビゲーション。ロゴ、ナビ項目、ヘルプリンクを表示。
+ * アプリケーションのメインナビゲーション。ロゴ、ナビ項目、注意導線を表示。
  */
 import { usePage } from '@inertiajs/react';
 import { NavItem } from '@/components/layouts/NavItem';
 
 /** ナビゲーション項目定義 */
 const NAV_ITEMS = [
-  { href: '/dashboard', icon: 'dashboard', label: 'ダッシュボード' },
-  { href: '/projects', icon: 'folder', label: 'プロジェクト' },
-  { href: '/members', icon: 'group', label: 'メンバー' },
-  { href: '/settings', icon: 'settings', label: '設定' },
+  { href: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
+  { href: '/stocks', icon: 'query_stats', label: 'Stocks' },
+  { href: '/watchlist', icon: 'visibility', label: 'Watchlist' },
+  { href: '/news', icon: 'newspaper', label: 'News' },
 ] as const;
 
 export function SideNav() {
@@ -24,7 +24,10 @@ export function SideNav() {
     >
       {/* ロゴ */}
       <div className="flex h-16 items-center px-6">
-        <span className="font-bold text-gray-900 text-lg">Web App</span>
+        <div className="flex flex-col">
+          <span className="font-bold text-gray-900 text-lg">Stock Insight</span>
+          <span className="text-gray-500 text-xs">Market analysis app</span>
+        </div>
       </div>
 
       {/* ナビゲーション項目 */}
@@ -40,9 +43,12 @@ export function SideNav() {
         ))}
       </div>
 
-      {/* ヘルプリンク */}
-      <div className="border-gray-200 border-t px-3 py-3">
-        <NavItem href="/help" icon="help" label="ヘルプ＆サポート" />
+      {/* 注意表示 */}
+      <div className="border-gray-200 border-t px-4 py-4">
+        <p className="font-medium text-gray-700 text-xs">注意</p>
+        <p className="mt-1 text-gray-500 text-xs leading-5">
+          表示内容は投資判断の参考情報であり、投資助言ではありません。
+        </p>
       </div>
     </nav>
   );

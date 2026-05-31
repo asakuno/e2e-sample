@@ -18,22 +18,22 @@ vi.mock('@inertiajs/react', () => ({
 import { SideNav } from '../SideNav';
 
 describe('SideNav', () => {
-  it('ロゴ「Web App」が表示されること', () => {
+  it('ロゴ「Stock Insight」が表示されること', () => {
     render(<SideNav />);
-    expect(screen.getByText('Web App')).toBeInTheDocument();
+    expect(screen.getByText('Stock Insight')).toBeInTheDocument();
   });
 
   it('4つのナビゲーション項目が表示されること', () => {
     render(<SideNav />);
-    expect(screen.getByText('ダッシュボード')).toBeInTheDocument();
-    expect(screen.getByText('プロジェクト')).toBeInTheDocument();
-    expect(screen.getByText('メンバー')).toBeInTheDocument();
-    expect(screen.getByText('設定')).toBeInTheDocument();
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Stocks')).toBeInTheDocument();
+    expect(screen.getByText('Watchlist')).toBeInTheDocument();
+    expect(screen.getByText('News')).toBeInTheDocument();
   });
 
-  it('ヘルプ＆サポートリンクが表示されること', () => {
+  it('投資助言ではない旨の注意表示が表示されること', () => {
     render(<SideNav />);
-    expect(screen.getByText('ヘルプ＆サポート')).toBeInTheDocument();
+    expect(screen.getByText(/投資助言ではありません/)).toBeInTheDocument();
   });
 
   it('nav 要素に aria-label が設定されること', () => {
