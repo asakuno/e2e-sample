@@ -1,0 +1,125 @@
+# deptrac.yaml
+deptrac:
+  paths:
+    - ./app
+  layers:
+    # 1. Presentation Layer (Controllers)
+    - name: Presentation
+      collectors:
+        - type: directory
+          value: app/Http/Controllers/.*
+
+    # 2. Request Layer (Form Requests)
+    - name: Request
+      collectors:
+        - type: directory
+          value: app/Http/Requests/.*
+
+    # 3. UseCase Layer
+    - name: UseCase
+      collectors:
+        - type: directory
+          value: app/UseCases/.*
+
+    # 4. Service Layer
+    - name: Service
+      collectors:
+        - type: directory
+          value: app/Services/.*
+
+    # 5. Repository Layer
+    - name: Repository
+      collectors:
+        - type: directory
+          value: app/Repositories/.*
+
+    # 6. Model Layer
+    - name: Model
+      collectors:
+        - type: directory
+          value: app/Models/.*
+
+    # 7. Resource Layer
+    - name: Resource
+      collectors:
+        - type: directory
+          value: app/Http/Resources/.*
+
+    # Additional layers
+    - name: Data
+      collectors:
+        - type: directory
+          value: app/Data/.*
+
+    - name: Policy
+      collectors:
+        - type: directory
+          value: app/Policies/.*
+
+    - name: Enum
+      collectors:
+        - type: directory
+          value: app/Enums/.*
+
+  ruleset:
+    # Presentation can depend on: Request, UseCase, Resource
+    Presentation:
+      - Presentation
+      - Request
+      - UseCase
+      - Resource
+
+    # Request can depend on: Data (DTOs)
+    Request:
+      - Request
+      - Data
+      - Enum
+
+    # UseCase can depend on: Repository, Service, Policy, Data
+    UseCase:
+      - UseCase
+      - Repository
+      - Service
+      - Policy
+      - Data
+      - Model
+      - Enum
+
+    # Service can depend on: Repository, Model
+    Service:
+      - Service
+      - Repository
+      - Model
+      - Enum
+
+    # Repository can depend on: Model
+    Repository:
+      - Repository
+      - Model
+      - Enum
+      - Data
+
+    # Model has no dependencies (bottom layer)
+    Model:
+      - Model
+      - Enum
+
+    # Resource can depend on: Model
+    Resource:
+      - Resource
+      - Model
+      - Enum
+
+    # Data (DTOs) has minimal dependencies
+    Data:
+      - Data
+      - Enum
+
+    # Policy can depend on: Model
+    Policy:
+      - Policy
+      - Model
+
+    # Enum has no dependencies
+    Enum:
+      - Enum
