@@ -8,5 +8,4 @@ parameters:
     level: 6
 
     ignoreErrors:
-        - identifier: trait.unused
         - identifier: argument.templateType
