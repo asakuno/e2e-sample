@@ -1,0 +1,121 @@
+name: Backend & Frontend Quality Checks
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, sqlite3, pdo_sqlite
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-8.4-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-8.4-composer-${{ hashFiles('composer.lock') }}
+            ${{ runner.os }}-php-8.4-composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Setup environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          # テスト環境用の設定
+          echo "DB_CONNECTION=sqlite" >> .env
+          echo "DB_DATABASE=:memory:" >> .env
+          echo "APP_ENV=testing" >> .env
+          echo "APP_DEBUG=false" >> .env
+          echo "SESSION_DRIVER=array" >> .env
+          echo "CACHE_DRIVER=array" >> .env
+          echo "QUEUE_CONNECTION=sync" >> .env
+          # Vite マニフェストのダミー作成（Frontend CIと並列実行のため）
+          mkdir -p public/build/assets
+          echo '{"resources/css/app.css":{"file":"assets/app.css","src":"resources/css/app.css","isEntry":true},"resources/js/app.tsx":{"file":"assets/app.js","src":"resources/js/app.tsx","isEntry":true}}' > public/build/manifest.json
+          touch public/build/assets/app.css public/build/assets/app.js
+
+      - name: PHPStan
+        run: ./vendor/bin/phpstan analyse --error-format=github
+
+      - name: Pint
+        run: ./vendor/bin/pint --test
+
+      - name: PHPUnit
+        run: ./vendor/bin/phpunit
+
+      - name: Deptrac
+        run: ./vendor/bin/deptrac
+
+      - name: Composer Audit
+        run: composer audit
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, sqlite3, pdo_sqlite
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-8.4-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-8.4-composer-${{ hashFiles('composer.lock') }}
+            ${{ runner.os }}-php-8.4-composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Setup Laravel environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeCheck
+        run: npm run typecheck
+
+      - name: Vite+ Check
+        run: npm run check
+
+      - name: Vite+ Test
+        run: npm run test:ci
+        env:
+          LARAVEL_BYPASS_ENV_CHECK: 1
+
+      - name: Build
+        run: npm run build:all
+
+      - name: NPM Audit
+        run: npm audit || true
