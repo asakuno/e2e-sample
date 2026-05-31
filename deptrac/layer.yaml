@@ -1,0 +1,108 @@
+# Deptrac Configuration - 7層レイヤードアーキテクチャ
+deptrac:
+  paths:
+    - ./app
+
+  exclude_files:
+    - '#.*test.*#i'
+    - '#.*Test.*#i'
+
+  layers:
+    # Presentation Layer - Controllers
+    - name: Presentation
+      collectors:
+        - type: directory
+          value: app/Http/Controllers
+
+    # Request Layer - Form Requests
+    - name: Request
+      collectors:
+        - type: directory
+          value: app/Http/Requests
+
+    # UseCase Layer - Business Logic
+    - name: UseCase
+      collectors:
+        - type: directory
+          value: app/UseCases
+
+    # Service Layer - Shared Business Logic
+    - name: Service
+      collectors:
+        - type: directory
+          value: app/Services
+
+    # Repository Layer - Data Access
+    - name: Repository
+      collectors:
+        - type: directory
+          value: app/Repositories
+
+    # Model Layer - Eloquent Models
+    - name: Model
+      collectors:
+        - type: directory
+          value: app/Models
+
+    # Resource Layer - Response Transformation
+    - name: Resource
+      collectors:
+        - type: directory
+          value: app/Http/Resources
+
+    # Data Layer - DTOs
+    - name: Data
+      collectors:
+        - type: directory
+          value: app/Data
+
+    # Policy Layer - Authorization
+    - name: Policy
+      collectors:
+        - type: directory
+          value: app/Policies
+
+  ruleset:
+    # Presentation Layer（Controllers）の依存
+    Presentation:
+      - Request
+      - UseCase
+      - Resource
+      - Policy
+
+    # Request Layer（Form Requests）の依存
+    Request:
+      - Data
+
+    # UseCase Layer（Business Logic）の依存
+    # Model への直接依存は禁止 - Repository 経由必須
+    UseCase:
+      - Repository
+      - Service
+      - Policy
+      - Data
+
+    # Service Layer（Shared Logic）の依存
+    Service:
+      - Repository
+      - Model
+      - Data
+
+    # Repository Layer（Data Access）の依存
+    Repository:
+      - Model
+
+    # Resource Layer（Response Transformation）の依存
+    Resource:
+      - Model
+      - Data
+
+    # Policy Layer（Authorization）の依存
+    Policy:
+      - Model
+
+    # Model Layer - 最下層のため依存なし
+    Model: []
+
+    # Data Layer（DTOs）- 依存なし
+    Data: []

@@ -1,0 +1,108 @@
+services:
+  app:
+    build: ".docker/local/php"
+    working_dir: /app
+    volumes:
+      - ".:/app"
+      - "./.docker/local/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
+      - "./.docker/local/php-fpm/www.conf:/usr/local/etc/php-fpm.d/www.conf"
+    ports:
+      - "9000:9000"
+      - "5173:5173"
+      - "6006:6006"
+    environment:
+      - USER_NAME
+      - USER_ID
+      - GROUP_NAME
+      - GROUP_ID
+      - OS_NAME
+    depends_on:
+      - mysql
+      - redis
+      - minio
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  nginx:
+    build: ".docker/local/nginx"
+    platform: linux/arm64/v8
+    ports:
+      - "80:80"
+    volumes:
+      - ./public:/app/public
+      - ./.docker/local/nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - app
+
+  queue_worker:
+    build: ".docker/local/php"
+    working_dir: "/app"
+    command: "php artisan queue:work --tries=3 --queue=high,default,low"
+    environment:
+      - USER_NAME
+      - USER_ID
+      - GROUP_NAME
+      - GROUP_ID
+      - OS_NAME
+    volumes:
+      - ".:/app"
+      - "./.docker/local/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
+      - "./.docker/local/php-fpm/www.conf:/usr/local/etc/php-fpm.d/www.conf"
+    depends_on:
+      - mysql
+      - redis
+      - minio
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  mysql:
+    platform: linux/amd64
+    build: ".docker/local/mysql"
+    ports:
+      - "3306:3306"
+    volumes:
+      - ".docker/local/mysql/my.cnf:/etc/mysql/my.cnf"
+      - "./storage/mysql:/var/lib/mysql"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+
+  redis:
+    image: redis:6.2-buster
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio
+    ports:
+      - "9001:9001"
+      - "9002:9002"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --address :9001 --console-address :9002
+
+  create-bucket:
+    image: minio/mc
+    entrypoint: [ "" ]
+    command:
+      - /bin/sh
+      - -c
+      - |
+        until (mc config host add minio http://minio:9001 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}) do echo 'wait until add host' && sleep 1; done;
+        mc mb minio/public
+        mc policy set public minio/public
+        mc mb minio/private
+        mc policy set private minio/private
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    depends_on:
+      - minio
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "8025:8025"
