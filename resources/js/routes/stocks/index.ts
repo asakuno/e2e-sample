@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefaults } from './../../wayfinder'
 /**
 * @see \App\Http\Controllers\Web\StocksPageController::__invoke
-* @see Http/Controllers/Web/StocksPageController.php:22
+* @see Http/Controllers/Web/StocksPageController.php:23
 * @route '/stocks'
 */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Web\StocksPageController::__invoke
-* @see Http/Controllers/Web/StocksPageController.php:22
+* @see Http/Controllers/Web/StocksPageController.php:23
 * @route '/stocks'
 */
 index.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Web\StocksPageController::__invoke
-* @see Http/Controllers/Web/StocksPageController.php:22
+* @see Http/Controllers/Web/StocksPageController.php:23
 * @route '/stocks'
 */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -35,7 +35,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Web\StocksPageController::__invoke
-* @see Http/Controllers/Web/StocksPageController.php:22
+* @see Http/Controllers/Web/StocksPageController.php:23
 * @route '/stocks'
 */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -45,7 +45,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Web\StocksPageController::show
-* @see Http/Controllers/Web/StocksPageController.php:39
+* @see Http/Controllers/Web/StocksPageController.php:40
 * @route '/stocks/{stock}'
 */
 export const show = (args: { stock: string | number } | [stock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -60,7 +60,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\Web\StocksPageController::show
-* @see Http/Controllers/Web/StocksPageController.php:39
+* @see Http/Controllers/Web/StocksPageController.php:40
 * @route '/stocks/{stock}'
 */
 show.url = (args: { stock: string | number } | [stock: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -87,7 +87,7 @@ show.url = (args: { stock: string | number } | [stock: string | number ] | strin
 
 /**
 * @see \App\Http\Controllers\Web\StocksPageController::show
-* @see Http/Controllers/Web/StocksPageController.php:39
+* @see Http/Controllers/Web/StocksPageController.php:40
 * @route '/stocks/{stock}'
 */
 show.get = (args: { stock: string | number } | [stock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -97,7 +97,7 @@ show.get = (args: { stock: string | number } | [stock: string | number ] | strin
 
 /**
 * @see \App\Http\Controllers\Web\StocksPageController::show
-* @see Http/Controllers/Web/StocksPageController.php:39
+* @see Http/Controllers/Web/StocksPageController.php:40
 * @route '/stocks/{stock}'
 */
 show.head = (args: { stock: string | number } | [stock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({

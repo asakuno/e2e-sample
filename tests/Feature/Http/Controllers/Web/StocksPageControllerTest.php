@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Controllers\Web;
 
 use App\Models\Stock;
+use App\Models\StockPrice;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
@@ -18,6 +20,12 @@ final class StocksPageControllerTest extends TestCase
     {
         parent::setUp();
         $this->withoutVite();
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
     }
 
     public function test_銘柄一覧ページに有効な銘柄が表示される(): void
@@ -145,6 +153,63 @@ final class StocksPageControllerTest extends TestCase
             ->where('stock.id', $stock->id)
             ->where('stock.symbol', 'NVDA')
             ->where('stock.name', 'NVIDIA Corporation')
+        );
+    }
+
+    public function test_銘柄詳細ページで最新価格と指定期間の価格履歴を表示できる(): void
+    {
+        // Arrange
+        Carbon::setTestNow('2026-05-31 12:00:00');
+        $user = User::factory()->create();
+        $stock = Stock::factory()->create([
+            'symbol' => 'AAPL',
+            'name' => 'Apple Inc.',
+            'market' => 'us',
+            'country' => 'US',
+            'currency' => 'USD',
+        ]);
+
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2025-12-31',
+            'close' => 150.00,
+            'volume' => 10_000,
+        ]);
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2026-03-01',
+            'open' => 160.00,
+            'high' => 166.00,
+            'low' => 158.00,
+            'close' => 165.00,
+            'volume' => 20_000,
+        ]);
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2026-05-30',
+            'open' => 180.00,
+            'high' => 185.00,
+            'low' => 178.00,
+            'close' => 182.50,
+            'volume' => 30_000,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)->get(route('stocks.show', [
+            'stock' => $stock->id,
+            'period' => '3M',
+        ]));
+
+        // Assert
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('StockDetail')
+            ->where('stock.id', $stock->id)
+            ->where('stock.selected_period', '3M')
+            ->where('stock.latest_price.price_date', '2026-05-30')
+            ->where('stock.latest_price.close', 182.5)
+            ->where('stock.latest_price.volume', 30_000)
+            ->has('stock.price_history', 2)
+            ->where('stock.price_history.0.price_date', '2026-03-01')
+            ->where('stock.price_history.1.price_date', '2026-05-30')
+            ->has('stock.period_options', 4)
         );
     }
 }

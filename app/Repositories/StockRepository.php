@@ -6,6 +6,8 @@ namespace App\Repositories;
 
 use App\Data\Stock\StockSearchData;
 use App\Models\Stock;
+use App\Models\StockPrice;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -54,5 +56,29 @@ final class StockRepository implements StockRepositoryInterface
         return Stock::query()
             ->active()
             ->find($id);
+    }
+
+    public function findLatestPriceByStockId(int $stockId): ?StockPrice
+    {
+        return StockPrice::query()
+            ->where('stock_id', $stockId)
+            ->whereNotNull('close')
+            ->orderByDesc('price_date')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /**
+     * @return Collection<int, StockPrice>
+     */
+    public function findPricesByStockIdSince(int $stockId, CarbonInterface $since): Collection
+    {
+        return StockPrice::query()
+            ->where('stock_id', $stockId)
+            ->whereDate('price_date', '>=', $since->toDateString())
+            ->whereNotNull('close')
+            ->orderBy('price_date')
+            ->orderBy('id')
+            ->get();
     }
 }

@@ -15,6 +15,29 @@ export interface StockListItem {
   industry: string | null;
 }
 
+export interface StockPricePoint {
+  price_date: string;
+  open: number | null;
+  high: number | null;
+  low: number | null;
+  close: number | null;
+  adjusted_close: number | null;
+  volume: number | null;
+}
+
+export interface StockPeriodOption {
+  value: '1M' | '3M' | '6M' | '1Y';
+  label: string;
+}
+
+export interface StockDetail extends StockListItem {
+  description: string | null;
+  latest_price: StockPricePoint | null;
+  price_history: StockPricePoint[];
+  selected_period: StockPeriodOption['value'];
+  period_options: StockPeriodOption[];
+}
+
 export interface StockFilters {
   q: string;
   market: string;
@@ -32,5 +55,5 @@ export interface StocksPageProps extends AppPageProps {
 }
 
 export interface StockDetailPageProps extends AppPageProps {
-  stock: StockListItem;
+  stock: StockDetail;
 }

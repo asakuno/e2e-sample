@@ -1,7 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
-import type { StockMarketOption, StocksPageProps } from '@/types/stocks';
+import type {
+  StockDetail as StockDetailType,
+  StockMarketOption,
+  StocksPageProps,
+} from '@/types/stocks';
 
 const routerGetMock = vi.hoisted(() => vi.fn());
 
@@ -64,6 +68,55 @@ const stocksProps: StocksPageProps = {
   ],
 };
 
+const stockDetail: StockDetailType = {
+  id: 1,
+  symbol: 'AAPL',
+  name: 'Apple Inc.',
+  market: 'us',
+  exchange: 'NASDAQ',
+  country: 'US',
+  currency: 'USD',
+  sector: 'Technology',
+  industry: 'Consumer Electronics',
+  description: 'Consumer technology company.',
+  latest_price: {
+    price_date: '2026-05-30',
+    open: 180,
+    high: 185,
+    low: 178,
+    close: 182.5,
+    adjusted_close: 182.5,
+    volume: 30000,
+  },
+  price_history: [
+    {
+      price_date: '2026-05-01',
+      open: 170,
+      high: 174,
+      low: 168,
+      close: 172,
+      adjusted_close: 172,
+      volume: 20000,
+    },
+    {
+      price_date: '2026-05-30',
+      open: 180,
+      high: 185,
+      low: 178,
+      close: 182.5,
+      adjusted_close: 182.5,
+      volume: 30000,
+    },
+  ],
+  selected_period: '1M',
+  period_options: [
+    { value: '1M', label: '1M' },
+    { value: '3M', label: '3M' },
+    { value: '6M', label: '6M' },
+    { value: '1Y', label: '1Y' },
+  ],
+};
+
 describe('Stock app navigation pages', () => {
   it('Stocks ページに銘柄一覧が表示されること', () => {
     render(<Stocks {...stocksProps} />);
@@ -94,26 +147,14 @@ describe('Stock app navigation pages', () => {
     );
   });
 
-  it('StockDetail ページの仮導線先が表示されること', () => {
-    render(
-      <StockDetail
-        {...stocksProps}
-        stock={{
-          id: 1,
-          symbol: 'AAPL',
-          name: 'Apple Inc.',
-          market: 'us',
-          exchange: 'NASDAQ',
-          country: 'US',
-          currency: 'USD',
-          sector: 'Technology',
-          industry: 'Consumer Electronics',
-        }}
-      />,
-    );
+  it('StockDetail ページに価格履歴が表示されること', () => {
+    render(<StockDetail {...stocksProps} stock={stockDetail} />);
     expect(document.querySelector('title')).toHaveTextContent('AAPL - Stocks');
     expect(screen.getByRole('heading', { name: 'AAPL' })).toBeInTheDocument();
-    expect(screen.getByText('価格・分析')).toBeInTheDocument();
+    expect(screen.getByText('最新価格')).toBeInTheDocument();
+    expect(screen.getAllByText('$182.50')).toHaveLength(2);
+    expect(screen.getByRole('link', { name: '3M' })).toHaveAttribute('href', '/stocks/1?period=3M');
+    expect(screen.getByText('価格履歴一覧')).toBeInTheDocument();
   });
 
   it('Watchlist ページの仮コンテンツが表示されること', () => {

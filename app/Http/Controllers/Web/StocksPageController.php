@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Stock\StockIndexRequest;
+use App\Http\Requests\Stock\StockShowRequest;
 use App\UseCases\Stock\ListStocksUseCase;
 use App\UseCases\Stock\ShowStockUseCase;
 use Inertia\Inertia;
@@ -36,10 +37,10 @@ class StocksPageController extends Controller
     /**
      * 銘柄詳細ページ表示
      */
-    public function show(int $stock, ShowStockUseCase $useCase): Response
+    public function show(StockShowRequest $request, int $stock, ShowStockUseCase $useCase): Response
     {
         return Inertia::render('StockDetail', [
-            'stock' => $useCase->execute($stock),
+            'stock' => $useCase->execute($stock, $request->period()),
         ]);
     }
 }
