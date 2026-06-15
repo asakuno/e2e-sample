@@ -149,12 +149,21 @@
   - `WatchlistPolicy`
   - Watchlist 用 Data / UseCase / Repository
   - 自分のウォッチリストだけ更新・停止できる認可
+- News Backend
+  - `NewsPageController` の一覧 props
+  - `NewsIndexRequest`
+  - News 用 Data / UseCase / Repository
+  - 銘柄フィルタ
+  - sentiment フィルタ
+  - 期間フィルタ
+  - 関連銘柄・AI分析結果との結合取得
 - テスト
   - 認証系 Feature / UseCase / Data テスト
   - メール認証 Feature テスト
   - Stock 画面 Feature テスト
   - 株式分析系 Model relation テスト
   - Watchlist Web Controller / UseCase テスト
+  - News Web Controller / UseCase テスト
 
 ### 部分実装
 
@@ -164,7 +173,8 @@
   - フロントエンド画面はまだプレースホルダーであり、一覧表示・編集フォーム・削除操作は未接続。
 - News
   - DB、Model、Factory、Relation は存在する。
-  - ニュース取得、一覧表示、フィルタ、AI分析結果との結合取得は未実装。
+  - Inertia 向けの一覧 props、フィルタ、AI分析結果との結合取得は実装済み。
+  - フロントエンド画面はまだプレースホルダーであり、一覧表示・フィルタ UI は未接続。
 - AnalysisResult / StockSignal
   - DB、Model、Factory、Enum は存在する。
   - 生成処理、集計処理、画面向け取得処理は未実装。
@@ -189,12 +199,12 @@
   - 重要ニュース取得
   - 最新分析日時取得
 - News 一覧
-  - News 用 UseCase / Service
-  - ウォッチリスト関連ニュース取得
-  - 銘柄フィルタ
-  - sentiment フィルタ
-  - 期間フィルタ
-  - Feature Test
+  - フロントエンドのニュース一覧表示
+  - 銘柄フィルタ UI
+  - sentiment フィルタ UI
+  - 期間フィルタ UI
+  - AI要約・impact_score 表示 UI
+  - 元記事URLへの導線 UI
 - 株価取得バッチ
   - `StockPriceProviderInterface`
   - 外部株価 API Provider

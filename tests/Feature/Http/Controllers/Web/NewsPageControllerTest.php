@@ -1,0 +1,180 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature\Http\Controllers\Web;
+
+use App\Enums\AnalysisSentiment;
+use App\Models\AnalysisResult;
+use App\Models\NewsArticle;
+use App\Models\Stock;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
+use Tests\TestCase;
+
+final class NewsPageControllerTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutVite();
+    }
+
+    public function test_ニュース一覧ページに関連銘柄と分析結果が表示される(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $stock = Stock::factory()->create([
+            'symbol' => 'AAPL',
+            'name' => 'Apple Inc.',
+            'market' => 'us',
+            'country' => 'US',
+            'currency' => 'USD',
+        ]);
+        $article = NewsArticle::factory()->create([
+            'title' => 'Apple announces new product',
+            'summary' => 'Apple product summary',
+            'source' => 'Reuters',
+            'provider' => 'rss',
+            'language' => 'en',
+            'published_at' => '2026-06-15 10:00:00',
+        ]);
+        $article->stocks()->attach($stock->id, [
+            'relevance_score' => 95,
+            'matched_by' => 'symbol',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        AnalysisResult::factory()->for($stock)->create([
+            'analysable_type' => NewsArticle::class,
+            'analysable_id' => $article->id,
+            'summary' => '売上成長にポジティブ',
+            'sentiment' => AnalysisSentiment::Positive->value,
+            'impact_score' => 8,
+            'confidence_score' => 90,
+            'analyzed_at' => '2026-06-15 11:00:00',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)->get(route('news.index'));
+
+        // Assert
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('News')
+            ->has('news', 1)
+            ->where('news.0.title', 'Apple announces new product')
+            ->where('news.0.source', 'Reuters')
+            ->where('news.0.published_at', '2026-06-15 10:00:00')
+            ->where('news.0.stocks.0.symbol', 'AAPL')
+            ->where('news.0.stocks.0.relevance_score', 95)
+            ->where('news.0.analyses.0.summary', '売上成長にポジティブ')
+            ->where('news.0.analyses.0.sentiment', 1)
+            ->where('news.0.analyses.0.sentiment_label', 'ポジティブ')
+            ->where('news.0.analyses.0.impact_score', 8)
+            ->where('filters.stock_id', '')
+            ->where('filters.sentiment', '')
+            ->has('stockOptions', 1)
+            ->has('sentimentOptions', 3)
+        );
+    }
+
+    public function test_銘柄でニュースを絞り込める(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $apple = Stock::factory()->create(['symbol' => 'AAPL']);
+        $tesla = Stock::factory()->create(['symbol' => 'TSLA']);
+        $appleNews = NewsArticle::factory()->create(['title' => 'Apple news']);
+        $teslaNews = NewsArticle::factory()->create(['title' => 'Tesla news']);
+        $appleNews->stocks()->attach($apple->id, ['created_at' => now(), 'updated_at' => now()]);
+        $teslaNews->stocks()->attach($tesla->id, ['created_at' => now(), 'updated_at' => now()]);
+
+        // Act
+        $response = $this->actingAs($user)->get(route('news.index', ['stock_id' => $apple->id]));
+
+        // Assert
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('News')
+            ->has('news', 1)
+            ->where('news.0.title', 'Apple news')
+            ->where('filters.stock_id', (string) $apple->id)
+        );
+    }
+
+    public function test_感情分析でニュースを絞り込める(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $stock = Stock::factory()->create();
+        $positiveNews = NewsArticle::factory()->create(['title' => 'Positive news']);
+        $negativeNews = NewsArticle::factory()->create(['title' => 'Negative news']);
+        AnalysisResult::factory()->for($stock)->create([
+            'analysable_type' => NewsArticle::class,
+            'analysable_id' => $positiveNews->id,
+            'sentiment' => AnalysisSentiment::Positive->value,
+        ]);
+        AnalysisResult::factory()->for($stock)->create([
+            'analysable_type' => NewsArticle::class,
+            'analysable_id' => $negativeNews->id,
+            'sentiment' => AnalysisSentiment::Negative->value,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)->get(route('news.index', [
+            'sentiment' => AnalysisSentiment::Positive->value,
+        ]));
+
+        // Assert
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('News')
+            ->has('news', 1)
+            ->where('news.0.title', 'Positive news')
+            ->where('filters.sentiment', (string) AnalysisSentiment::Positive->value)
+        );
+    }
+
+    public function test_期間でニュースを絞り込める(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        NewsArticle::factory()->create([
+            'title' => 'New news',
+            'published_at' => '2026-06-15 10:00:00',
+        ]);
+        NewsArticle::factory()->create([
+            'title' => 'Old news',
+            'published_at' => '2026-05-01 10:00:00',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)->get(route('news.index', [
+            'from' => '2026-06-01',
+            'to' => '2026-06-30',
+        ]));
+
+        // Assert
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('News')
+            ->has('news', 1)
+            ->where('news.0.title', 'New news')
+            ->where('filters.from', '2026-06-01')
+            ->where('filters.to', '2026-06-30')
+        );
+    }
+
+    public function test_未認証ユーザーはニュースページにアクセスできない(): void
+    {
+        // Act
+        $response = $this->get(route('news.index'));
+
+        // Assert
+        $response->assertRedirect(route('login'));
+    }
+}

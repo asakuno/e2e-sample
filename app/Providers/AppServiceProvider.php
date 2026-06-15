@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Models\Watchlist;
 use App\Policies\WatchlistPolicy;
+use App\Repositories\NewsRepository;
+use App\Repositories\NewsRepositoryInterface;
 use App\Repositories\StockRepository;
 use App\Repositories\StockRepositoryInterface;
 use App\Repositories\UserRepository;
@@ -31,6 +33,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             StockRepositoryInterface::class,
             StockRepository::class,
+        );
+
+        $this->app->bind(
+            NewsRepositoryInterface::class,
+            NewsRepository::class,
         );
 
         $this->app->bind(
