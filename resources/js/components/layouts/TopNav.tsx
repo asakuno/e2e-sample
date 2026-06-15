@@ -4,7 +4,7 @@
  * 検索バー、通知ベル、ユーザー情報、ログアウトボタンを表示。
  */
 import { router, usePage } from '@inertiajs/react';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { logout } from '@/actions/App/Http/Controllers/Web/AuthPageController';
 import type { AppPageProps } from '@/types/index.d.ts';
 import { LogoutModal } from './LogoutModal';
@@ -14,21 +14,44 @@ export function TopNav() {
   const userName = props.auth.user?.name ?? '';
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  const logoutAction = useCallback(
-    () =>
-      new Promise<void>((resolve) => {
-        router.post(
-          logout.url(),
-          {},
-          {
-            onError: () => resolve(),
-            onFinish: () => resolve(),
-          },
-        );
-      }),
-    [],
-  );
+  const logoutAction = () =>
+    new Promise<void>((resolve) => {
+      router.post(
+        logout.url(),
+        {},
+        {
+          onError: () => resolve(),
+          onFinish: () => resolve(),
+        },
+      );
+    });
 
+  return (
+    <TopNavView
+      userName={userName}
+      logoutOpen={showLogoutModal}
+      onOpenLogout={() => setShowLogoutModal(true)}
+      onCloseLogout={() => setShowLogoutModal(false)}
+      onLogout={logoutAction}
+    />
+  );
+}
+
+type TopNavViewProps = {
+  userName: string;
+  logoutOpen: boolean;
+  onOpenLogout: () => void;
+  onCloseLogout: () => void;
+  onLogout: () => void | Promise<void>;
+};
+
+export function TopNavView({
+  userName,
+  logoutOpen,
+  onOpenLogout,
+  onCloseLogout,
+  onLogout,
+}: TopNavViewProps) {
   return (
     <>
       <header className="flex h-16 items-center justify-between gap-4 border-gray-200 border-b bg-white px-6">
@@ -64,7 +87,7 @@ export function TopNav() {
           {/* ログアウト */}
           <button
             type="button"
-            onClick={() => setShowLogoutModal(true)}
+            onClick={onOpenLogout}
             className="min-h-11 rounded-md px-3 py-1.5 text-gray-600 text-sm transition hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
           >
             ログアウト
@@ -72,11 +95,7 @@ export function TopNav() {
         </div>
       </header>
 
-      <LogoutModal
-        open={showLogoutModal}
-        onClose={() => setShowLogoutModal(false)}
-        action={logoutAction}
-      />
+      <LogoutModal open={logoutOpen} onClose={onCloseLogout} action={onLogout} />
     </>
   );
 }

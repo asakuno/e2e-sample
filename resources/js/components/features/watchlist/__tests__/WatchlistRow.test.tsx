@@ -46,41 +46,41 @@ describe('WatchlistRow', () => {
     expect(actual).toEqual(expected);
   });
 
-  it('メモ編集ボタンを押した場合、onEditMemo が呼ばれること', () => {
+  it('メモ編集ボタンを押した場合、editMemoAction が呼ばれること', () => {
     // Arrange
-    const onEditMemo = vi.fn();
+    const editMemoAction = vi.fn();
     const expected = 1;
 
     // Act
     render(
       <table>
         <tbody>
-          <WatchlistRow item={item} onEditMemo={onEditMemo} />
+          <WatchlistRow item={item} editMemoAction={editMemoAction} />
         </tbody>
       </table>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'AAPL のメモを編集' }));
-    const actual = onEditMemo.mock.calls.length;
+    const actual = editMemoAction.mock.calls.length;
 
     // Assert
     expect(actual).toBe(expected);
   });
 
-  it('削除ボタンを押した場合、onRemove が呼ばれること', () => {
+  it('削除ボタンを押した場合、removeAction が呼ばれること', () => {
     // Arrange
-    const onRemove = vi.fn();
+    const removeAction = vi.fn();
     const expected = 1;
 
     // Act
     render(
       <table>
         <tbody>
-          <WatchlistRow item={item} onRemove={onRemove} />
+          <WatchlistRow item={item} removeAction={removeAction} />
         </tbody>
       </table>,
     );
     fireEvent.click(screen.getByRole('button', { name: 'AAPL をウォッチリストから削除' }));
-    const actual = onRemove.mock.calls.length;
+    const actual = removeAction.mock.calls.length;
 
     // Assert
     expect(actual).toBe(expected);

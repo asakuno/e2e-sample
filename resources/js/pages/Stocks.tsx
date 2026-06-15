@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { StockSearchForm } from '@/components/features/stock-app/StockSearchForm';
 import { StockTable } from '@/components/features/stock-app/StockTable';
 import { AuthenticatedLayout } from '@/layouts/AuthenticatedLayout';
@@ -7,27 +7,6 @@ import { index } from '@/routes/stocks';
 import type { StockFilters, StocksPageProps } from '@/types/stocks';
 
 export default function Stocks({ stocks, filters, marketOptions }: StocksPageProps) {
-  const [searchFilters, setSearchFilters] = useState<StockFilters>(filters);
-
-  useEffect(() => {
-    setSearchFilters(filters);
-  }, [filters]);
-
-  const submitSearch = (nextFilters = searchFilters) => {
-    router.get(index.url(), compactFilters(nextFilters), {
-      only: ['stocks', 'filters'],
-      preserveScroll: true,
-      preserveState: true,
-      replace: true,
-    });
-  };
-
-  const resetSearch = () => {
-    const emptyFilters = { q: '', market: '' };
-    setSearchFilters(emptyFilters);
-    submitSearch(emptyFilters);
-  };
-
   return (
     <>
       <Head title="Stocks" />
@@ -45,18 +24,50 @@ export default function Stocks({ stocks, filters, marketOptions }: StocksPagePro
             </div>
           </div>
 
-          <StockSearchForm
-            filters={searchFilters}
+          <StocksSearchPanel
+            key={`${filters.q}:${filters.market}`}
+            initialFilters={filters}
             marketOptions={marketOptions}
-            onFiltersChange={setSearchFilters}
-            onSubmit={submitSearch}
-            onReset={resetSearch}
           />
 
           <StockTable stocks={stocks} marketOptions={marketOptions} />
         </div>
       </AuthenticatedLayout>
     </>
+  );
+}
+
+type StocksSearchPanelProps = {
+  initialFilters: StockFilters;
+  marketOptions: StocksPageProps['marketOptions'];
+};
+
+function StocksSearchPanel({ initialFilters, marketOptions }: StocksSearchPanelProps) {
+  const [searchFilters, setSearchFilters] = useState<StockFilters>(initialFilters);
+
+  const submitSearch = (nextFilters = searchFilters) => {
+    router.get(index.url(), compactFilters(nextFilters), {
+      only: ['stocks', 'filters'],
+      preserveScroll: true,
+      preserveState: true,
+      replace: true,
+    });
+  };
+
+  const resetSearch = () => {
+    const emptyFilters = { q: '', market: '' };
+    setSearchFilters(emptyFilters);
+    submitSearch(emptyFilters);
+  };
+
+  return (
+    <StockSearchForm
+      filters={searchFilters}
+      marketOptions={marketOptions}
+      onFiltersChange={setSearchFilters}
+      onSubmit={submitSearch}
+      onReset={resetSearch}
+    />
   );
 }
 

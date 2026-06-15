@@ -7,7 +7,7 @@
 
 import { Head, Link, useForm } from '@inertiajs/react';
 import type React from 'react';
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { register, showLogin } from '@/actions/App/Http/Controllers/Web/AuthPageController';
 import { InputField } from '@/components/ui/InputField';
 import { PasswordInput } from '@/components/ui/PasswordInput';
@@ -16,6 +16,8 @@ import { GuestLayout } from '@/layouts/GuestLayout';
 
 export default function Register() {
   const [isPending, startTransition] = useTransition();
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [passwordConfirmationVisible, setPasswordConfirmationVisible] = useState(false);
   const form = useForm({
     name: '',
     email: '',
@@ -80,9 +82,11 @@ export default function Register() {
               id="password"
               label="パスワード"
               value={data.password}
+              visible={passwordVisible}
               placeholder="8文字以上の英数字"
               error={errors.password}
               onChange={(e) => setData('password', e.target.value)}
+              onVisibleChange={setPasswordVisible}
               onBlur={() => validate('password')}
               autoComplete="new-password"
               required
@@ -96,9 +100,11 @@ export default function Register() {
               id="password_confirmation"
               label="パスワード（確認用）"
               value={data.password_confirmation}
+              visible={passwordConfirmationVisible}
               placeholder="パスワードを再入力"
               error={errors.password_confirmation}
               onChange={(e) => setData('password_confirmation', e.target.value)}
+              onVisibleChange={setPasswordConfirmationVisible}
               onBlur={() => validate('password_confirmation')}
               autoComplete="new-password"
               required

@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { ArrowRight, Pencil, Trash2 } from 'lucide-react';
+import { useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { show as stockShow } from '@/routes/stocks';
 import type { WatchlistItem } from '@/types/watchlist';
@@ -7,11 +8,30 @@ import { WatchlistPriorityBadge } from './WatchlistPriorityBadge';
 
 interface WatchlistRowProps {
   item: WatchlistItem;
-  onEditMemo?: ((item: WatchlistItem) => void) | undefined;
-  onRemove?: ((item: WatchlistItem) => void) | undefined;
+  editMemoAction?: ((item: WatchlistItem) => void | Promise<void>) | undefined;
+  removeAction?: ((item: WatchlistItem) => void | Promise<void>) | undefined;
 }
 
-export function WatchlistRow({ item, onEditMemo, onRemove }: WatchlistRowProps) {
+export function WatchlistRow({ item, editMemoAction, removeAction }: WatchlistRowProps) {
+  const [isEditPending, startEditTransition] = useTransition();
+  const [isRemovePending, startRemoveTransition] = useTransition();
+
+  const handleEditMemo = () => {
+    if (editMemoAction == null) return;
+
+    startEditTransition(async () => {
+      await editMemoAction(item);
+    });
+  };
+
+  const handleRemove = () => {
+    if (removeAction == null) return;
+
+    startRemoveTransition(async () => {
+      await removeAction(item);
+    });
+  };
+
   return (
     <tr className="transition hover:bg-gray-50">
       <td className="whitespace-nowrap px-4 py-4">
@@ -33,24 +53,28 @@ export function WatchlistRow({ item, onEditMemo, onRemove }: WatchlistRowProps) 
       </td>
       <td className="whitespace-nowrap px-4 py-4 text-right">
         <div className="inline-flex items-center justify-end gap-1">
-          {onEditMemo != null && (
+          {editMemoAction != null && (
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
               aria-label={`${item.stock.symbol} のメモを編集`}
-              onClick={() => onEditMemo(item)}
+              aria-busy={isEditPending || undefined}
+              disabled={isEditPending}
+              onClick={handleEditMemo}
             >
               <Pencil aria-hidden="true" className="size-4" />
             </Button>
           )}
-          {onRemove != null && (
+          {removeAction != null && (
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
               aria-label={`${item.stock.symbol} をウォッチリストから削除`}
-              onClick={() => onRemove(item)}
+              aria-busy={isRemovePending || undefined}
+              disabled={isRemovePending}
+              onClick={handleRemove}
             >
               <Trash2 aria-hidden="true" className="size-4" />
             </Button>

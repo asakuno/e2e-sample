@@ -7,7 +7,7 @@
 
 import { Head, Link, useForm } from '@inertiajs/react';
 import type React from 'react';
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { login, showRegister } from '@/actions/App/Http/Controllers/Web/AuthPageController';
 import { InputField } from '@/components/ui/InputField';
 import { PasswordInput } from '@/components/ui/PasswordInput';
@@ -16,6 +16,7 @@ import { GuestLayout } from '@/layouts/GuestLayout';
 
 export default function Login() {
   const [isPending, startTransition] = useTransition();
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const form = useForm({
     email: '',
     password: '',
@@ -57,9 +58,11 @@ export default function Login() {
               id="password"
               label="パスワード"
               value={data.password}
+              visible={passwordVisible}
               placeholder="••••••••••••"
               error={errors.password}
               onChange={(e) => setData('password', e.target.value)}
+              onVisibleChange={setPasswordVisible}
               onBlur={() => validate('password')}
               autoComplete="current-password"
               required

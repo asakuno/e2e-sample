@@ -5,16 +5,17 @@
  * アクセシビリティ対応（aria-label, aria-invalid, aria-describedby）。
  */
 import type React from 'react';
-import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface PasswordInputProps {
   id: string;
   label: string;
   value: string;
+  visible: boolean;
   placeholder?: string;
   error?: string | undefined;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onVisibleChange: (visible: boolean) => void;
   onBlur?: () => void;
   autoComplete?: string;
   required?: boolean;
@@ -24,15 +25,15 @@ export function PasswordInput({
   id,
   label,
   value,
+  visible,
   placeholder,
   error,
   onChange,
+  onVisibleChange,
   onBlur,
   autoComplete,
   required,
 }: PasswordInputProps) {
-  const [visible, setVisible] = useState(false);
-
   return (
     <div>
       <label htmlFor={id} className="mb-2 block font-medium text-gray-700 text-sm">
@@ -58,7 +59,7 @@ export function PasswordInput({
         <button
           type="button"
           aria-label={visible ? 'パスワードを非表示' : 'パスワードを表示'}
-          onClick={() => setVisible(!visible)}
+          onClick={() => onVisibleChange(!visible)}
           className="absolute top-1/2 right-2 -translate-y-1/2 p-2 text-gray-500 hover:text-gray-700"
         >
           {/* 目アイコン SVG */}

@@ -3,6 +3,7 @@
  */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { PasswordInput } from '../PasswordInput';
 
@@ -12,6 +13,8 @@ describe('PasswordInput', () => {
     label: 'パスワード',
     value: '',
     onChange: vi.fn(),
+    visible: false,
+    onVisibleChange: vi.fn(),
   };
 
   it('パスワード入力が表示されること', () => {
@@ -23,7 +26,7 @@ describe('PasswordInput', () => {
 
   it('目アイコンクリックで type が text に変わること', async () => {
     const user = userEvent.setup();
-    render(<PasswordInput {...defaultProps} />);
+    render(<ControlledPasswordInput />);
     const toggleButton = screen.getByRole('button', { name: 'パスワードを表示' });
     await user.click(toggleButton);
     expect(screen.getByLabelText('パスワード')).toHaveAttribute('type', 'text');
@@ -31,7 +34,7 @@ describe('PasswordInput', () => {
 
   it('再度クリックで type が password に戻ること', async () => {
     const user = userEvent.setup();
-    render(<PasswordInput {...defaultProps} />);
+    render(<ControlledPasswordInput />);
     const toggleButton = screen.getByRole('button', { name: 'パスワードを表示' });
     await user.click(toggleButton);
     const hideButton = screen.getByRole('button', { name: 'パスワードを非表示' });
@@ -49,3 +52,18 @@ describe('PasswordInput', () => {
     expect(screen.getByLabelText('パスワード')).toHaveAttribute('aria-invalid', 'true');
   });
 });
+
+function ControlledPasswordInput() {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <PasswordInput
+      id="password"
+      label="パスワード"
+      value=""
+      onChange={vi.fn()}
+      visible={visible}
+      onVisibleChange={setVisible}
+    />
+  );
+}
