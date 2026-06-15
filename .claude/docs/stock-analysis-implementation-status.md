@@ -142,17 +142,26 @@
   - 市場フィルタ
   - 最新株価取得
   - 指定期間の価格履歴取得
+- Watchlist Backend
+  - `WatchlistPageController` の一覧・追加・更新・停止 action
+  - `StoreWatchlistRequest`
+  - `UpdateWatchlistRequest`
+  - `WatchlistPolicy`
+  - Watchlist 用 Data / UseCase / Repository
+  - 自分のウォッチリストだけ更新・停止できる認可
 - テスト
   - 認証系 Feature / UseCase / Data テスト
   - メール認証 Feature テスト
   - Stock 画面 Feature テスト
   - 株式分析系 Model relation テスト
+  - Watchlist Web Controller / UseCase テスト
 
 ### 部分実装
 
 - Watchlist
   - DB、Model、Factory、Relation は存在する。
-  - 画面表示・追加・更新・削除の UseCase / Controller action / Request / Policy は未実装。
+  - Inertia 向けの一覧 props と追加・更新・停止 action は実装済み。
+  - フロントエンド画面はまだプレースホルダーであり、一覧表示・編集フォーム・削除操作は未接続。
 - News
   - DB、Model、Factory、Relation は存在する。
   - ニュース取得、一覧表示、フィルタ、AI分析結果との結合取得は未実装。
@@ -168,13 +177,11 @@
 - パスワードリセット
 - プロフィール編集
 - Watchlist 機能
-  - `WatchlistController` 相当の CRUD action
-  - `StoreWatchlistRequest`
-  - `UpdateWatchlistRequest`
-  - `WatchlistPolicy`
-  - Watchlist 用 UseCase / Service / Repository
-  - 自分のウォッチリストだけ更新・削除できる認可
-  - Feature Test
+  - フロントエンドの監視銘柄一覧表示
+  - priority 表示・変更 UI
+  - memo 表示・編集 UI
+  - 削除 UI
+  - Stocks 画面からの追加 UI
 - Dashboard 集計
   - Dashboard 用 UseCase / Service
   - ウォッチリスト集計

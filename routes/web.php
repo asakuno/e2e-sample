@@ -45,5 +45,12 @@ Route::middleware(['auth', 'verified', 'precognitive'])->group(function () {
         ->whereNumber('stock')
         ->name('stocks.show');
     Route::get('/watchlist', WatchlistPageController::class)->name('watchlist.index');
+    Route::post('/watchlist', [WatchlistPageController::class, 'store'])->name('watchlist.store');
+    Route::patch('/watchlist/{watchlist}', [WatchlistPageController::class, 'update'])
+        ->whereNumber('watchlist')
+        ->name('watchlist.update');
+    Route::delete('/watchlist/{watchlist}', [WatchlistPageController::class, 'destroy'])
+        ->whereNumber('watchlist')
+        ->name('watchlist.destroy');
     Route::get('/news', NewsPageController::class)->name('news.index');
 });

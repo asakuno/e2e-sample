@@ -2,12 +2,17 @@
 
 namespace App\Providers;
 
+use App\Models\Watchlist;
+use App\Policies\WatchlistPolicy;
 use App\Repositories\StockRepository;
 use App\Repositories\StockRepositoryInterface;
 use App\Repositories\UserRepository;
 use App\Repositories\UserRepositoryInterface;
+use App\Repositories\WatchlistRepository;
+use App\Repositories\WatchlistRepositoryInterface;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -27,6 +32,11 @@ class AppServiceProvider extends ServiceProvider
             StockRepositoryInterface::class,
             StockRepository::class,
         );
+
+        $this->app->bind(
+            WatchlistRepositoryInterface::class,
+            WatchlistRepository::class,
+        );
     }
 
     /**
@@ -34,6 +44,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::policy(Watchlist::class, WatchlistPolicy::class);
+
         RateLimiter::for('register', function (Request $request) {
             return Limit::perMinute(config('auth.rate_limits.register'))->by($request->input('email').$request->ip());
         });
