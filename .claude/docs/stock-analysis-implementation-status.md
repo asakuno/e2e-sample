@@ -1,6 +1,7 @@
 # Stock Analysis Implementation Status
 
 作成日: 2026-06-15
+更新日: 2026-06-16
 
 ## 確認対象
 
@@ -38,7 +39,22 @@
   - 市場フィルタ
   - 銘柄一覧テーブル
   - 銘柄詳細への遷移
+  - ウォッチリスト追加ボタン
   - 該当なしの空状態表示
+- Watchlist 画面
+  - Inertia props による監視銘柄一覧表示
+  - priority 表示・変更
+  - memo 表示・編集
+  - 削除
+  - 銘柄詳細への遷移
+- News 画面
+  - Inertia props によるニュース一覧表示
+  - 銘柄フィルタ
+  - sentiment フィルタ
+  - 期間フィルタ
+  - AI要約表示
+  - impact_score 表示
+  - 元記事URLへの導線
 - Stock Detail 画面
   - 銘柄基本情報
   - 最新価格
@@ -60,24 +76,7 @@
 ### 未実装
 
 - Stocks 画面
-  - ウォッチリスト追加ボタン
   - ウォッチリスト登録済み状態の表示
-- Watchlist 画面
-  - 現状はプレースホルダー。
-  - 監視銘柄一覧
-  - priority 表示・変更
-  - memo 表示・編集
-  - 削除
-  - 銘柄詳細への遷移
-- News 画面
-  - 現状はプレースホルダー。
-  - ニュース一覧
-  - 銘柄フィルタ
-  - sentiment フィルタ
-  - 期間フィルタ
-  - AI要約表示
-  - impact_score 表示
-  - 元記事URLへの導線
 - Dashboard 画面
   - ウォッチリスト銘柄数
   - 直近ポジティブ材料数
@@ -167,14 +166,6 @@
 
 ### 部分実装
 
-- Watchlist
-  - DB、Model、Factory、Relation は存在する。
-  - Inertia 向けの一覧 props と追加・更新・停止 action は実装済み。
-  - フロントエンド画面はまだプレースホルダーであり、一覧表示・編集フォーム・削除操作は未接続。
-- News
-  - DB、Model、Factory、Relation は存在する。
-  - Inertia 向けの一覧 props、フィルタ、AI分析結果との結合取得は実装済み。
-  - フロントエンド画面はまだプレースホルダーであり、一覧表示・フィルタ UI は未接続。
 - AnalysisResult / StockSignal
   - DB、Model、Factory、Enum は存在する。
   - 生成処理、集計処理、画面向け取得処理は未実装。
@@ -186,25 +177,17 @@
 
 - パスワードリセット
 - プロフィール編集
-- Watchlist 機能
-  - フロントエンドの監視銘柄一覧表示
-  - priority 表示・変更 UI
-  - memo 表示・編集 UI
-  - 削除 UI
-  - Stocks 画面からの追加 UI
 - Dashboard 集計
   - Dashboard 用 UseCase / Service
   - ウォッチリスト集計
   - 注目銘柄ランキング
   - 重要ニュース取得
   - 最新分析日時取得
-- News 一覧
-  - フロントエンドのニュース一覧表示
-  - 銘柄フィルタ UI
-  - sentiment フィルタ UI
-  - 期間フィルタ UI
-  - AI要約・impact_score 表示 UI
-  - 元記事URLへの導線 UI
+- Stock Detail 画面向け取得処理
+  - 関連ニュース取得
+  - AI分析結果取得
+  - シグナル取得
+  - ユーザーメモ取得
 - 株価取得バッチ
   - `StockPriceProviderInterface`
   - 外部株価 API Provider
@@ -260,11 +243,9 @@
 1. 設計とルートの差分を決める
    - `/watchlists` に寄せるか、現状の `/watchlist` を正とするか。
    - `/stocks/{symbol}` に寄せるか、ID ベースを正とするか。
-2. Watchlist CRUD を実装する
-   - Stocks から追加できるようにする。
-   - Watchlist で priority / memo / remove を扱う。
-3. News 一覧を DB データから表示する
-   - 取得バッチ前でも Seeder / Factory データで画面を成立させる。
-4. Stock Detail に関連ニュース・分析結果・シグナルを接続する
-5. Dashboard を実データ集計に置き換える
-6. 株価取得、ニュース取得、AI分析、シグナル生成のバッチ系を実装する
+2. Stocks 画面のウォッチリスト登録済み状態を表示する
+   - 一覧で追加済み銘柄を判別できるようにする。
+   - 追加済み銘柄は追加ボタンを無効化または状態表示に切り替える。
+3. Stock Detail に関連ニュース・分析結果・シグナルを接続する
+4. Dashboard を実データ集計に置き換える
+5. 株価取得、ニュース取得、AI分析、シグナル生成のバッチ系を実装する
