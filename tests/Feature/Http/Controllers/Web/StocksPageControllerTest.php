@@ -7,6 +7,7 @@ namespace Tests\Feature\Http\Controllers\Web;
 use App\Models\Stock;
 use App\Models\StockPrice;
 use App\Models\User;
+use App\Models\Watchlist;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia;
@@ -128,6 +129,42 @@ final class StocksPageControllerTest extends TestCase
             ->has('stocks', 1)
             ->where('stocks.0.symbol', '7203')
             ->where('filters.market', 'jp')
+        );
+    }
+
+    public function test_銘柄一覧でウォッチリスト登録済み状態が表示される(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $registeredStock = Stock::factory()->create([
+            'symbol' => 'AAPL',
+            'market' => 'us',
+            'country' => 'US',
+            'currency' => 'USD',
+        ]);
+        $unregisteredStock = Stock::factory()->create([
+            'symbol' => 'MSFT',
+            'market' => 'us',
+            'country' => 'US',
+            'currency' => 'USD',
+        ]);
+        Watchlist::factory()->for($user)->for($registeredStock)->create(['is_active' => true]);
+        Watchlist::factory()->for($user)->for($unregisteredStock)->create(['is_active' => false]);
+        Watchlist::factory()->for($otherUser)->for($unregisteredStock)->create(['is_active' => true]);
+
+        // Act
+        $response = $this->actingAs($user)->get(route('stocks.index'));
+
+        // Assert
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Stocks')
+            ->has('stocks', 2)
+            ->where('stocks.0.symbol', 'AAPL')
+            ->where('stocks.0.is_in_watchlist', true)
+            ->where('stocks.1.symbol', 'MSFT')
+            ->where('stocks.1.is_in_watchlist', false)
         );
     }
 

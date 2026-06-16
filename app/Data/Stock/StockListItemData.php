@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Data\Stock;
 
+use App\Models\Stock;
 use Spatie\LaravelData\Attributes\MapName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
@@ -23,5 +24,22 @@ final class StockListItemData extends Data
         public readonly string $currency,
         public readonly ?string $sector,
         public readonly ?string $industry,
+        public readonly bool $isInWatchlist = false,
     ) {}
+
+    public static function fromModel(Stock $stock, bool $isInWatchlist = false): self
+    {
+        return new self(
+            id: $stock->id,
+            symbol: $stock->symbol,
+            name: $stock->name,
+            market: $stock->market,
+            exchange: $stock->exchange,
+            country: $stock->country,
+            currency: $stock->currency,
+            sector: $stock->sector,
+            industry: $stock->industry,
+            isInWatchlist: $isInWatchlist,
+        );
+    }
 }

@@ -7,21 +7,28 @@ namespace App\UseCases\Stock;
 use App\Data\Stock\StockListItemData;
 use App\Data\Stock\StockSearchData;
 use App\Repositories\StockRepositoryInterface;
+use App\Repositories\WatchlistRepositoryInterface;
 
 final class ListStocksUseCase
 {
     public function __construct(
         private StockRepositoryInterface $stockRepository,
+        private WatchlistRepositoryInterface $watchlistRepository,
     ) {}
 
     /**
      * @return array<int, StockListItemData>
      */
-    public function execute(StockSearchData $filters): array
+    public function execute(StockSearchData $filters, int $userId): array
     {
+        $watchlistStockIds = array_flip($this->watchlistRepository->findActiveStockIdsByUser($userId));
+
         return $this->stockRepository
             ->search($filters)
-            ->map(fn ($stock): StockListItemData => StockListItemData::from($stock))
+            ->map(fn ($stock): StockListItemData => StockListItemData::fromModel(
+                stock: $stock,
+                isInWatchlist: isset($watchlistStockIds[$stock->id]),
+            ))
             ->all();
     }
 

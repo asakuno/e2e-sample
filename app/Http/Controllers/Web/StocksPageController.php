@@ -23,9 +23,10 @@ class StocksPageController extends Controller
     public function __invoke(StockIndexRequest $request, ListStocksUseCase $useCase): Response
     {
         $filters = $request->toStockSearchData();
+        $userId = (int) $request->user()->getAuthIdentifier();
 
         return Inertia::render('Stocks', [
-            'stocks' => fn (): array => $useCase->execute($filters),
+            'stocks' => fn (): array => $useCase->execute($filters, $userId),
             'filters' => [
                 'q' => $filters->q ?? '',
                 'market' => $filters->market ?? '',

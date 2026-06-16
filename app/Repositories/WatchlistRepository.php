@@ -24,6 +24,18 @@ final class WatchlistRepository implements WatchlistRepositoryInterface
             ->get();
     }
 
+    /**
+     * @return array<int, int>
+     */
+    public function findActiveStockIdsByUser(int $userId): array
+    {
+        return Watchlist::query()
+            ->forUser($userId)
+            ->active()
+            ->pluck('stock_id')
+            ->all();
+    }
+
     public function findByUserAndStock(int $userId, int $stockId): ?Watchlist
     {
         return Watchlist::query()
