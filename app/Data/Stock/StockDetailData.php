@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Data\Stock;
 
+use App\Data\News\NewsAnalysisData;
+use App\Data\News\NewsArticleData;
 use App\Enums\StockPricePeriod;
 use App\Models\Stock;
 use Spatie\LaravelData\Attributes\MapName;
@@ -17,6 +19,9 @@ final class StockDetailData extends Data
 {
     /**
      * @param  array<int, StockPriceData>  $priceHistory
+     * @param  array<int, NewsArticleData>  $relatedNews
+     * @param  array<int, NewsAnalysisData>  $analyses
+     * @param  array<int, StockSignalData>  $signals
      * @param  array<int, array{value: string, label: string}>  $periodOptions
      */
     public function __construct(
@@ -32,18 +37,27 @@ final class StockDetailData extends Data
         public readonly ?string $description,
         public readonly ?StockPriceData $latestPrice,
         public readonly array $priceHistory,
+        public readonly array $relatedNews,
+        public readonly array $analyses,
+        public readonly array $signals,
         public readonly StockPricePeriod $selectedPeriod,
         public readonly array $periodOptions,
     ) {}
 
     /**
      * @param  array<int, StockPriceData>  $priceHistory
+     * @param  array<int, NewsArticleData>  $relatedNews
+     * @param  array<int, NewsAnalysisData>  $analyses
+     * @param  array<int, StockSignalData>  $signals
      * @param  array<int, array{value: string, label: string}>  $periodOptions
      */
     public static function fromModel(
         Stock $stock,
         ?StockPriceData $latestPrice,
         array $priceHistory,
+        array $relatedNews,
+        array $analyses,
+        array $signals,
         StockPricePeriod $selectedPeriod,
         array $periodOptions,
     ): self {
@@ -60,6 +74,9 @@ final class StockDetailData extends Data
             description: $stock->description,
             latestPrice: $latestPrice,
             priceHistory: $priceHistory,
+            relatedNews: $relatedNews,
+            analyses: $analyses,
+            signals: $signals,
             selectedPeriod: $selectedPeriod,
             periodOptions: $periodOptions,
         );

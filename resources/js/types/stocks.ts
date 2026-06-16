@@ -2,6 +2,7 @@
  * 銘柄画面の型定義
  */
 import type { AppPageProps } from '@/types/index.d.ts';
+import type { NewsAnalysis, NewsArticle } from '@/types/news';
 
 export interface StockListItem {
   id: number;
@@ -35,8 +36,25 @@ export interface StockDetail extends StockListItem {
   description: string | null;
   latest_price: StockPricePoint | null;
   price_history: StockPricePoint[];
+  related_news: NewsArticle[];
+  analyses: NewsAnalysis[];
+  signals: StockSignal[];
   selected_period: StockPeriodOption['value'];
   period_options: StockPeriodOption[];
+}
+
+export interface StockSignal {
+  id: number;
+  signal_date: string;
+  news_score: number;
+  disclosure_score: number;
+  macro_score: number;
+  total_score: number;
+  positive_count: number;
+  negative_count: number;
+  neutral_count: number;
+  reason: string | null;
+  generated_at: string;
 }
 
 export interface StockFilters {
@@ -53,6 +71,7 @@ export interface StocksPageProps extends AppPageProps {
   stocks: StockListItem[];
   filters: StockFilters;
   marketOptions: StockMarketOption[];
+  watchlistedStockIds: number[];
 }
 
 export interface StockDetailPageProps extends AppPageProps {

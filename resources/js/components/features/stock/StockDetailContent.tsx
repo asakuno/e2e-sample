@@ -4,6 +4,7 @@ import { index, show } from '@/routes/stocks';
 import type { StockDetail } from '@/types/stocks';
 import { StockCompanyInfo } from './StockCompanyInfo';
 import { StockDetailHeader } from './StockDetailHeader';
+import { StockInsightsPanel } from './StockInsightsPanel';
 import { StockPriceChart } from './StockPriceChart';
 import { StockPriceHistoryTable } from './StockPriceHistoryTable';
 
@@ -60,6 +61,8 @@ export function StockDetailContent({ stock }: StockDetailContentProps) {
 
         <StockCompanyInfo stock={stock} />
       </div>
+
+      <StockInsightsPanel stock={stock} />
 
       <section className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
         <div className="border-gray-200 border-b px-5 py-4">

@@ -46,6 +46,14 @@ final class ListStocksUseCase
         );
     }
 
+    /**
+     * @return array<int, int>
+     */
+    public function watchlistedStockIds(int $userId): array
+    {
+        return $this->watchlistRepository->findActiveStockIdsByUser($userId);
+    }
+
     private function marketLabel(string $market): string
     {
         return match ($market) {

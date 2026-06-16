@@ -5,7 +5,12 @@ import { AuthenticatedLayout } from '@/layouts/AuthenticatedLayout';
 import { store as storeWatchlist } from '@/routes/watchlist';
 import type { StockListItem, StocksPageProps } from '@/types/stocks';
 
-export default function Stocks({ stocks, filters, marketOptions }: StocksPageProps) {
+export default function Stocks({
+  stocks,
+  filters,
+  marketOptions,
+  watchlistedStockIds,
+}: StocksPageProps) {
   const handleAddToWatchlist = (stock: StockListItem) => {
     router.post(
       storeWatchlist.url(),
@@ -46,6 +51,7 @@ export default function Stocks({ stocks, filters, marketOptions }: StocksPagePro
           <StockTable
             stocks={stocks}
             marketOptions={marketOptions}
+            watchlistedStockIds={watchlistedStockIds}
             addToWatchlistAction={handleAddToWatchlist}
           />
         </div>

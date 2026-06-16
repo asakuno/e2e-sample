@@ -9,10 +9,16 @@ import type { StockListItem, StockMarketOption } from '@/types/stocks';
 interface StockTableProps {
   stocks: StockListItem[];
   marketOptions: StockMarketOption[];
+  watchlistedStockIds?: number[];
   addToWatchlistAction?: ((stock: StockListItem) => void | Promise<void>) | undefined;
 }
 
-export function StockTable({ stocks, marketOptions, addToWatchlistAction }: StockTableProps) {
+export function StockTable({
+  stocks,
+  marketOptions,
+  watchlistedStockIds = [],
+  addToWatchlistAction,
+}: StockTableProps) {
   if (stocks.length === 0) {
     return (
       <div className="rounded-lg border border-gray-200 bg-white p-10 text-center shadow-sm">
@@ -21,6 +27,8 @@ export function StockTable({ stocks, marketOptions, addToWatchlistAction }: Stoc
       </div>
     );
   }
+
+  const watchlistedStockIdSet = new Set(watchlistedStockIds);
 
   return (
     <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -43,6 +51,9 @@ export function StockTable({ stocks, marketOptions, addToWatchlistAction }: Stoc
                 key={stock.id}
                 stock={stock}
                 marketOptions={marketOptions}
+                isInWatchlist={
+                  watchlistedStockIdSet.has(stock.id) || stock.is_in_watchlist === true
+                }
                 addToWatchlistAction={addToWatchlistAction}
               />
             ))}
@@ -56,14 +67,15 @@ export function StockTable({ stocks, marketOptions, addToWatchlistAction }: Stoc
 function StockTableRow({
   stock,
   marketOptions,
+  isInWatchlist,
   addToWatchlistAction,
 }: {
   stock: StockListItem;
   marketOptions: StockMarketOption[];
+  isInWatchlist: boolean;
   addToWatchlistAction?: ((stock: StockListItem) => void | Promise<void>) | undefined;
 }) {
   const [isPending, startTransition] = useTransition();
-  const isInWatchlist = stock.is_in_watchlist === true;
 
   const handleAddToWatchlist = () => {
     if (addToWatchlistAction == null || isInWatchlist) return;

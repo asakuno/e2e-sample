@@ -34,6 +34,7 @@ class StocksPageController extends Controller
                 'market' => $filters->market ?? '',
             ],
             'marketOptions' => fn (): array => $useCase->marketOptions(),
+            'watchlistedStockIds' => fn (): array => $useCase->watchlistedStockIds($userId),
         ]);
     }
 

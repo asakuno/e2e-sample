@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Data\Stock\StockSearchData;
+use App\Models\AnalysisResult;
+use App\Models\NewsArticle;
 use App\Models\Stock;
 use App\Models\StockPrice;
+use App\Models\StockSignal;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -79,6 +82,57 @@ final class StockRepository implements StockRepositoryInterface
             ->whereNotNull('close')
             ->orderBy('price_date')
             ->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * @return Collection<int, NewsArticle>
+     */
+    public function findRelatedNewsByStockId(int $stockId, int $limit): Collection
+    {
+        return NewsArticle::query()
+            ->with([
+                'stocks',
+                'analysisResults' => fn ($query) => $query
+                    ->where('stock_id', $stockId)
+                    ->with('stock')
+                    ->orderByDesc('analyzed_at')
+                    ->orderByDesc('id'),
+            ])
+            ->whereHas(
+                'stocks',
+                fn (Builder $query): Builder => $query->whereKey($stockId),
+            )
+            ->orderByDesc('published_at')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * @return Collection<int, AnalysisResult>
+     */
+    public function findAnalysisResultsByStockId(int $stockId, int $limit): Collection
+    {
+        return AnalysisResult::query()
+            ->with('stock')
+            ->where('stock_id', $stockId)
+            ->orderByDesc('analyzed_at')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * @return Collection<int, StockSignal>
+     */
+    public function findSignalsByStockId(int $stockId, int $limit): Collection
+    {
+        return StockSignal::query()
+            ->where('stock_id', $stockId)
+            ->orderByDesc('signal_date')
+            ->orderByDesc('id')
+            ->limit($limit)
             ->get();
     }
 }

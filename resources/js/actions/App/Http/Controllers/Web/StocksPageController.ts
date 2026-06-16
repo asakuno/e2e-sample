@@ -45,7 +45,7 @@ StocksPageController.head = (options?: RouteQueryOptions): RouteDefinition<'head
 
 /**
 * @see \App\Http\Controllers\Web\StocksPageController::show
-* @see Http/Controllers/Web/StocksPageController.php:43
+* @see Http/Controllers/Web/StocksPageController.php:44
 * @route '/stocks/{stock}'
 */
 export const show = (args: { stock: string | number } | [stock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -60,7 +60,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\Web\StocksPageController::show
-* @see Http/Controllers/Web/StocksPageController.php:43
+* @see Http/Controllers/Web/StocksPageController.php:44
 * @route '/stocks/{stock}'
 */
 show.url = (args: { stock: string | number } | [stock: string | number ] | string | number, options?: RouteQueryOptions) => {
@@ -87,7 +87,7 @@ show.url = (args: { stock: string | number } | [stock: string | number ] | strin
 
 /**
 * @see \App\Http\Controllers\Web\StocksPageController::show
-* @see Http/Controllers/Web/StocksPageController.php:43
+* @see Http/Controllers/Web/StocksPageController.php:44
 * @route '/stocks/{stock}'
 */
 show.get = (args: { stock: string | number } | [stock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -97,7 +97,7 @@ show.get = (args: { stock: string | number } | [stock: string | number ] | strin
 
 /**
 * @see \App\Http\Controllers\Web\StocksPageController::show
-* @see Http/Controllers/Web/StocksPageController.php:43
+* @see Http/Controllers/Web/StocksPageController.php:44
 * @route '/stocks/{stock}'
 */
 show.head = (args: { stock: string | number } | [stock: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({

@@ -74,6 +74,7 @@ const stocksProps: StocksPageProps = {
   filters: { q: '', market: '' },
   marketOptions,
   stocks: [appleStock, toyotaStock],
+  watchlistedStockIds: [],
 };
 
 const watchlistProps: WatchlistPageProps = {
@@ -180,6 +181,56 @@ const stockDetail: StockDetailType = {
       volume: 30000,
     },
   ],
+  related_news: [
+    {
+      id: 1,
+      title: 'Apple supplier raises guidance',
+      summary: 'Supplier demand indicates stronger iPhone sales.',
+      url: 'https://example.com/apple-supplier',
+      source: 'Reuters',
+      provider: 'rss',
+      language: 'en',
+      published_at: '2026-06-15 10:00:00',
+      stocks: [
+        {
+          id: 1,
+          symbol: 'AAPL',
+          name: 'Apple Inc.',
+          market: 'us',
+          relevance_score: 91,
+          matched_by: 'symbol',
+        },
+      ],
+      analyses: [],
+    },
+  ],
+  analyses: [
+    {
+      id: 1,
+      stock: appleStock,
+      summary: '需要回復にポジティブ',
+      sentiment: 1,
+      sentiment_label: 'ポジティブ',
+      impact_score: 8,
+      confidence_score: 92,
+      analyzed_at: '2026-06-15 11:00:00',
+    },
+  ],
+  signals: [
+    {
+      id: 1,
+      signal_date: '2026-06-15',
+      news_score: 6.5,
+      disclosure_score: 1,
+      macro_score: -0.5,
+      total_score: 7,
+      positive_count: 3,
+      negative_count: 1,
+      neutral_count: 2,
+      reason: 'ニュースと分析結果が上向きです。',
+      generated_at: '2026-06-15 12:00:00',
+    },
+  ],
   selected_period: '1M',
   period_options: [
     { value: '1M', label: '1M' },
@@ -214,12 +265,11 @@ describe('Stock app navigation pages', () => {
     );
   });
 
-  it('Stocks ページでウォッチリスト登録済み銘柄の追加ボタンが無効化されること', async () => {
+  it('Stocks ページで watchlistedStockIds に含まれる銘柄の追加ボタンが無効化されること', async () => {
     const user = userEvent.setup();
     routerPostMock.mockClear();
-    const registeredStock = { ...appleStock, is_in_watchlist: true };
 
-    render(<Stocks {...stocksProps} stocks={[registeredStock, toyotaStock]} />);
+    render(<Stocks {...stocksProps} watchlistedStockIds={[appleStock.id]} />);
     const actual = screen.getByRole('button', {
       name: 'AAPL はウォッチリストに追加済み',
     });
@@ -258,6 +308,12 @@ describe('Stock app navigation pages', () => {
     expect(screen.getAllByText('$182.50')).toHaveLength(2);
     expect(screen.getByRole('link', { name: '3M' })).toHaveAttribute('href', '/stocks/1?period=3M');
     expect(screen.getByText('価格履歴一覧')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '関連ニュース' })).toBeInTheDocument();
+    expect(screen.getByText('Apple supplier raises guidance')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'AI分析結果' })).toBeInTheDocument();
+    expect(screen.getByText('AI要約: 需要回復にポジティブ')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'シグナル' })).toBeInTheDocument();
+    expect(screen.getByText('ニュースと分析結果が上向きです。')).toBeInTheDocument();
   });
 
   it('Watchlist ページにウォッチリスト銘柄が表示されること', async () => {

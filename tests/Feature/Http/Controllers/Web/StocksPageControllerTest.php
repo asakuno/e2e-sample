@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Controllers\Web;
 
+use App\Enums\AnalysisSentiment;
+use App\Models\AnalysisResult;
+use App\Models\NewsArticle;
 use App\Models\Stock;
 use App\Models\StockPrice;
+use App\Models\StockSignal;
 use App\Models\User;
 use App\Models\Watchlist;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -165,6 +169,7 @@ final class StocksPageControllerTest extends TestCase
             ->where('stocks.0.is_in_watchlist', true)
             ->where('stocks.1.symbol', 'MSFT')
             ->where('stocks.1.is_in_watchlist', false)
+            ->where('watchlistedStockIds', [$registeredStock->id])
         );
     }
 
@@ -247,6 +252,69 @@ final class StocksPageControllerTest extends TestCase
             ->where('stock.price_history.0.price_date', '2026-03-01')
             ->where('stock.price_history.1.price_date', '2026-05-30')
             ->has('stock.period_options', 4)
+        );
+    }
+
+    public function test_銘柄詳細ページで関連ニュースと分析結果とシグナルを表示できる(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $stock = Stock::factory()->create([
+            'symbol' => 'AAPL',
+            'name' => 'Apple Inc.',
+            'market' => 'us',
+            'country' => 'US',
+            'currency' => 'USD',
+        ]);
+        $article = NewsArticle::factory()->create([
+            'title' => 'Apple supplier raises guidance',
+            'summary' => 'Supplier demand indicates stronger iPhone sales.',
+            'source' => 'Reuters',
+            'provider' => 'rss',
+            'published_at' => '2026-06-15 10:00:00',
+        ]);
+        $article->stocks()->attach($stock->id, [
+            'relevance_score' => 91,
+            'matched_by' => 'symbol',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        AnalysisResult::factory()->for($stock)->create([
+            'analysable_type' => NewsArticle::class,
+            'analysable_id' => $article->id,
+            'summary' => '需要回復にポジティブ',
+            'sentiment' => AnalysisSentiment::Positive->value,
+            'impact_score' => 8,
+            'confidence_score' => 92,
+            'analyzed_at' => '2026-06-15 11:00:00',
+        ]);
+        StockSignal::factory()->for($stock)->create([
+            'signal_date' => '2026-06-15',
+            'news_score' => 6.5,
+            'disclosure_score' => 1.0,
+            'macro_score' => -0.5,
+            'total_score' => 7.0,
+            'positive_count' => 3,
+            'negative_count' => 1,
+            'neutral_count' => 2,
+            'reason' => 'ニュースと分析結果が上向きです。',
+            'generated_at' => '2026-06-15 12:00:00',
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)->get(route('stocks.show', $stock->id));
+
+        // Assert
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('StockDetail')
+            ->where('stock.related_news.0.title', 'Apple supplier raises guidance')
+            ->where('stock.related_news.0.stocks.0.symbol', 'AAPL')
+            ->where('stock.analyses.0.summary', '需要回復にポジティブ')
+            ->where('stock.analyses.0.sentiment_label', 'ポジティブ')
+            ->where('stock.signals.0.signal_date', '2026-06-15')
+            ->where('stock.signals.0.total_score', 7)
+            ->where('stock.signals.0.reason', 'ニュースと分析結果が上向きです。')
         );
     }
 }
