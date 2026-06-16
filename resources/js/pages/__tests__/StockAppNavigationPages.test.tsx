@@ -50,6 +50,7 @@ const appleStock: StockListItem = {
   currency: 'USD',
   sector: 'Technology',
   industry: 'Consumer Electronics',
+  is_in_watchlist: false,
 };
 
 const toyotaStock: StockListItem = {
@@ -62,6 +63,7 @@ const toyotaStock: StockListItem = {
   currency: 'JPY',
   sector: 'Consumer Discretionary',
   industry: 'Auto Manufacturers',
+  is_in_watchlist: false,
 };
 
 const stocksProps: StocksPageProps = {
@@ -210,6 +212,22 @@ describe('Stock app navigation pages', () => {
       { stock_id: 1, memo: '', priority: 2 },
       expect.objectContaining({ preserveScroll: true }),
     );
+  });
+
+  it('Stocks ページでウォッチリスト登録済み銘柄の追加ボタンが無効化されること', async () => {
+    const user = userEvent.setup();
+    routerPostMock.mockClear();
+    const registeredStock = { ...appleStock, is_in_watchlist: true };
+
+    render(<Stocks {...stocksProps} stocks={[registeredStock, toyotaStock]} />);
+    const actual = screen.getByRole('button', {
+      name: 'AAPL はウォッチリストに追加済み',
+    });
+
+    expect(actual).toBeDisabled();
+
+    await user.click(actual);
+    expect(routerPostMock).not.toHaveBeenCalled();
   });
 
   it('Stocks ページの検索フォームがクエリパラメータ付きで再取得すること', async () => {

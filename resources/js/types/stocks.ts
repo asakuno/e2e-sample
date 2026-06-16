@@ -13,6 +13,7 @@ export interface StockListItem {
   currency: string;
   sector: string | null;
   industry: string | null;
+  is_in_watchlist?: boolean;
 }
 
 export interface StockPricePoint {

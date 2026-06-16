@@ -1,6 +1,6 @@
 import type React from 'react';
 import { Link } from '@inertiajs/react';
-import { ArrowRight, Eye } from 'lucide-react';
+import { ArrowRight, Check, Eye } from 'lucide-react';
 import { useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { show } from '@/routes/stocks';
@@ -63,9 +63,10 @@ function StockTableRow({
   addToWatchlistAction?: ((stock: StockListItem) => void | Promise<void>) | undefined;
 }) {
   const [isPending, startTransition] = useTransition();
+  const isInWatchlist = stock.is_in_watchlist === true;
 
   const handleAddToWatchlist = () => {
-    if (addToWatchlistAction == null) return;
+    if (addToWatchlistAction == null || isInWatchlist) return;
 
     startTransition(async () => {
       await addToWatchlistAction(stock);
@@ -97,13 +98,21 @@ function StockTableRow({
               type="button"
               variant="outline"
               size="sm"
-              aria-label={`${stock.symbol} をウォッチリストに追加`}
+              aria-label={
+                isInWatchlist
+                  ? `${stock.symbol} はウォッチリストに追加済み`
+                  : `${stock.symbol} をウォッチリストに追加`
+              }
               aria-busy={isPending || undefined}
-              disabled={isPending}
+              disabled={isPending || isInWatchlist}
               onClick={handleAddToWatchlist}
             >
-              <Eye aria-hidden="true" className="size-4" />
-              追加
+              {isInWatchlist ? (
+                <Check aria-hidden="true" className="size-4" />
+              ) : (
+                <Eye aria-hidden="true" className="size-4" />
+              )}
+              {isInWatchlist ? '追加済み' : '追加'}
             </Button>
           )}
           <Link
