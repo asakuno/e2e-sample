@@ -7,6 +7,7 @@ import type {
   StockMarketOption,
   StocksPageProps,
 } from '@/types/stocks';
+import type { NewsPageProps } from '@/types/news';
 import type { WatchlistPageProps } from '@/types/watchlist';
 
 const routerGetMock = vi.hoisted(() => vi.fn());
@@ -85,6 +86,54 @@ const watchlistProps: WatchlistPageProps = {
       priority: 3,
       is_active: true,
       stock: appleStock,
+    },
+  ],
+};
+
+const newsProps: NewsPageProps = {
+  app: stocksProps.app,
+  auth: stocksProps.auth,
+  flash: {},
+  errors: {},
+  filters: { stock_id: '', sentiment: '', from: '', to: '' },
+  stockOptions: [{ value: 1, label: 'AAPL Apple Inc.' }],
+  sentimentOptions: [
+    { value: 1, label: 'ポジティブ' },
+    { value: 0, label: '中立' },
+    { value: -1, label: 'ネガティブ' },
+  ],
+  news: [
+    {
+      id: 1,
+      title: 'Apple announces new product',
+      summary: 'Apple product summary',
+      url: 'https://example.com/apple-news',
+      source: 'Reuters',
+      provider: 'rss',
+      language: 'en',
+      published_at: '2026-06-15 10:00:00',
+      stocks: [
+        {
+          id: 1,
+          symbol: 'AAPL',
+          name: 'Apple Inc.',
+          market: 'us',
+          relevance_score: 95,
+          matched_by: 'symbol',
+        },
+      ],
+      analyses: [
+        {
+          id: 1,
+          stock: appleStock,
+          summary: '売上成長にポジティブ',
+          sentiment: 1,
+          sentiment_label: 'ポジティブ',
+          impact_score: 8,
+          confidence_score: 90,
+          analyzed_at: '2026-06-15 11:00:00',
+        },
+      ],
     },
   ],
 };
@@ -210,10 +259,38 @@ describe('Stock app navigation pages', () => {
     );
   });
 
-  it('News ページの仮コンテンツが表示されること', () => {
-    render(<News />);
+  it('News ページにニュース一覧とAI分析が表示されること', () => {
+    render(<News {...newsProps} />);
     expect(document.querySelector('title')).toHaveTextContent('News');
     expect(screen.getByRole('heading', { name: 'News' })).toBeInTheDocument();
-    expect(screen.getByText('市場ニュース一覧')).toBeInTheDocument();
+    expect(screen.getByText('Apple announces new product')).toBeInTheDocument();
+    expect(screen.getByText('AI要約: 売上成長にポジティブ')).toBeInTheDocument();
+    expect(screen.getByText('impact score')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '元記事' })).toHaveAttribute(
+      'href',
+      'https://example.com/apple-news',
+    );
+  });
+
+  it('News ページのフィルタフォームがクエリパラメータ付きで再取得すること', async () => {
+    const user = userEvent.setup();
+    routerGetMock.mockClear();
+
+    render(<News {...newsProps} />);
+    await user.selectOptions(screen.getByLabelText('銘柄'), '1');
+    await user.selectOptions(screen.getByLabelText('sentiment'), '1');
+    await user.type(screen.getByLabelText('期間 From'), '2026-06-01');
+    await user.type(screen.getByLabelText('期間 To'), '2026-06-30');
+    await user.click(screen.getByRole('button', { name: '検索' }));
+
+    expect(routerGetMock).toHaveBeenCalledWith(
+      '/news',
+      { stock_id: '1', sentiment: '1', from: '2026-06-01', to: '2026-06-30' },
+      expect.objectContaining({
+        only: ['news', 'filters'],
+        preserveState: true,
+        replace: true,
+      }),
+    );
   });
 });

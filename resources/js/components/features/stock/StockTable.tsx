@@ -108,7 +108,7 @@ function StockTableRow({
           )}
           <Link
             href={show.url(stock.id)}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium text-gray-700 text-sm transition hover:bg-gray-100 hover:text-gray-950"
+            className="inline-flex min-h-8 items-center gap-1 rounded-md px-2 py-1 font-medium text-gray-700 text-sm transition-[background-color,color,transform] hover:bg-gray-100 hover:text-gray-950 active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
           >
             開く
             <ArrowRight aria-hidden="true" className="size-4" />

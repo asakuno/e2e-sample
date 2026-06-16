@@ -1,18 +1,36 @@
 import { Head } from '@inertiajs/react';
-import { FeaturePlaceholder } from '@/components/features/stock/FeaturePlaceholder';
+import { NewsArticleList } from '@/components/features/news/NewsArticleList';
+import { NewsFiltersPanel } from '@/components/features/news/NewsFiltersPanel';
 import { AuthenticatedLayout } from '@/layouts/AuthenticatedLayout';
+import type { NewsPageProps } from '@/types/news';
 
-export default function News() {
+export default function News({ news, filters, stockOptions, sentimentOptions }: NewsPageProps) {
   return (
     <>
       <Head title="News" />
       <AuthenticatedLayout>
-        <FeaturePlaceholder
-          title="News"
-          description="市場ニュース、決算情報、銘柄別の関連ニュースを確認する画面です。"
-          icon="newspaper"
-          items={['市場ニュース一覧', '銘柄別ニュース紐付け', 'ニュース感情分析']}
-        />
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <h1 className="font-bold text-2xl text-gray-950">News</h1>
+              <p className="mt-1 text-gray-500 text-sm">
+                市場ニュースを銘柄、sentiment、公開期間で絞り込み、AI分析の要点を確認できます。
+              </p>
+            </div>
+            <div className="rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-600 text-sm">
+              表示件数 <span className="font-semibold text-gray-950">{news.length}</span>
+            </div>
+          </div>
+
+          <NewsFiltersPanel
+            key={`${filters.stock_id}:${filters.sentiment}:${filters.from}:${filters.to}`}
+            initialFilters={filters}
+            stockOptions={stockOptions}
+            sentimentOptions={sentimentOptions}
+          />
+
+          <NewsArticleList articles={news} />
+        </div>
       </AuthenticatedLayout>
     </>
   );

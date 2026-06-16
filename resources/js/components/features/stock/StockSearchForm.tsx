@@ -44,7 +44,7 @@ export function StockSearchForm({
               value={filters.q}
               onChange={(event) => onFiltersChange({ ...filters, q: event.target.value })}
               placeholder="AAPL, Toyota, Microsoft"
-              className="h-11 w-full rounded-md border border-gray-300 bg-white pr-4 pl-10 text-gray-900 text-sm shadow-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+              className="h-11 w-full rounded-md border border-gray-300 bg-white pr-4 pl-10 text-gray-900 text-sm shadow-sm outline-none transition hover:border-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
             />
           </div>
         </div>
@@ -60,7 +60,7 @@ export function StockSearchForm({
             id="stock-search-market"
             value={filters.market}
             onChange={(event) => onFiltersChange({ ...filters, market: event.target.value })}
-            className="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-gray-900 text-sm shadow-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+            className="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-gray-900 text-sm shadow-sm outline-none transition hover:border-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
           >
             <option value="">すべて</option>
             {marketOptions.map((option) => (

@@ -76,7 +76,7 @@ export function TopNavView({
           <button
             type="button"
             aria-label="アラート通知"
-            className="relative min-h-11 min-w-11 rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
+            className="relative min-h-11 min-w-11 rounded-md text-gray-500 transition-[background-color,color,transform] hover:bg-gray-100 hover:text-gray-700 active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
           >
             <span className="material-symbols-outlined">notifications</span>
           </button>
@@ -88,7 +88,7 @@ export function TopNavView({
           <button
             type="button"
             onClick={onOpenLogout}
-            className="min-h-11 rounded-md px-3 py-1.5 text-gray-600 text-sm transition hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
+            className="min-h-11 rounded-md px-3 py-1.5 text-gray-600 text-sm transition-[background-color,color,transform] hover:bg-gray-100 hover:text-gray-900 active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
           >
             ログアウト
           </button>

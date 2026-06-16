@@ -14,7 +14,7 @@ export function WatchlistEmptyState() {
       </p>
       <Link
         href={stocksIndex.url()}
-        className="mt-5 inline-flex items-center justify-center rounded-md bg-gray-900 px-4 py-2 font-medium text-sm text-white transition hover:bg-gray-700"
+        className="mt-5 inline-flex min-h-11 items-center justify-center rounded-md bg-gray-900 px-4 py-2 font-medium text-sm text-white transition-[background-color,transform] hover:bg-gray-700 active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
       >
         銘柄を探す
       </Link>

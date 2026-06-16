@@ -16,7 +16,7 @@ export function StockDetailContent({ stock }: StockDetailContentProps) {
     <div className="flex flex-col gap-6">
       <Link
         href={index.url()}
-        className="inline-flex w-fit items-center gap-2 rounded-md px-2 py-1 font-medium text-gray-600 text-sm transition hover:bg-gray-100 hover:text-gray-950"
+        className="inline-flex min-h-8 w-fit items-center gap-2 rounded-md px-2 py-1 font-medium text-gray-600 text-sm transition-[background-color,color,transform] hover:bg-gray-100 hover:text-gray-950 active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
         銘柄一覧
@@ -42,7 +42,7 @@ export function StockDetailContent({ stock }: StockDetailContentProps) {
                     className={`rounded px-3 py-1.5 font-medium text-sm transition ${
                       isActive
                         ? 'bg-white text-gray-950 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-900'
+                        : 'hover:bg-white/80 text-gray-500 hover:text-gray-900'
                     }`}
                     aria-current={isActive ? 'page' : undefined}
                   >
