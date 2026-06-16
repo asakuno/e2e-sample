@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import type { WatchlistItem } from '@/types/watchlist';
 import { WatchlistRow } from '../WatchlistRow';
@@ -46,8 +47,9 @@ describe('WatchlistRow', () => {
     expect(actual).toEqual(expected);
   });
 
-  it('メモ編集ボタンを押した場合、editMemoAction が呼ばれること', () => {
+  it('メモ編集ボタンを押した場合、editMemoAction が呼ばれること', async () => {
     // Arrange
+    const user = userEvent.setup();
     const editMemoAction = vi.fn();
     const expected = 1;
 
@@ -59,15 +61,16 @@ describe('WatchlistRow', () => {
         </tbody>
       </table>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'AAPL のメモを編集' }));
+    await user.click(screen.getByRole('button', { name: 'AAPL のメモを編集' }));
     const actual = editMemoAction.mock.calls.length;
 
     // Assert
     expect(actual).toBe(expected);
   });
 
-  it('削除ボタンを押した場合、removeAction が呼ばれること', () => {
+  it('削除ボタンを押した場合、removeAction が呼ばれること', async () => {
     // Arrange
+    const user = userEvent.setup();
     const removeAction = vi.fn();
     const expected = 1;
 
@@ -79,7 +82,7 @@ describe('WatchlistRow', () => {
         </tbody>
       </table>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'AAPL をウォッチリストから削除' }));
+    await user.click(screen.getByRole('button', { name: 'AAPL をウォッチリストから削除' }));
     const actual = removeAction.mock.calls.length;
 
     // Assert

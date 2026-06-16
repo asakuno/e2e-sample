@@ -14,10 +14,6 @@ export function WatchlistContent({ items, editMemoAction, removeAction }: Watchl
   }
 
   return (
-    <WatchlistTable
-      items={items}
-      editMemoAction={editMemoAction}
-      removeAction={removeAction}
-    />
+    <WatchlistTable items={items} editMemoAction={editMemoAction} removeAction={removeAction} />
   );
 }

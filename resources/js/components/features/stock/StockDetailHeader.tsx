@@ -1,10 +1,5 @@
 import { TrendingDown, TrendingUp } from 'lucide-react';
-import {
-  formatCurrencyChange,
-  formatPercent,
-  formatPrice,
-  formatVolume,
-} from '@/lib/formatters';
+import { formatCurrencyChange, formatPercent, formatPrice, formatVolume } from '@/lib/formatters';
 import type { StockDetail } from '@/types/stocks';
 import { calculatePeriodChange } from './stock-detail-presenter';
 
@@ -28,9 +23,7 @@ export function StockDetailHeader({ stock }: StockDetailHeaderProps) {
           </div>
           <p className="mt-2 text-gray-700">{stock.name}</p>
           {stock.description && (
-            <p className="mt-3 max-w-3xl text-gray-500 text-sm leading-6">
-              {stock.description}
-            </p>
+            <p className="mt-3 max-w-3xl text-gray-500 text-sm leading-6">{stock.description}</p>
           )}
         </div>
         <div className="grid grid-cols-2 gap-3 sm:min-w-96 sm:grid-cols-3">

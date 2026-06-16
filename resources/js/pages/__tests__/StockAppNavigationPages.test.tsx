@@ -3,11 +3,15 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import type {
   StockDetail as StockDetailType,
+  StockListItem,
   StockMarketOption,
   StocksPageProps,
 } from '@/types/stocks';
+import type { WatchlistPageProps } from '@/types/watchlist';
 
 const routerGetMock = vi.hoisted(() => vi.fn());
+const routerPostMock = vi.hoisted(() => vi.fn());
+const routerDeleteMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@inertiajs/react', () => ({
   Head: ({ title }: { title: string }) => <title>{title}</title>,
@@ -16,7 +20,7 @@ vi.mock('@inertiajs/react', () => ({
       {children as React.ReactNode}
     </a>
   ),
-  router: { get: routerGetMock, post: vi.fn() },
+  router: { get: routerGetMock, post: routerPostMock, delete: routerDeleteMock },
   usePage: vi.fn(() => ({
     url: '/stocks',
     props: {
@@ -35,6 +39,30 @@ const marketOptions: StockMarketOption[] = [
   { value: 'us', label: '米国株' },
 ];
 
+const appleStock: StockListItem = {
+  id: 1,
+  symbol: 'AAPL',
+  name: 'Apple Inc.',
+  market: 'us',
+  exchange: 'NASDAQ',
+  country: 'US',
+  currency: 'USD',
+  sector: 'Technology',
+  industry: 'Consumer Electronics',
+};
+
+const toyotaStock: StockListItem = {
+  id: 2,
+  symbol: '7203',
+  name: 'Toyota Motor Corporation',
+  market: 'jp',
+  exchange: 'TSE',
+  country: 'JP',
+  currency: 'JPY',
+  sector: 'Consumer Discretionary',
+  industry: 'Auto Manufacturers',
+};
+
 const stocksProps: StocksPageProps = {
   app: { name: 'Web App', env: 'testing', locale: 'ja' },
   auth: { user: { id: 1, name: 'テストユーザー', email: 'test@example.com' } },
@@ -42,28 +70,21 @@ const stocksProps: StocksPageProps = {
   errors: {},
   filters: { q: '', market: '' },
   marketOptions,
-  stocks: [
+  stocks: [appleStock, toyotaStock],
+};
+
+const watchlistProps: WatchlistPageProps = {
+  app: stocksProps.app,
+  auth: stocksProps.auth,
+  flash: {},
+  errors: {},
+  watchlists: [
     {
       id: 1,
-      symbol: 'AAPL',
-      name: 'Apple Inc.',
-      market: 'us',
-      exchange: 'NASDAQ',
-      country: 'US',
-      currency: 'USD',
-      sector: 'Technology',
-      industry: 'Consumer Electronics',
-    },
-    {
-      id: 2,
-      symbol: '7203',
-      name: 'Toyota Motor Corporation',
-      market: 'jp',
-      exchange: 'TSE',
-      country: 'JP',
-      currency: 'JPY',
-      sector: 'Consumer Discretionary',
-      industry: 'Auto Manufacturers',
+      memo: '決算前に確認',
+      priority: 3,
+      is_active: true,
+      stock: appleStock,
     },
   ],
 };
@@ -125,6 +146,21 @@ describe('Stock app navigation pages', () => {
     expect(screen.getByText('AAPL')).toBeInTheDocument();
     expect(screen.getByText('Toyota Motor Corporation')).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: /開く/ })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /ウォッチリストに追加/ })).toHaveLength(2);
+  });
+
+  it('Stocks ページでウォッチリスト追加ボタンを押した場合、追加リクエストが送信されること', async () => {
+    const user = userEvent.setup();
+    routerPostMock.mockClear();
+
+    render(<Stocks {...stocksProps} />);
+    await user.click(screen.getByRole('button', { name: 'AAPL をウォッチリストに追加' }));
+
+    expect(routerPostMock).toHaveBeenCalledWith(
+      '/watchlist',
+      { stock_id: 1, memo: '', priority: 2 },
+      expect.objectContaining({ preserveScroll: true }),
+    );
   });
 
   it('Stocks ページの検索フォームがクエリパラメータ付きで再取得すること', async () => {
@@ -157,11 +193,21 @@ describe('Stock app navigation pages', () => {
     expect(screen.getByText('価格履歴一覧')).toBeInTheDocument();
   });
 
-  it('Watchlist ページの仮コンテンツが表示されること', () => {
-    render(<Watchlist />);
+  it('Watchlist ページにウォッチリスト銘柄が表示されること', async () => {
+    const user = userEvent.setup();
+    routerDeleteMock.mockClear();
+
+    render(<Watchlist {...watchlistProps} />);
     expect(document.querySelector('title')).toHaveTextContent('Watchlist');
-    expect(screen.getByRole('heading', { name: 'Watchlist' })).toBeInTheDocument();
-    expect(screen.getByText('監視銘柄一覧')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'ウォッチリスト' })).toBeInTheDocument();
+    expect(screen.getByText('AAPL')).toBeInTheDocument();
+    expect(screen.getByText('決算前に確認')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'AAPL をウォッチリストから削除' }));
+    expect(routerDeleteMock).toHaveBeenCalledWith(
+      '/watchlist/1',
+      expect.objectContaining({ preserveScroll: true }),
+    );
   });
 
   it('News ページの仮コンテンツが表示されること', () => {

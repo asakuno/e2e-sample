@@ -6,11 +6,13 @@ interface WatchlistMemoFormProps {
   memo: string;
   priority: number;
   priorityOptions: WatchlistPriorityOption[];
-  processing?: boolean;
-  memoError?: string;
-  priorityError?: string;
+  processing?: boolean | undefined;
+  memoError?: string | undefined;
+  priorityError?: string | undefined;
   onMemoChange: (memo: string) => void;
   onPriorityChange: (priority: number) => void;
+  onMemoBlur?: (() => void) | undefined;
+  onPriorityBlur?: (() => void) | undefined;
   onSubmit: () => void;
   onCancel: () => void;
 }
@@ -24,6 +26,8 @@ export function WatchlistMemoForm({
   priorityError,
   onMemoChange,
   onPriorityChange,
+  onMemoBlur,
+  onPriorityBlur,
   onSubmit,
   onCancel,
 }: WatchlistMemoFormProps) {
@@ -42,6 +46,7 @@ export function WatchlistMemoForm({
           id="watchlist-memo"
           value={memo}
           onChange={(event) => onMemoChange(event.target.value)}
+          onBlur={onMemoBlur}
           rows={4}
           className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 text-sm shadow-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
         />
@@ -59,6 +64,7 @@ export function WatchlistMemoForm({
           id="watchlist-priority"
           value={priority}
           onChange={(event) => onPriorityChange(Number(event.target.value))}
+          onBlur={onPriorityBlur}
           className="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-gray-900 text-sm shadow-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
         >
           {priorityOptions.map((option) => (

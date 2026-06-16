@@ -1,10 +1,25 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { StockTable } from '@/components/features/stock/StockTable';
 import { StocksSearchPanel } from '@/components/features/stock/StocksSearchPanel';
 import { AuthenticatedLayout } from '@/layouts/AuthenticatedLayout';
-import type { StocksPageProps } from '@/types/stocks';
+import { store as storeWatchlist } from '@/routes/watchlist';
+import type { StockListItem, StocksPageProps } from '@/types/stocks';
 
 export default function Stocks({ stocks, filters, marketOptions }: StocksPageProps) {
+  const handleAddToWatchlist = (stock: StockListItem) => {
+    router.post(
+      storeWatchlist.url(),
+      {
+        stock_id: stock.id,
+        memo: '',
+        priority: 2,
+      },
+      {
+        preserveScroll: true,
+      },
+    );
+  };
+
   return (
     <>
       <Head title="Stocks" />
@@ -28,7 +43,11 @@ export default function Stocks({ stocks, filters, marketOptions }: StocksPagePro
             marketOptions={marketOptions}
           />
 
-          <StockTable stocks={stocks} marketOptions={marketOptions} />
+          <StockTable
+            stocks={stocks}
+            marketOptions={marketOptions}
+            addToWatchlistAction={handleAddToWatchlist}
+          />
         </div>
       </AuthenticatedLayout>
     </>
