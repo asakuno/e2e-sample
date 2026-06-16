@@ -1,10 +1,8 @@
-import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
-import { StockSearchForm } from '@/components/features/stock-app/StockSearchForm';
-import { StockTable } from '@/components/features/stock-app/StockTable';
+import { Head } from '@inertiajs/react';
+import { StockTable } from '@/components/features/stock/StockTable';
+import { StocksSearchPanel } from '@/components/features/stock/StocksSearchPanel';
 import { AuthenticatedLayout } from '@/layouts/AuthenticatedLayout';
-import { index } from '@/routes/stocks';
-import type { StockFilters, StocksPageProps } from '@/types/stocks';
+import type { StocksPageProps } from '@/types/stocks';
 
 export default function Stocks({ stocks, filters, marketOptions }: StocksPageProps) {
   return (
@@ -35,45 +33,4 @@ export default function Stocks({ stocks, filters, marketOptions }: StocksPagePro
       </AuthenticatedLayout>
     </>
   );
-}
-
-type StocksSearchPanelProps = {
-  initialFilters: StockFilters;
-  marketOptions: StocksPageProps['marketOptions'];
-};
-
-function StocksSearchPanel({ initialFilters, marketOptions }: StocksSearchPanelProps) {
-  const [searchFilters, setSearchFilters] = useState<StockFilters>(initialFilters);
-
-  const submitSearch = (nextFilters = searchFilters) => {
-    router.get(index.url(), compactFilters(nextFilters), {
-      only: ['stocks', 'filters'],
-      preserveScroll: true,
-      preserveState: true,
-      replace: true,
-    });
-  };
-
-  const resetSearch = () => {
-    const emptyFilters = { q: '', market: '' };
-    setSearchFilters(emptyFilters);
-    submitSearch(emptyFilters);
-  };
-
-  return (
-    <StockSearchForm
-      filters={searchFilters}
-      marketOptions={marketOptions}
-      onFiltersChange={setSearchFilters}
-      onSubmit={submitSearch}
-      onReset={resetSearch}
-    />
-  );
-}
-
-function compactFilters(filters: StockFilters): Partial<StockFilters> {
-  return {
-    ...(filters.q.trim() !== '' ? { q: filters.q.trim() } : {}),
-    ...(filters.market !== '' ? { market: filters.market } : {}),
-  };
 }

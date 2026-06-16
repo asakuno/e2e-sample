@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { FeaturePlaceholder } from '@/components/features/stock-app/FeaturePlaceholder';
+import { FeaturePlaceholder } from '@/components/features/stock/FeaturePlaceholder';
 import { AuthenticatedLayout } from '@/layouts/AuthenticatedLayout';
 
 export default function News() {
