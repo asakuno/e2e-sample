@@ -1,10 +1,11 @@
 /**
  * サイドナビゲーション項目コンポーネント
  *
- * Material Symbols アイコン + ラベルのリンク。active 状態でハイライト表示。
+ * アイコン + ラベルのリンク。active 状態でハイライト表示。
  */
 import { Link } from '@inertiajs/react';
 import { cn } from '@/lib/utils';
+import { AppIcon } from '@/components/ui/AppIcon';
 
 interface NavItemProps {
   href: string;
@@ -23,7 +24,7 @@ export function NavItem({ href, icon, label, active = false }: NavItemProps) {
         active ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
       )}
     >
-      <span className="material-symbols-outlined text-[20px]">{icon}</span>
+      <AppIcon name={icon} className="size-5" />
       {label}
     </Link>
   );

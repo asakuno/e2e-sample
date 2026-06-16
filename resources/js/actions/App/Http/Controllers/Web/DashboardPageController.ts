@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Web\DashboardPageController::__invoke
-* @see Http/Controllers/Web/DashboardPageController.php:19
+* @see Http/Controllers/Web/DashboardPageController.php:21
 * @route '/dashboard'
 */
 const DashboardPageController = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ DashboardPageController.definition = {
 
 /**
 * @see \App\Http\Controllers\Web\DashboardPageController::__invoke
-* @see Http/Controllers/Web/DashboardPageController.php:19
+* @see Http/Controllers/Web/DashboardPageController.php:21
 * @route '/dashboard'
 */
 DashboardPageController.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ DashboardPageController.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Web\DashboardPageController::__invoke
-* @see Http/Controllers/Web/DashboardPageController.php:19
+* @see Http/Controllers/Web/DashboardPageController.php:21
 * @route '/dashboard'
 */
 DashboardPageController.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -35,7 +35,7 @@ DashboardPageController.get = (options?: RouteQueryOptions): RouteDefinition<'ge
 
 /**
 * @see \App\Http\Controllers\Web\DashboardPageController::__invoke
-* @see Http/Controllers/Web/DashboardPageController.php:19
+* @see Http/Controllers/Web/DashboardPageController.php:21
 * @route '/dashboard'
 */
 DashboardPageController.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({

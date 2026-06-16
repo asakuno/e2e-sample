@@ -4,6 +4,7 @@
  * ラベル、値、変化率、アイコンを表示する統計情報カード。
  */
 import { cn } from '@/lib/utils';
+import { AppIcon } from '@/components/ui/AppIcon';
 import type { StatCardData } from '@/types/dashboard';
 
 export function StatCard({
@@ -18,8 +19,8 @@ export function StatCard({
 }: StatCardData) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5">
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
           <p className="text-gray-500 text-sm">{label}</p>
           <p className="mt-1 font-bold text-2xl text-gray-900">{value}</p>
           {subLabel != null && subValue != null && (
@@ -28,7 +29,7 @@ export function StatCard({
             </p>
           )}
         </div>
-        <span className={cn('material-symbols-outlined text-[28px]', iconColorClass)}>{icon}</span>
+        <AppIcon name={icon} className={cn('size-7', iconColorClass)} />
       </div>
       {change != null && changeDirection != null && (
         <p

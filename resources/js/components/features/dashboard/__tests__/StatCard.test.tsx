@@ -44,7 +44,7 @@ describe('StatCard', () => {
   });
 
   it('アイコンが表示されること', () => {
-    render(<StatCard {...defaultProps} />);
-    expect(screen.getByText('group')).toBeInTheDocument();
+    const { container } = render(<StatCard {...defaultProps} />);
+    expect(container.querySelector('svg')).toBeInTheDocument();
   });
 });

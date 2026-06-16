@@ -27,8 +27,8 @@ describe('NavItem', () => {
   });
 
   it('アイコンが表示されること', () => {
-    render(<NavItem {...defaultProps} />);
-    expect(screen.getByText('dashboard')).toBeInTheDocument();
+    const { container } = render(<NavItem {...defaultProps} />);
+    expect(container.querySelector('svg')).toBeInTheDocument();
   });
 
   it('active=true で aria-current="page" が設定されること', () => {

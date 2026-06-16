@@ -7,6 +7,7 @@ import { router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { logout } from '@/actions/App/Http/Controllers/Web/AuthPageController';
 import type { AppPageProps } from '@/types/index.d.ts';
+import { AppIcon } from '@/components/ui/AppIcon';
 import { LogoutModal } from './LogoutModal';
 
 export function TopNav() {
@@ -57,7 +58,7 @@ export function TopNavView({
       <header className="flex h-16 items-center justify-between gap-4 border-gray-200 border-b bg-white px-6">
         {/* 検索バー */}
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="material-symbols-outlined text-gray-400">search</span>
+          <AppIcon name="search" className="size-5 text-gray-400" />
           <input
             type="text"
             aria-label="銘柄・ニュース検索"
@@ -78,7 +79,7 @@ export function TopNavView({
             aria-label="アラート通知"
             className="relative min-h-11 min-w-11 rounded-md text-gray-500 transition-[background-color,color,transform] hover:bg-gray-100 hover:text-gray-700 active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
           >
-            <span className="material-symbols-outlined">notifications</span>
+            <AppIcon name="notifications" className="mx-auto size-5" />
           </button>
 
           {/* ユーザー名 */}

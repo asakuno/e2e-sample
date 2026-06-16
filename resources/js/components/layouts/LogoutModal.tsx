@@ -6,6 +6,7 @@
  */
 import { useTransition } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { AppIcon } from '@/components/ui/AppIcon';
 
 type LogoutModalProps = {
   open: boolean;
@@ -35,13 +36,8 @@ export function LogoutModal({ open, onClose, action, processing }: LogoutModalPr
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent opacity-50" />
 
         {/* アイコン */}
-        <div className="mb-8 text-slate-700 dark:text-slate-200">
-          <span
-            className="material-symbols-outlined text-4xl font-light opacity-90"
-            aria-hidden="true"
-          >
-            logout
-          </span>
+        <div className="mb-8 flex justify-center text-slate-700 dark:text-slate-200">
+          <AppIcon name="logout" className="size-10 opacity-90" />
         </div>
 
         <DialogTitle className="sr-only">ログアウト確認</DialogTitle>

@@ -20,53 +20,69 @@ vi.mock('@inertiajs/react', () => ({
   })),
 }));
 
-import type { ActivityItemData, StatCardData, TrendData } from '@/types/dashboard';
+import type { ActivityItemData, StatCardData, TopStockData, TrendData } from '@/types/dashboard';
 import Dashboard from '../Dashboard';
 
 const stats: StatCardData[] = [
   {
-    label: 'S&P 500',
-    value: '5,842.91',
-    change: '+24.3',
-    changeDirection: 'up',
-    icon: 'show_chart',
-    iconColorClass: 'text-blue-500',
-  },
-  {
-    label: '日経平均',
-    value: '39,812.24',
-    change: '-0.18%',
-    changeDirection: 'down',
-    icon: 'candlestick_chart',
-    iconColorClass: 'text-red-500',
-  },
-  {
-    label: 'ウォッチリスト',
-    value: '12',
-    change: '+2銘柄',
-    changeDirection: 'up',
+    label: 'ウォッチリスト銘柄数',
+    value: '3',
+    change: '監視中',
+    changeDirection: 'neutral',
     icon: 'visibility',
-    iconColorClass: 'text-green-500',
+    iconColorClass: 'text-blue-600',
+  },
+  {
+    label: '直近ポジティブ材料',
+    value: '2',
+    subLabel: '対象',
+    subValue: '直近7日',
+    change: 'AI分析結果',
+    changeDirection: 'up',
+    icon: 'trending_up',
+    iconColorClass: 'text-green-600',
+  },
+  {
+    label: '未分析ニュース',
+    value: '1',
+    change: 'ウォッチ銘柄関連',
+    changeDirection: 'neutral',
+    icon: 'article',
+    iconColorClass: 'text-orange-600',
   },
 ];
 
 const recentTrend: TrendData = {
-  total: 1500,
-  changePercent: '+8.2%',
+  total: 4,
+  changePercent: '+2件',
   changeDirection: 'up',
-  description: '先月比',
+  description: '直近7日の分析件数',
   points: [
-    { label: '1月', value: 100 },
-    { label: '2月', value: 150 },
+    { label: '6/9', value: 1 },
+    { label: '6/10', value: 3 },
   ],
 };
 
-const recentActivities: ActivityItemData[] = [
+const topStocks: TopStockData[] = [
   {
     id: 1,
-    title: 'AAPL が高値を更新',
-    description: 'ウォッチ銘柄の Apple が直近30日の高値を更新しました',
-    timeAgo: '10分前',
+    symbol: 'AAPL',
+    name: 'Apple Inc.',
+    market: 'us',
+    totalScore: 8.25,
+    positiveCount: 3,
+    negativeCount: 1,
+    reason: 'ポジティブ材料が増加',
+    signalDate: '2026-06-15',
+  },
+];
+
+const importantNews: ActivityItemData[] = [
+  {
+    id: 1,
+    title: 'Apple announces new product',
+    description: 'AAPL / impact 8: 売上成長にポジティブ',
+    timeAgo: '2026-06-15 11:00',
     dotColor: 'green',
   },
 ];
@@ -78,7 +94,9 @@ const defaultProps = {
   errors: {},
   stats,
   recentTrend,
-  recentActivities,
+  topStocks,
+  importantNews,
+  latestAnalysisAt: '2026-06-15 11:00',
 };
 
 describe('Dashboard', () => {
@@ -92,22 +110,25 @@ describe('Dashboard', () => {
     expect(screen.getByText('マーケットダッシュボード')).toBeInTheDocument();
   });
 
-  it('StatCard が3枚表示されること', () => {
+  it('実データ集計の StatCard が表示されること', () => {
     render(<Dashboard {...defaultProps} />);
-    expect(screen.getByText('S&P 500')).toBeInTheDocument();
-    expect(screen.getByText('日経平均')).toBeInTheDocument();
-    expect(screen.getByText('ウォッチリスト')).toBeInTheDocument();
+    expect(screen.getByText('ウォッチリスト銘柄数')).toBeInTheDocument();
+    expect(screen.getByText('直近ポジティブ材料')).toBeInTheDocument();
+    expect(screen.getByText('未分析ニュース')).toBeInTheDocument();
   });
 
   it('TrendChart が表示されること', () => {
     render(<Dashboard {...defaultProps} />);
-    expect(screen.getByText('1500')).toBeInTheDocument();
+    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getByText('直近7日の分析件数')).toBeInTheDocument();
   });
 
-  it('RecentActivity が表示されること', () => {
+  it('注目銘柄ランキングと重要ニュースが表示されること', () => {
     render(<Dashboard {...defaultProps} />);
-    expect(screen.getByText('最近のアクティビティ')).toBeInTheDocument();
-    expect(screen.getByText('AAPL が高値を更新')).toBeInTheDocument();
+    expect(screen.getByText('注目銘柄ランキング')).toBeInTheDocument();
+    expect(screen.getByText('AAPL')).toBeInTheDocument();
+    expect(screen.getByText('重要ニュース')).toBeInTheDocument();
+    expect(screen.getByText('Apple announces new product')).toBeInTheDocument();
   });
 
   it('main 要素が存在すること', () => {

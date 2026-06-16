@@ -39,9 +39,24 @@ export interface ActivityItemData {
   dotColor: 'blue' | 'green' | 'orange' | 'gray';
 }
 
+/** 注目銘柄ランキングデータ */
+export interface TopStockData {
+  id: number;
+  symbol: string;
+  name: string;
+  market: string;
+  totalScore: number;
+  positiveCount: number;
+  negativeCount: number;
+  reason: string | null;
+  signalDate: string | null;
+}
+
 /** ダッシュボードページProps */
 export interface DashboardPageProps extends AppPageProps {
   stats: StatCardData[];
   recentTrend: TrendData;
-  recentActivities: ActivityItemData[];
+  topStocks: TopStockData[];
+  importantNews: ActivityItemData[];
+  latestAnalysisAt: string | null;
 }

@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Models\Watchlist;
 use App\Policies\WatchlistPolicy;
+use App\Repositories\DashboardRepository;
+use App\Repositories\DashboardRepositoryInterface;
 use App\Repositories\NewsRepository;
 use App\Repositories\NewsRepositoryInterface;
 use App\Repositories\StockRepository;
@@ -43,6 +45,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             WatchlistRepositoryInterface::class,
             WatchlistRepository::class,
+        );
+
+        $this->app->bind(
+            DashboardRepositoryInterface::class,
+            DashboardRepository::class,
         );
     }
 

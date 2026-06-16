@@ -1,3 +1,5 @@
+import { AppIcon } from '@/components/ui/AppIcon';
+
 interface FeaturePlaceholderProps {
   title: string;
   description: string;
@@ -10,11 +12,8 @@ export function FeaturePlaceholder({ title, description, icon, items }: FeatureP
     <section className="flex flex-col gap-6">
       <div>
         <div className="flex items-center gap-3">
-          <span
-            className="material-symbols-outlined rounded-lg bg-blue-50 p-2 text-[28px] text-blue-700"
-            aria-hidden="true"
-          >
-            {icon}
+          <span className="rounded-lg bg-blue-50 p-2 text-blue-700">
+            <AppIcon name={icon} className="size-7" />
           </span>
           <div>
             <h1 className="font-bold text-2xl text-gray-900">{title}</h1>
