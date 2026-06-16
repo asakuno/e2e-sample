@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Stock\StockIndexRequest;
 use App\Http\Requests\Stock\StockShowRequest;
+use App\Http\Resources\Stock\StockDetailResource;
+use App\Http\Resources\Stock\StockListItemResource;
 use App\UseCases\Stock\ListStocksUseCase;
 use App\UseCases\Stock\ShowStockUseCase;
 use Inertia\Inertia;
@@ -26,7 +28,7 @@ class StocksPageController extends Controller
         $userId = (int) $request->user()->getAuthIdentifier();
 
         return Inertia::render('Stocks', [
-            'stocks' => fn (): array => $useCase->execute($filters, $userId),
+            'stocks' => fn (): array => StockListItemResource::collection($useCase->execute($filters, $userId))->resolve($request),
             'filters' => [
                 'q' => $filters->q ?? '',
                 'market' => $filters->market ?? '',
@@ -41,7 +43,7 @@ class StocksPageController extends Controller
     public function show(StockShowRequest $request, int $stock, ShowStockUseCase $useCase): Response
     {
         return Inertia::render('StockDetail', [
-            'stock' => $useCase->execute($stock, $request->period()),
+            'stock' => StockDetailResource::make($useCase->execute($stock, $request->period()))->resolve($request),
         ]);
     }
 }

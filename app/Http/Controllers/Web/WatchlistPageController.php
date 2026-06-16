@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Watchlist\StoreWatchlistRequest;
 use App\Http\Requests\Watchlist\UpdateWatchlistRequest;
+use App\Http\Resources\Watchlist\WatchlistItemResource;
 use App\Models\Watchlist;
 use App\UseCases\Watchlist\CreateWatchlistUseCase;
 use App\UseCases\Watchlist\DeleteWatchlistUseCase;
@@ -29,7 +30,9 @@ class WatchlistPageController extends Controller
     public function __invoke(Request $request, ListWatchlistsUseCase $useCase): Response
     {
         return Inertia::render('Watchlist', [
-            'watchlists' => fn (): array => $useCase->execute((int) $request->user()->getAuthIdentifier()),
+            'watchlists' => fn (): array => WatchlistItemResource::collection(
+                $useCase->execute((int) $request->user()->getAuthIdentifier()),
+            )->resolve($request),
         ]);
     }
 

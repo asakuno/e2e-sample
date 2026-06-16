@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition } from './../../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\Web\NewsPageController::__invoke
-* @see Http/Controllers/Web/NewsPageController.php:22
+* @see Http/Controllers/Web/NewsPageController.php:23
 * @route '/news'
 */
 const NewsPageController = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ NewsPageController.definition = {
 
 /**
 * @see \App\Http\Controllers\Web\NewsPageController::__invoke
-* @see Http/Controllers/Web/NewsPageController.php:22
+* @see Http/Controllers/Web/NewsPageController.php:23
 * @route '/news'
 */
 NewsPageController.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ NewsPageController.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Web\NewsPageController::__invoke
-* @see Http/Controllers/Web/NewsPageController.php:22
+* @see Http/Controllers/Web/NewsPageController.php:23
 * @route '/news'
 */
 NewsPageController.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -35,7 +35,7 @@ NewsPageController.get = (options?: RouteQueryOptions): RouteDefinition<'get'> =
 
 /**
 * @see \App\Http\Controllers\Web\NewsPageController::__invoke
-* @see Http/Controllers/Web/NewsPageController.php:22
+* @see Http/Controllers/Web/NewsPageController.php:23
 * @route '/news'
 */
 NewsPageController.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({

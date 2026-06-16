@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
-use App\Http\Controllers\Controller;
 use App\Enums\AnalysisSentiment;
+use App\Http\Controllers\Controller;
 use App\Http\Requests\News\NewsIndexRequest;
+use App\Http\Resources\News\NewsArticleResource;
 use App\UseCases\News\ListNewsUseCase;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,7 +25,7 @@ class NewsPageController extends Controller
         $filters = $request->toNewsSearchData();
 
         return Inertia::render('News', [
-            'news' => fn (): array => $useCase->execute($filters),
+            'news' => fn (): array => NewsArticleResource::collection($useCase->execute($filters))->resolve($request),
             'filters' => [
                 'stock_id' => $filters->stockId === null ? '' : (string) $filters->stockId,
                 'sentiment' => $filters->sentiment === null ? '' : (string) $filters->sentiment->value,
