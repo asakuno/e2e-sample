@@ -1,7 +1,8 @@
-import { Link } from '@inertiajs/react';
 import { ArrowRight, Pencil, Trash2 } from 'lucide-react';
-import { useTransition } from 'react';
+import { ActionButton } from '@/components/ui/ActionButton';
+import { ActionLink } from '@/components/ui/ActionLink';
 import { Button } from '@/components/ui/button';
+import { visitAction } from '@/lib/inertia-actions';
 import { show as stockShow } from '@/routes/stocks';
 import type { WatchlistItem } from '@/types/watchlist';
 import { WatchlistPriorityBadge } from './WatchlistPriorityBadge';
@@ -13,23 +14,10 @@ interface WatchlistRowProps {
 }
 
 export function WatchlistRow({ item, editMemoAction, removeAction }: WatchlistRowProps) {
-  const [isEditPending, startEditTransition] = useTransition();
-  const [isRemovePending, startRemoveTransition] = useTransition();
-
   const handleEditMemo = () => {
     if (editMemoAction == null) return;
 
-    startEditTransition(async () => {
-      await editMemoAction(item);
-    });
-  };
-
-  const handleRemove = () => {
-    if (removeAction == null) return;
-
-    startRemoveTransition(async () => {
-      await removeAction(item);
-    });
+    void editMemoAction(item);
   };
 
   return (
@@ -59,33 +47,30 @@ export function WatchlistRow({ item, editMemoAction, removeAction }: WatchlistRo
               variant="ghost"
               size="icon-sm"
               aria-label={`${item.stock.symbol} のメモを編集`}
-              aria-busy={isEditPending || undefined}
-              disabled={isEditPending}
               onClick={handleEditMemo}
             >
               <Pencil aria-hidden="true" className="size-4" />
             </Button>
           )}
           {removeAction != null && (
-            <Button
-              type="button"
+            <ActionButton
               variant="ghost"
               size="icon-sm"
               aria-label={`${item.stock.symbol} をウォッチリストから削除`}
-              aria-busy={isRemovePending || undefined}
-              disabled={isRemovePending}
-              onClick={handleRemove}
+              action={() => removeAction(item)}
             >
               <Trash2 aria-hidden="true" className="size-4" />
-            </Button>
+            </ActionButton>
           )}
-          <Link
+          <ActionLink
             href={stockShow.url(item.stock.id)}
+            action={visitAction(stockShow.url(item.stock.id))}
+            pendingClassName="opacity-70"
             className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium text-gray-700 text-sm transition hover:bg-gray-100 hover:text-gray-950"
           >
             詳細
             <ArrowRight aria-hidden="true" className="size-4" />
-          </Link>
+          </ActionLink>
         </div>
       </td>
     </tr>

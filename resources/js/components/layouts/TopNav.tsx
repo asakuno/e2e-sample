@@ -20,7 +20,6 @@ export function TopNav() {
         logout.url(),
         {},
         {
-          onError: () => resolve(),
           onFinish: () => resolve(),
         },
       );

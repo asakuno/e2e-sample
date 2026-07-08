@@ -53,10 +53,13 @@ function WatchlistEditDialogForm({ item, open, onOpenChange }: WatchlistEditDial
   }).withPrecognition(action.method, action.url);
 
   const handleSubmit = () => {
-    startTransition(() => {
-      form.submit(action, {
-        preserveScroll: true,
-        onSuccess: () => onOpenChange(false),
+    startTransition(async () => {
+      await new Promise<void>((resolve) => {
+        form.submit(action, {
+          preserveScroll: true,
+          onSuccess: () => onOpenChange(false),
+          onFinish: () => resolve(),
+        });
       });
     });
   };

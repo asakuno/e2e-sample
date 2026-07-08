@@ -10,8 +10,11 @@ export default function Watchlist({ watchlists }: WatchlistPageProps) {
   const [editingItem, setEditingItem] = useState<WatchlistItem | null>(null);
 
   const handleRemove = (item: WatchlistItem) => {
-    router.delete(destroy.url(item.id), {
-      preserveScroll: true,
+    return new Promise<void>((resolve) => {
+      router.delete(destroy.url(item.id), {
+        preserveScroll: true,
+        onFinish: () => resolve(),
+      });
     });
   };
 

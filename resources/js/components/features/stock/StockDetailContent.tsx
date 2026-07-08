@@ -1,5 +1,6 @@
-import { Link } from '@inertiajs/react';
 import { ArrowLeft, BarChart3 } from 'lucide-react';
+import { ActionLink } from '@/components/ui/ActionLink';
+import { visitAction } from '@/lib/inertia-actions';
 import { index, show } from '@/routes/stocks';
 import type { StockDetail } from '@/types/stocks';
 import { StockCompanyInfo } from './StockCompanyInfo';
@@ -14,13 +15,15 @@ type StockDetailContentProps = {
 export function StockDetailContent({ stock }: StockDetailContentProps) {
   return (
     <div className="flex flex-col gap-6">
-      <Link
+      <ActionLink
         href={index.url()}
+        action={visitAction(index.url())}
+        pendingClassName="opacity-70"
         className="inline-flex w-fit items-center gap-2 rounded-md px-2 py-1 font-medium text-gray-600 text-sm transition hover:bg-gray-100 hover:text-gray-950"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
         銘柄一覧
-      </Link>
+      </ActionLink>
 
       <StockDetailHeader stock={stock} />
 
@@ -36,9 +39,11 @@ export function StockDetailContent({ stock }: StockDetailContentProps) {
                 const isActive = option.value === stock.selected_period;
 
                 return (
-                  <Link
+                  <ActionLink
                     key={option.value}
                     href={show.url(stock.id, { query: { period: option.value } })}
+                    action={visitAction(show.url(stock.id, { query: { period: option.value } }))}
+                    pendingClassName="opacity-70"
                     className={`rounded px-3 py-1.5 font-medium text-sm transition ${
                       isActive
                         ? 'bg-white text-gray-950 shadow-sm'
@@ -47,7 +52,7 @@ export function StockDetailContent({ stock }: StockDetailContentProps) {
                     aria-current={isActive ? 'page' : undefined}
                   >
                     {option.label}
-                  </Link>
+                  </ActionLink>
                 );
               })}
             </div>

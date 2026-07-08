@@ -7,17 +7,20 @@ import type { StockListItem, StocksPageProps } from '@/types/stocks';
 
 export default function Stocks({ stocks, filters, marketOptions }: StocksPageProps) {
   const handleAddToWatchlist = (stock: StockListItem) => {
-    router.post(
-      storeWatchlist.url(),
-      {
-        stock_id: stock.id,
-        memo: '',
-        priority: 2,
-      },
-      {
-        preserveScroll: true,
-      },
-    );
+    return new Promise<void>((resolve) => {
+      router.post(
+        storeWatchlist.url(),
+        {
+          stock_id: stock.id,
+          memo: '',
+          priority: 2,
+        },
+        {
+          preserveScroll: true,
+          onFinish: () => resolve(),
+        },
+      );
+    });
   };
 
   return (
