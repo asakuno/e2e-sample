@@ -240,18 +240,28 @@ function Button({ onClick, children }: ButtonOldProps) {
 <Button onClick={() => startTransition(() => doSomething())} />;
 
 // ✅ Action Props: action を受け取り内部でトランジション化
+type ActionContext = {
+  transition: (callback: () => void) => void;
+};
+
+type ActionCallback = (context: ActionContext) => void | Promise<void>;
+
 interface ButtonProps {
-  action: () => Promise<void>;
+  action: ActionCallback;
   children: React.ReactNode;
 }
 
 function Button({ action, children }: ButtonProps) {
   const [isPending, startTransition] = useTransition();
+  const transition: ActionContext["transition"] = (callback) => {
+    startTransition(callback);
+  };
+
   return (
     <button
       onClick={() =>
         startTransition(async () => {
-          await action();
+          await action({ transition });
         })
       }
       disabled={isPending}
@@ -269,6 +279,40 @@ function Button({ action, children }: ButtonProps) {
 - **汎用コンポーネント**にトランジションを組み込むことで、使う側は意識せず自動的にAsync Reactの恩恵を受ける
 - ローディング表示もコンポーネント内で完結する
 - Action propの命名: `action`, `changeAction`, `submitAction` 等
+- action内で `await` 後にstate更新する場合は、action context の `transition` helperで追加のトランジションに包む
+
+### Action context と ActionScope
+
+`await` 後のstate更新はReact公式の制約により追加の `startTransition` が必要になるため、actionには `transition` helperを渡す。toast / Sentry / 共通ログなど操作横断のエラー通知は `ActionScope onError` に集約し、個別のバリデーションや業務エラーはaction内で処理する。
+
+```tsx
+type ActionContext = {
+  transition: (callback: () => void) => void;
+};
+
+type ActionCallback = (context: ActionContext) => void | Promise<void>;
+
+function SaveSection() {
+  const [saved, setSaved] = useState(false);
+
+  return (
+    <ActionScope onError={(error) => reportActionError(error)}>
+      <ActionButton
+        action={async ({ transition }) => {
+          await save();
+
+          transition(() => {
+            setSaved(true);
+          });
+        }}
+      >
+        Save
+      </ActionButton>
+      {saved && <p>Saved</p>}
+    </ActionScope>
+  );
+}
+```
 
 ## 5. Data Fetching (Suspense + use())
 
@@ -590,4 +634,5 @@ function SaveButton({ action, children }: SaveButtonProps) {
 **使い分け**:
 
 - **データ読み取り（`use()`）のエラー** → `ErrorBoundary` で宣言的にキャッチ
-- **ミューテーション（action）のエラー** → `try/catch` でステート管理
+- **個別ミューテーション（action）のエラー** → action内の `try/catch` でフォームエラーや業務エラーをステート管理
+- **操作横断のエラー通知** → `ActionScope onError` でtoast / Sentry / 共通ログを集約

@@ -24,9 +24,10 @@ const ActionScopeContext = createContext<ActionScopeContextValue | null>(null);
 
 type ActionScopeProps = {
   children: ReactNode;
+  onError?: (error: unknown) => void;
 };
 
-export function ActionScope({ children }: ActionScopeProps) {
+export function ActionScope({ children, onError }: ActionScopeProps) {
   const [isPending, startActionTransition] = useTransition();
 
   const transition = useCallback<ActionContext['transition']>(
@@ -39,10 +40,15 @@ export function ActionScope({ children }: ActionScopeProps) {
   const runAction = useCallback(
     (action: ActionCallback) => {
       startActionTransition(async () => {
-        await action({ transition });
+        try {
+          await action({ transition });
+        } catch (error) {
+          onError?.(error);
+          throw error;
+        }
       });
     },
-    [startActionTransition, transition],
+    [startActionTransition, transition, onError],
   );
 
   const value = useMemo<ActionScopeContextValue>(

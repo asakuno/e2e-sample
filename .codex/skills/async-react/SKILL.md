@@ -35,6 +35,7 @@ Suspenseはもはや全ての前提であり必須。アプリケーション内
 3. **ローディング表示**: `isPending` で制御する。手動の `isLoading` ステートは使わない
 4. **楽観的更新**: トグル・入力など即座のフィードバックが必要な場面では `useOptimistic` を使う
 5. **Suspenseバウンダリ**: データ取得を行うコンポーネントの親に必ず `<Suspense>` を配置する
+6. **await後のstate更新**: action内で `await` 後に `setState` する場合は、action context の `transition(() => setState(...))` で追加のトランジションに包む
 
 ### SHOULD（推奨）
 
@@ -45,6 +46,7 @@ Suspenseはもはや全ての前提であり必須。アプリケーション内
 5. **プリフェッチ**: ナビゲーション前にデータをプリロードする
 6. **ErrorBoundary**: Suspenseバウンダリの外側に `<ErrorBoundary>` を配置し、データフェッチのエラーを宣言的にハンドリングする
 7. **action内のtry/catch**: `useActionState` や action prop のコールバック内で `try/catch` を使い、エラー状態を返す
+8. **ActionScope onError**: toast / Sentry / 共通ログなど操作横断のエラー通知が必要な領域では `ActionScope` に `onError` を渡す。個別のバリデーションや業務エラーは action 内で処理する
 
 ### MUST NOT（禁止）
 
@@ -65,6 +67,7 @@ Suspenseはもはや全ての前提であり必須。アプリケーション内
 | タブ切り替え         | `useOptimistic` + `startTransition`  | タブの即座切り替え                    |
 | データ一覧表示       | `Suspense` + `use()`                 | 非同期データの宣言的表示              |
 | フォーム送信         | `useActionState`                     | フォームのステート管理                |
+| 共通actionエラー処理 | `ActionScope onError`                | toast / Sentry / 共通ログ             |
 | ページ遷移           | `startTransition` + `ViewTransition` | スムーズなナビゲーション              |
 | ページネーション     | `Suspense` + `startTransition`       | ちらつきのないページ切り替え          |
 

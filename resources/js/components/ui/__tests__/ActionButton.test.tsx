@@ -1,8 +1,29 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Component, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { ActionButton } from '../ActionButton';
 import { ActionScope, type ActionCallback } from '../ActionScope';
+
+type TestErrorBoundaryProps = {
+  children: ReactNode;
+};
+
+type TestErrorBoundaryState = {
+  hasError: boolean;
+};
+
+class TestErrorBoundary extends Component<TestErrorBoundaryProps, TestErrorBoundaryState> {
+  state: TestErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    return this.state.hasError ? <div role="alert">エラー</div> : this.props.children;
+  }
+}
 
 describe('ActionButton', () => {
   it('クリックした場合、action が呼ばれること', async () => {
@@ -83,6 +104,32 @@ describe('ActionButton', () => {
     await user.click(screen.getByRole('button', { name: '保存' }));
     await waitFor(() => {
       const actual = transitionCallback.mock.calls.length;
+
+      expect(actual).toBe(expected);
+    });
+  });
+
+  it('ActionScope 配下の action が失敗した場合、onError が呼ばれること', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const expected = new Error('保存に失敗しました');
+    const onError = vi.fn();
+    const action: ActionCallback = async () => {
+      await Promise.resolve();
+      throw expected;
+    };
+
+    // Act
+    render(
+      <TestErrorBoundary>
+        <ActionScope onError={onError}>
+          <ActionButton action={action}>保存</ActionButton>
+        </ActionScope>
+      </TestErrorBoundary>,
+    );
+    await user.click(screen.getByRole('button', { name: '保存' }));
+    await waitFor(() => {
+      const actual = onError.mock.calls[0]?.[0];
 
       expect(actual).toBe(expected);
     });
