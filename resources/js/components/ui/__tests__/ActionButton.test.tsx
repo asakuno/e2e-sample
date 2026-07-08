@@ -1,8 +1,8 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { ActionButton } from '../ActionButton';
-import { ActionScope } from '../ActionScope';
+import { ActionScope, type ActionCallback } from '../ActionScope';
 
 describe('ActionButton', () => {
   it('クリックした場合、action が呼ばれること', async () => {
@@ -65,6 +65,26 @@ describe('ActionButton', () => {
 
     await act(async () => {
       resolveAction();
+    });
+  });
+
+  it('await 後に action context の transition を呼び出せること', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const transitionCallback = vi.fn();
+    const action: ActionCallback = async ({ transition }) => {
+      await Promise.resolve();
+      transition(transitionCallback);
+    };
+    const expected = 1;
+
+    // Act
+    render(<ActionButton action={action}>保存</ActionButton>);
+    await user.click(screen.getByRole('button', { name: '保存' }));
+    await waitFor(() => {
+      const actual = transitionCallback.mock.calls.length;
+
+      expect(actual).toBe(expected);
     });
   });
 });

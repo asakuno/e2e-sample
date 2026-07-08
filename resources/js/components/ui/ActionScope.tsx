@@ -1,6 +1,7 @@
 import {
   createContext,
   type ReactNode,
+  startTransition as startReactTransition,
   useCallback,
   useContext,
   useMemo,
@@ -9,9 +10,15 @@ import {
 
 export type Awaitable<T> = T | Promise<T>;
 
+export type ActionContext = {
+  transition: (callback: () => void) => void;
+};
+
+export type ActionCallback = (context: ActionContext) => Awaitable<void>;
+
 type ActionScopeContextValue = {
   isPending: boolean;
-  runAction: (action: () => Awaitable<void>) => void;
+  runAction: (action: ActionCallback) => void;
 };
 
 const ActionScopeContext = createContext<ActionScopeContextValue | null>(null);
@@ -21,15 +28,19 @@ type ActionScopeProps = {
 };
 
 export function ActionScope({ children }: ActionScopeProps) {
-  const [isPending, startTransition] = useTransition();
+  const [isPending, startActionTransition] = useTransition();
+
+  const transition = useCallback<ActionContext['transition']>((callback) => {
+    startReactTransition(callback);
+  }, []);
 
   const runAction = useCallback(
-    (action: () => Awaitable<void>) => {
-      startTransition(async () => {
-        await action();
+    (action: ActionCallback) => {
+      startActionTransition(async () => {
+        await action({ transition });
       });
     },
-    [startTransition],
+    [startActionTransition, transition],
   );
 
   const value = useMemo<ActionScopeContextValue>(
@@ -49,19 +60,29 @@ export function useActionScope() {
 
 export function useActionRunner() {
   const scope = useActionScope();
-  const [localPending, localStartTransition] = useTransition();
+  const [localPending, localStartActionTransition] = useTransition();
+
+  const localTransition = useCallback<ActionContext['transition']>((callback) => {
+    startReactTransition(callback);
+  }, []);
 
   const runLocalAction = useCallback(
-    (action: () => Awaitable<void>) => {
-      localStartTransition(async () => {
-        await action();
+    (action: ActionCallback) => {
+      localStartActionTransition(async () => {
+        await action({ transition: localTransition });
       });
     },
-    [localStartTransition],
+    [localStartActionTransition, localTransition],
   );
 
-  return {
-    isPending: scope?.isPending ?? localPending,
-    runAction: scope?.runAction ?? runLocalAction,
-  };
+  const isPending = scope?.isPending ?? localPending;
+  const runAction = scope?.runAction ?? runLocalAction;
+
+  return useMemo(
+    () => ({
+      isPending,
+      runAction,
+    }),
+    [isPending, runAction],
+  );
 }

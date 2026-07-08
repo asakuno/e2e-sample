@@ -1,9 +1,9 @@
 import type React from 'react';
-import { useActionRunner, type Awaitable } from '@/components/ui/ActionScope';
+import { useActionRunner, type ActionCallback } from '@/components/ui/ActionScope';
 import { Button } from '@/components/ui/button';
 
 type ActionButtonProps = Omit<React.ComponentProps<typeof Button>, 'onClick' | 'type'> & {
-  action: () => Awaitable<void>;
+  action: ActionCallback;
   pendingLabel?: React.ReactNode;
 };
 

@@ -4,13 +4,13 @@
  * Glassmorphismデザインの確認モーダル。
  * shadcn/ui Dialog をベースにカスタムスタイルを適用。
  */
-import { useActionRunner } from '@/components/ui/ActionScope';
+import { useActionRunner, type ActionCallback } from '@/components/ui/ActionScope';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 
 type LogoutModalProps = {
   open: boolean;
   onClose: () => void;
-  action: () => void | Promise<void>;
+  action: ActionCallback;
   processing?: boolean;
 };
 

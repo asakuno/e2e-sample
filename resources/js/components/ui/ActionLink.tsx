@@ -1,10 +1,10 @@
 import type React from 'react';
-import { useActionRunner, type Awaitable } from '@/components/ui/ActionScope';
+import { useActionRunner, type ActionCallback } from '@/components/ui/ActionScope';
 import { cn } from '@/lib/utils';
 
 type ActionLinkProps = Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'onClick'> & {
   href: string;
-  action: () => Awaitable<void>;
+  action: ActionCallback;
   pendingClassName?: string;
   onClick?: React.MouseEventHandler<HTMLAnchorElement>;
 };

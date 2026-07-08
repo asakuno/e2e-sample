@@ -4,7 +4,7 @@
  * フォーム送信用の青色ボタン。processing状態とdisabled状態に対応。
  */
 import type React from 'react';
-import { useActionRunner } from '@/components/ui/ActionScope';
+import { useActionRunner, type ActionCallback } from '@/components/ui/ActionScope';
 import { cn } from '@/lib/utils';
 
 interface PrimaryButtonProps {
@@ -14,7 +14,7 @@ interface PrimaryButtonProps {
   processingLabel?: string;
   children: React.ReactNode;
   className?: string;
-  action?: () => void | Promise<void>;
+  action?: ActionCallback;
 }
 
 export function PrimaryButton({
