@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 type ActionButtonProps = Omit<React.ComponentProps<typeof Button>, 'onClick' | 'type'> & {
   action: ActionCallback;
   pendingLabel?: React.ReactNode;
+  disableWhilePending?: boolean;
 };
 
 export function ActionButton({
@@ -12,11 +13,12 @@ export function ActionButton({
   pendingLabel,
   children,
   disabled,
+  disableWhilePending = true,
   'aria-busy': ariaBusy,
   ...props
 }: ActionButtonProps) {
   const { isPending, runAction } = useActionRunner();
-  const isDisabled = Boolean(disabled || isPending);
+  const isDisabled = Boolean(disabled || (disableWhilePending && isPending));
 
   return (
     <Button

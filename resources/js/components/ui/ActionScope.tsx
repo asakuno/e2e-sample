@@ -1,7 +1,6 @@
 import {
   createContext,
   type ReactNode,
-  startTransition as startReactTransition,
   useCallback,
   useContext,
   useMemo,
@@ -30,9 +29,12 @@ type ActionScopeProps = {
 export function ActionScope({ children }: ActionScopeProps) {
   const [isPending, startActionTransition] = useTransition();
 
-  const transition = useCallback<ActionContext['transition']>((callback) => {
-    startReactTransition(callback);
-  }, []);
+  const transition = useCallback<ActionContext['transition']>(
+    (callback) => {
+      startActionTransition(callback);
+    },
+    [startActionTransition],
+  );
 
   const runAction = useCallback(
     (action: ActionCallback) => {
@@ -62,9 +64,12 @@ export function useActionRunner() {
   const scope = useActionScope();
   const [localPending, localStartActionTransition] = useTransition();
 
-  const localTransition = useCallback<ActionContext['transition']>((callback) => {
-    startReactTransition(callback);
-  }, []);
+  const localTransition = useCallback<ActionContext['transition']>(
+    (callback) => {
+      localStartActionTransition(callback);
+    },
+    [localStartActionTransition],
+  );
 
   const runLocalAction = useCallback(
     (action: ActionCallback) => {

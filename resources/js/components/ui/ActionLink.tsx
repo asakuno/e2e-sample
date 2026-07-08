@@ -16,6 +16,7 @@ export function ActionLink({
   className,
   onClick,
   target,
+  children,
   'aria-busy': ariaBusy,
   ...props
 }: ActionLinkProps) {
@@ -39,7 +40,9 @@ export function ActionLink({
         event.preventDefault();
         runAction(action);
       }}
-    />
+    >
+      {children}
+    </a>
   );
 }
 
@@ -54,6 +57,7 @@ function shouldHandleNavigation(
     !event.metaKey &&
     !event.altKey &&
     !event.ctrlKey &&
-    !event.shiftKey
+    !event.shiftKey &&
+    !event.currentTarget.hasAttribute('download')
   );
 }

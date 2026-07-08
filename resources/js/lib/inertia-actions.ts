@@ -10,8 +10,11 @@ export function visitAction(href: string, options?: VisitOptions): () => Promise
       router.visit(href, {
         ...options,
         onFinish: (visit) => {
-          onFinish?.(visit);
-          resolve();
+          try {
+            onFinish?.(visit);
+          } finally {
+            resolve();
+          }
         },
       });
     });

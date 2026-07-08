@@ -87,4 +87,32 @@ describe('ActionButton', () => {
       expect(actual).toBe(expected);
     });
   });
+
+  it('disableWhilePending が false の場合、pending 中でも disabled にならないこと', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    let resolveAction: () => void = () => {};
+    const action = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveAction = resolve;
+        }),
+    );
+
+    // Act
+    render(
+      <ActionButton action={action} disableWhilePending={false}>
+        移動
+      </ActionButton>,
+    );
+    const actual = screen.getByRole('button', { name: '移動' });
+    await user.click(actual);
+
+    // Assert
+    expect(actual).not.toBeDisabled();
+
+    await act(async () => {
+      resolveAction();
+    });
+  });
 });
