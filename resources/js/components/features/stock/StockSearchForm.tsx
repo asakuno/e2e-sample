@@ -76,7 +76,7 @@ export function StockSearchForm({
         <div className="flex gap-2">
           <Button
             type="submit"
-            className="h-11 flex-1 lg:flex-none"
+            className="h-11 min-w-28 flex-1 lg:flex-none"
             disabled={processing}
             aria-busy={processing || undefined}
           >
