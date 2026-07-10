@@ -18,13 +18,11 @@ export default function VerifyEmail({ status }: VerifyEmailProps) {
   const { post, processing } = useForm({});
   const [cooldown, setCooldown] = useState(0);
 
-  const resendVerificationEmail = () =>
-    new Promise<void>((resolve) => {
-      post(send.url(), {
-        onSuccess: () => setCooldown(60),
-        onFinish: () => resolve(),
-      });
+  const resendVerificationEmail = () => {
+    post(send.url(), {
+      onSuccess: () => setCooldown(60),
     });
+  };
 
   useEffect(() => {
     if (cooldown <= 0) return;

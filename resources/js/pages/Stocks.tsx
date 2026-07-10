@@ -2,25 +2,26 @@ import { Head, router } from '@inertiajs/react';
 import { StockTable } from '@/components/features/stock/StockTable';
 import { StocksSearchPanel } from '@/components/features/stock/StocksSearchPanel';
 import { AuthenticatedLayout } from '@/layouts/AuthenticatedLayout';
+import { runInertiaAction } from '@/lib/inertia-actions';
 import { store as storeWatchlist } from '@/routes/watchlist';
 import type { StockListItem, StocksPageProps } from '@/types/stocks';
 
 export default function Stocks({ stocks, filters, marketOptions }: StocksPageProps) {
   const handleAddToWatchlist = (stock: StockListItem) => {
-    return new Promise<void>((resolve) => {
-      router.post(
-        storeWatchlist.url(),
-        {
-          stock_id: stock.id,
-          memo: '',
-          priority: 2,
-        },
-        {
-          preserveScroll: true,
-          onFinish: () => resolve(),
-        },
-      );
-    });
+    return runInertiaAction(
+      (visitOptions) => {
+        router.post(
+          storeWatchlist.url(),
+          {
+            stock_id: stock.id,
+            memo: '',
+            priority: 2,
+          },
+          visitOptions,
+        );
+      },
+      { preserveScroll: true },
+    );
   };
 
   return (

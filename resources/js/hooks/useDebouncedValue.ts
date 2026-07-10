@@ -27,6 +27,10 @@ export function useDebouncedValue<T>(value: T, options: UseDebouncedValueOptions
   const [debouncedValue, setDebouncedValue] = useState(value);
 
   useEffect(() => {
+    if (Object.is(value, debouncedValue)) {
+      return;
+    }
+
     const controller = new AbortController();
 
     startTransition(async () => {
@@ -44,7 +48,7 @@ export function useDebouncedValue<T>(value: T, options: UseDebouncedValueOptions
     return () => {
       controller.abort();
     };
-  }, [value, intervalMs, startTransition]);
+  }, [value, debouncedValue, intervalMs, startTransition]);
 
   return debouncedValue;
 }

@@ -2,7 +2,7 @@
 
 ## 1. Transitions (useTransition / startTransition)
 
-トランジションは、ステート更新を「緊急でない」とマークする仕組み。トランジション中にSuspenseが発生しても、**既存のUIを維持しつつバックグラウンドで新しいUIを準備**する。
+トランジションは、ステート更新を「緊急でない」とマークする仕組み。トランジション中にSuspenseが発生しても、**既存のUIを維持しつつバックグラウンドで新しいUIを準備**する。データ変更や検索などの非緊急なアプリケーションactionに使用し、即時反映が必要なローカルUI更新には使用しない。
 
 ### useTransition - コンポーネント内で使う場合
 
@@ -55,6 +55,7 @@ function navigate(url: string) {
 
 - `isPending` が必要 → `useTransition()`
 - 単にトランジションにしたいだけ → `startTransition()`
+- controlled input、モーダル・メニュー・ポップオーバー、focus・selection、PrimitiveのDOMイベント、即時ローカルUI更新 → 通常の `onClick` / `onChange`
 
 ## 2. Suspense
 
@@ -222,12 +223,12 @@ function TabList({ activeTab, changeAction, children }: TabListProps) {
 
 ## 4. Action Props Pattern
 
-コンポーネントが `onClick` ではなく `action` propを受け取り、内部でトランジションを管理するパターン。
+非緊急なアプリケーション操作を受けるコンポーネントが `action` propを受け取り、内部でトランジションを管理するパターン。
 
 ### 従来のパターン vs Action Propsパターン
 
 ```tsx
-// ❌ 従来: onClick を受け取る
+// ❌ 非緊急なアプリケーションactionを通常のonClickとして受け取る
 interface ButtonOldProps {
   onClick: () => void;
   children: React.ReactNode;
@@ -280,6 +281,7 @@ function Button({ action, children }: ButtonProps) {
 - ローディング表示もコンポーネント内で完結する
 - Action propの命名: `action`, `changeAction`, `submitAction` 等
 - action内で `await` 後にstate更新する場合は、action context の `transition` helperで追加のトランジションに包む
+- `action` propは全てのボタンに必須ではない。controlled input、モーダル・メニュー・ポップオーバー、focus・selection、PrimitiveのDOMイベント、即時ローカルUI更新には通常の `onClick` / `onChange` を使う
 
 ### Action context と ActionScope
 
@@ -379,68 +381,20 @@ async function updateItem(id: string, data: Record<string, unknown>) {
 }
 ```
 
-## 6. ViewTransition
+## 6. InertiaナビゲーションとView Transition
 
-画面遷移やリスト変更時にCSSアニメーションを統合する。
+`ActionLink` / `visitAction` を `useTransition` に接続する構成では、Inertiaリクエストの完了まで `isPending` を提供できる。pending表示、`aria-busy`、pending class、二重操作の制御に利用する。
 
-### リストアイテムのアニメーション
+ただし、呼び出し側で `visitAction` をTransitionに包んでも、`@inertiajs/react` 内部のpage swap自体はConcurrent Transitionにならない。次の挙動は保証しない。
 
-```tsx
-import { ViewTransition } from "react";
+- ページ交換自体のinterruptible rendering
+- Suspenseによる旧画面の保持
+- React TransitionとしてのInertia page swap
+- 古いページを表示したまま新しいページをバックグラウンドレンダーする挙動
 
-interface Item {
-  id: string;
-  name: string;
-}
+page swapをConcurrent Transition化するには、そのstate更新を所有するInertiaアダプター側での統合が必要になる。
 
-interface AnimatedListProps {
-  items: Item[];
-}
-
-function AnimatedList({ items }: AnimatedListProps) {
-  return (
-    <ViewTransition key="list" default="none" enter="auto" exit="auto">
-      <ul>
-        {items.map((item) => (
-          <ViewTransition key={item.id}>
-            <li>{item.name}</li>
-          </ViewTransition>
-        ))}
-      </ul>
-    </ViewTransition>
-  );
-}
-```
-
-### ページ遷移のアニメーション
-
-```tsx
-function AppRouter() {
-  const { url } = useRouter();
-
-  return (
-    <>
-      {url === "/" && (
-        <ViewTransition key={url} default="none" enter="auto" exit="auto">
-          <HomePage />
-        </ViewTransition>
-      )}
-      {url === "/about" && (
-        <ViewTransition key={url} default="none" enter="auto" exit="auto">
-          <AboutPage />
-        </ViewTransition>
-      )}
-    </>
-  );
-}
-```
-
-**ポイント**:
-
-- `default="none"` で通常のレンダリングではアニメーションなし
-- `enter="auto"` / `exit="auto"` でトランジション時のみアニメーション
-- `key` propでViewTransitionの識別を行う
-- まだ安定版には含まれていない（experimental）
+Reactの `<ViewTransition>` はcanary / experimental限定であり、React 19.2系stableでは利用しない。stable向けコードで `react` からimportせず、`react@canary` を明示的に採用したプロジェクトでのみ検討する。ブラウザのView Transition APIやInertiaのView Transition機能は視覚的な遷移の仕組みであり、Reactの `startTransition` / Concurrent Transitionとは別物である。
 
 ## 7. Prefetching
 

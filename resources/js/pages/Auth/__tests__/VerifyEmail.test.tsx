@@ -1,7 +1,8 @@
 /**
  * メール認証ページテスト
  */
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 // Inertia.js モック
@@ -49,13 +50,18 @@ describe('VerifyEmail', () => {
     expect(screen.queryByText(/認証リンクを再送しました/)).not.toBeInTheDocument();
   });
 
-  it('再送ボタンクリックで post が呼ばれること', () => {
+  it('再送ボタンクリックで post が呼ばれること', async () => {
+    // Arrange
+    const user = userEvent.setup();
     render(<VerifyEmail />);
-    fireEvent.click(screen.getByRole('button', { name: '認証メールを再送する' }));
+
+    // Act
+    await user.click(screen.getByRole('button', { name: '認証メールを再送する' }));
+
+    // Assert
     expect(mockPost).toHaveBeenCalledWith(
       '/email/verification-notification',
       expect.objectContaining({
-        onFinish: expect.any(Function),
         onSuccess: expect.any(Function),
       }),
     );

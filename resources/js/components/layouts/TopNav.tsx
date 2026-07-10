@@ -6,6 +6,7 @@
 import { router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { logout } from '@/actions/App/Http/Controllers/Web/AuthPageController';
+import { inertiaAction } from '@/lib/inertia-actions';
 import type { AppPageProps } from '@/types/index.d.ts';
 import { LogoutModal } from './LogoutModal';
 
@@ -14,16 +15,9 @@ export function TopNav() {
   const userName = props.auth.user?.name ?? '';
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  const logoutAction = () =>
-    new Promise<void>((resolve) => {
-      router.post(
-        logout.url(),
-        {},
-        {
-          onFinish: () => resolve(),
-        },
-      );
-    });
+  const logoutAction = inertiaAction((visitOptions) => {
+    router.post(logout.url(), {}, visitOptions);
+  });
 
   return (
     <TopNavView

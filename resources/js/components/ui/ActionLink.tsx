@@ -50,10 +50,12 @@ function shouldHandleNavigation(
   event: React.MouseEvent<HTMLAnchorElement>,
   target: React.AnchorHTMLAttributes<HTMLAnchorElement>['target'],
 ) {
+  const isCurrentBrowsingContext = target === undefined || target === '' || target === '_self';
+
   return (
     !event.defaultPrevented &&
     event.button === 0 &&
-    target !== '_blank' &&
+    isCurrentBrowsingContext &&
     !event.metaKey &&
     !event.altKey &&
     !event.ctrlKey &&

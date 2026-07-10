@@ -1,5 +1,6 @@
 import { router } from '@inertiajs/react';
 import { useState, useTransition } from 'react';
+import { runInertiaAction } from '@/lib/inertia-actions';
 import { index } from '@/routes/stocks';
 import type { StockFilters, StocksPageProps } from '@/types/stocks';
 import { StockSearchForm } from './StockSearchForm';
@@ -15,15 +16,17 @@ export function StocksSearchPanel({ initialFilters, marketOptions }: StocksSearc
 
   const submitSearch = (nextFilters = searchFilters) => {
     startTransition(async () => {
-      await new Promise<void>((resolve) => {
-        router.get(index.url(), compactFilters(nextFilters), {
+      await runInertiaAction(
+        (visitOptions) => {
+          router.get(index.url(), compactFilters(nextFilters), visitOptions);
+        },
+        {
           only: ['stocks', 'filters'],
           preserveScroll: true,
           preserveState: true,
           replace: true,
-          onFinish: () => resolve(),
-        });
-      });
+        },
+      );
     });
   };
 

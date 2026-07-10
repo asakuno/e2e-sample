@@ -75,6 +75,98 @@ describe('ActionLink', () => {
     expect(actual).toBe(expected);
   });
 
+  it('target が空文字の場合、action が呼ばれること', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const action = vi.fn();
+    const expected = 1;
+
+    // Act
+    render(
+      <ActionLink href="#stocks-empty-target" target="" action={action}>
+        銘柄一覧
+      </ActionLink>,
+    );
+    await user.click(screen.getByRole('link', { name: '銘柄一覧' }));
+    const actual = action.mock.calls.length;
+
+    // Assert
+    expect(actual).toBe(expected);
+  });
+
+  it('target が _self の場合、action が呼ばれること', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const action = vi.fn();
+    const expected = 1;
+
+    // Act
+    render(
+      <ActionLink href="#stocks-self" target="_self" action={action}>
+        銘柄一覧
+      </ActionLink>,
+    );
+    await user.click(screen.getByRole('link', { name: '銘柄一覧' }));
+    const actual = action.mock.calls.length;
+
+    // Assert
+    expect(actual).toBe(expected);
+  });
+
+  it('target が _top の場合、action が呼ばれないこと', () => {
+    // Arrange
+    const action = vi.fn();
+    const expected = 0;
+
+    // Act
+    render(
+      <ActionLink href="#stocks-top" target="_top" action={action}>
+        銘柄一覧
+      </ActionLink>,
+    );
+    clickWithoutNavigation(screen.getByRole('link', { name: '銘柄一覧' }));
+    const actual = action.mock.calls.length;
+
+    // Assert
+    expect(actual).toBe(expected);
+  });
+
+  it('target が _parent の場合、action が呼ばれないこと', () => {
+    // Arrange
+    const action = vi.fn();
+    const expected = 0;
+
+    // Act
+    render(
+      <ActionLink href="#stocks-parent" target="_parent" action={action}>
+        銘柄一覧
+      </ActionLink>,
+    );
+    clickWithoutNavigation(screen.getByRole('link', { name: '銘柄一覧' }));
+    const actual = action.mock.calls.length;
+
+    // Assert
+    expect(actual).toBe(expected);
+  });
+
+  it('target が名前付き閲覧コンテキストの場合、action が呼ばれないこと', () => {
+    // Arrange
+    const action = vi.fn();
+    const expected = 0;
+
+    // Act
+    render(
+      <ActionLink href="#stocks-named" target="stocks-window" action={action}>
+        銘柄一覧
+      </ActionLink>,
+    );
+    clickWithoutNavigation(screen.getByRole('link', { name: '銘柄一覧' }));
+    const actual = action.mock.calls.length;
+
+    // Assert
+    expect(actual).toBe(expected);
+  });
+
   it('download 属性がある場合、action が呼ばれないこと', () => {
     // Arrange
     const action = vi.fn();
