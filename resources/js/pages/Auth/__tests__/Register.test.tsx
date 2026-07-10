@@ -8,21 +8,22 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 const mockSetData = vi.fn();
 const mockSubmit = vi.fn();
 const mockValidate = vi.fn();
+let mockProcessing = false;
 
 vi.mock('@inertiajs/react', () => ({
   useForm: vi.fn(() => ({
     data: { name: '', email: '', password: '', password_confirmation: '' },
     setData: mockSetData,
-    processing: false,
+    processing: mockProcessing,
     errors: {},
-    withPrecognition: vi.fn().mockReturnValue({
+    withPrecognition: vi.fn().mockImplementation(() => ({
       data: { name: '', email: '', password: '', password_confirmation: '' },
       setData: mockSetData,
       submit: mockSubmit,
-      processing: false,
+      processing: mockProcessing,
       errors: {},
       validate: mockValidate,
-    }),
+    })),
   })),
   Head: ({ title }: { title: string }) => <title>{title}</title>,
   Link: ({ href, children, ...props }: Record<string, unknown>) => (
@@ -37,6 +38,7 @@ import Register from '../Register';
 describe('Register', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockProcessing = false;
   });
 
   it('お名前入力欄が表示されること', () => {
@@ -85,6 +87,21 @@ describe('Register', () => {
       fireEvent.submit(form);
     }
     expect(mockSubmit).toHaveBeenCalled();
+  });
+
+  it('processing=true の場合、アカウント作成ボタンが無効になること', () => {
+    // Arrange
+    mockProcessing = true;
+    const expected = true;
+
+    // Act
+    render(<Register />);
+    const actual = screen
+      .getByRole('button', { name: '処理中...' })
+      .hasAttribute('disabled');
+
+    // Assert
+    expect(actual).toBe(expected);
   });
 
   it('ページタイトルが「新規会員登録」であること', () => {

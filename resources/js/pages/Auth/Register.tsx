@@ -7,7 +7,7 @@
 
 import { Head, useForm } from '@inertiajs/react';
 import type React from 'react';
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { register, showLogin } from '@/actions/App/Http/Controllers/Web/AuthPageController';
 import { InputField } from '@/components/ui/InputField';
 import { PasswordInput } from '@/components/ui/PasswordInput';
@@ -17,7 +17,6 @@ import { ActionLink } from '@/components/ui/ActionLink';
 import { visitAction } from '@/lib/inertia-actions';
 
 export default function Register() {
-  const [isPending, startTransition] = useTransition();
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [passwordConfirmationVisible, setPasswordConfirmationVisible] = useState(false);
   const form = useForm({
@@ -31,9 +30,7 @@ export default function Register() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    startTransition(() => {
-      submit();
-    });
+    submit();
   };
 
   return (
@@ -123,7 +120,7 @@ export default function Register() {
           </p>
 
           {/* 送信ボタン */}
-          <PrimaryButton processing={processing || isPending}>アカウントを作成する</PrimaryButton>
+          <PrimaryButton processing={processing}>アカウントを作成する</PrimaryButton>
 
           {/* 区切り線 */}
           <hr className="my-6 border-slate-200" />
