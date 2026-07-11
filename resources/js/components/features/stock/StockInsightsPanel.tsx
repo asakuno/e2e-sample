@@ -12,7 +12,7 @@ interface StockInsightsPanelProps {
 export function StockInsightsPanel({ relatedNews, analyses, signals }: StockInsightsPanelProps) {
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
-      <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+      <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
         <SectionHeader
           icon={<Newspaper aria-hidden="true" className="size-5" />}
           title="関連ニュース"
@@ -21,7 +21,7 @@ export function StockInsightsPanel({ relatedNews, analyses, signals }: StockInsi
       </section>
 
       <div className="flex flex-col gap-4">
-        <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <SectionHeader
             icon={<Sparkles aria-hidden="true" className="size-5" />}
             title="AI分析結果"
@@ -29,7 +29,7 @@ export function StockInsightsPanel({ relatedNews, analyses, signals }: StockInsi
           {analyses}
         </section>
 
-        <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <SectionHeader
             icon={<RadioTower aria-hidden="true" className="size-5" />}
             title="シグナル"
@@ -43,8 +43,8 @@ export function StockInsightsPanel({ relatedNews, analyses, signals }: StockInsi
 
 function SectionHeader({ icon, title }: { icon: ReactNode; title: string }) {
   return (
-    <div className="flex items-center gap-2 text-gray-950">
-      <span className="text-gray-500">{icon}</span>
+    <div className="flex items-center gap-2 text-card-foreground">
+      <span className="text-muted-foreground">{icon}</span>
       <h2 className="font-semibold text-lg">{title}</h2>
     </div>
   );

@@ -1,7 +1,7 @@
 /**
  * プライマリボタンコンポーネント
  *
- * フォーム送信用の青色ボタン。processing状態とdisabled状態に対応。
+ * フォーム送信用の主要ボタン。processing状態とdisabled状態に対応。
  */
 import type React from 'react';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,7 @@ export function PrimaryButton({
       disabled={disabled || isProcessing}
       aria-busy={ariaBusy ?? (isProcessing || undefined)}
       className={cn(
-        'h-auto w-full cursor-pointer rounded bg-[#2767cf] px-4 py-3 font-bold text-base text-white shadow-md transition duration-200 hover:bg-blue-700',
+        'min-h-12 w-full px-4 py-3 font-semibold text-base',
         (disabled || isProcessing) && 'cursor-not-allowed opacity-50',
         className,
       )}

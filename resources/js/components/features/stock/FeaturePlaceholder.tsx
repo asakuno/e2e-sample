@@ -12,23 +12,23 @@ export function FeaturePlaceholder({ title, description, icon, items }: FeatureP
     <section className="flex flex-col gap-6">
       <div>
         <div className="flex items-center gap-3">
-          <span className="rounded-lg bg-blue-50 p-2 text-blue-700">
+          <span className="rounded-lg bg-primary/10 p-2 text-primary">
             <AppIcon name={icon} className="size-7" />
           </span>
           <div>
-            <h1 className="font-bold text-2xl text-gray-900">{title}</h1>
-            <p className="mt-1 text-gray-600 text-sm">{description}</p>
+            <h1 className="font-bold text-2xl text-foreground">{title}</h1>
+            <p className="mt-1 text-muted-foreground text-sm">{description}</p>
           </div>
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white p-5">
-        <h2 className="font-semibold text-base text-gray-900">Phase 3 以降で実装する内容</h2>
+      <div className="rounded-xl border border-border bg-card p-5">
+        <h2 className="font-semibold text-base text-card-foreground">Phase 3 以降で実装する内容</h2>
         <ul className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
           {items.map((item) => (
             <li
               key={item}
-              className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-gray-700 text-sm"
+              className="rounded-lg border border-border bg-muted px-4 py-3 text-foreground text-sm"
             >
               {item}
             </li>

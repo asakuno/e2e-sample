@@ -11,9 +11,9 @@ describe('presentDashboardStat', () => {
       label: 'ウォッチリスト銘柄数',
       value: '1,234',
       change: '監視中',
-      changeDirection: 'neutral',
+      changeTone: 'neutral',
       icon: 'visibility',
-      iconColorClass: 'text-blue-600',
+      iconColorClass: 'text-info',
     };
 
     // Act
@@ -23,7 +23,7 @@ describe('presentDashboardStat', () => {
     expect(actual).toEqual(expected);
   });
 
-  it('ポジティブ分析件数を上昇表示データへ変換すること', () => {
+  it('ポジティブ分析件数をポジティブ表示データへ変換すること', () => {
     // Arrange
     const stat: DashboardStatData = { kind: 'positiveAnalysis', value: 2 };
     const expected: StatCardData = {
@@ -32,9 +32,9 @@ describe('presentDashboardStat', () => {
       subLabel: '対象',
       subValue: '直近7日',
       change: 'AI分析結果',
-      changeDirection: 'up',
+      changeTone: 'positive',
       icon: 'trending_up',
-      iconColorClass: 'text-green-600',
+      iconColorClass: 'text-positive',
     };
 
     // Act
@@ -44,7 +44,7 @@ describe('presentDashboardStat', () => {
     expect(actual).toEqual(expected);
   });
 
-  it('ネガティブ分析件数を下降表示データへ変換すること', () => {
+  it('ネガティブ分析件数をネガティブ表示データへ変換すること', () => {
     // Arrange
     const stat: DashboardStatData = { kind: 'negativeAnalysis', value: 1 };
     const expected: StatCardData = {
@@ -53,9 +53,9 @@ describe('presentDashboardStat', () => {
       subLabel: '対象',
       subValue: '直近7日',
       change: 'AI分析結果',
-      changeDirection: 'down',
+      changeTone: 'negative',
       icon: 'trending_down',
-      iconColorClass: 'text-red-600',
+      iconColorClass: 'text-negative',
     };
 
     // Act
@@ -72,9 +72,9 @@ describe('presentDashboardStat', () => {
       label: '未分析ニュース',
       value: '3',
       change: 'ウォッチ銘柄関連',
-      changeDirection: 'neutral',
+      changeTone: 'neutral',
       icon: 'article',
-      iconColorClass: 'text-orange-600',
+      iconColorClass: 'text-warning',
     };
 
     // Act
@@ -84,16 +84,16 @@ describe('presentDashboardStat', () => {
     expect(actual).toEqual(expected);
   });
 
-  it('未分析ニュースがない場合に上昇表示データへ変換すること', () => {
+  it('未分析ニュースがない場合にポジティブ表示データへ変換すること', () => {
     // Arrange
     const stat: DashboardStatData = { kind: 'unanalyzedNews', value: 0 };
     const expected: StatCardData = {
       label: '未分析ニュース',
       value: '0',
       change: 'ウォッチ銘柄関連',
-      changeDirection: 'up',
+      changeTone: 'positive',
       icon: 'article',
-      iconColorClass: 'text-orange-600',
+      iconColorClass: 'text-warning',
     };
 
     // Act
@@ -112,9 +112,9 @@ describe('presentDashboardStat', () => {
       subLabel: '時刻',
       subValue: '11:00',
       change: '最終更新',
-      changeDirection: 'neutral',
+      changeTone: 'neutral',
       icon: 'schedule',
-      iconColorClass: 'text-gray-600',
+      iconColorClass: 'text-muted-foreground',
     };
 
     // Act
@@ -131,9 +131,9 @@ describe('presentDashboardStat', () => {
       label: '最新分析日時',
       value: '2026-06-15',
       change: '最終更新',
-      changeDirection: 'neutral',
+      changeTone: 'neutral',
       icon: 'schedule',
-      iconColorClass: 'text-gray-600',
+      iconColorClass: 'text-muted-foreground',
     };
 
     // Act
@@ -150,9 +150,9 @@ describe('presentDashboardStat', () => {
       label: '最新分析日時',
       value: '未分析',
       change: '分析結果なし',
-      changeDirection: 'neutral',
+      changeTone: 'neutral',
       icon: 'schedule',
-      iconColorClass: 'text-gray-600',
+      iconColorClass: 'text-muted-foreground',
     };
 
     // Act

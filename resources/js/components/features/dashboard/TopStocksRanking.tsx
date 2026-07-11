@@ -6,37 +6,37 @@ interface TopStocksRankingProps {
 
 export function TopStocksRanking({ stocks = [] }: TopStocksRankingProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5">
+    <div className="rounded-xl border border-border bg-card p-5 text-card-foreground">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h3 className="font-semibold text-base text-gray-900">注目銘柄ランキング</h3>
-        <span className="text-gray-400 text-xs">signal score</span>
+        <h3 className="font-semibold text-base">注目銘柄ランキング</h3>
+        <span className="text-muted-foreground text-xs">signal score</span>
       </div>
 
       {stocks.length === 0 ? (
-        <p className="text-gray-500 text-sm">シグナルがあるウォッチ銘柄はありません</p>
+        <p className="text-muted-foreground text-sm">シグナルがあるウォッチ銘柄はありません</p>
       ) : (
         <ol className="flex flex-col gap-3">
           {stocks.map((stock, index) => (
             <li key={stock.id} className="flex items-start gap-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 font-semibold text-gray-700 text-sm">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted font-semibold text-muted-foreground text-sm tabular-nums">
                 {index + 1}
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="font-semibold text-gray-900 text-sm">
+                  <p className="font-semibold text-sm">
                     {stock.symbol}
-                    <span className="ml-2 font-normal text-gray-500">{stock.name}</span>
+                    <span className="ml-2 font-normal text-muted-foreground">{stock.name}</span>
                   </p>
-                  <p className="font-semibold text-blue-600 text-sm">
+                  <p className="font-semibold text-primary text-sm tabular-nums">
                     {stock.totalScore.toFixed(2)}
                   </p>
                 </div>
-                <p className="mt-0.5 text-gray-500 text-xs">
+                <p className="mt-0.5 text-muted-foreground text-xs tabular-nums">
                   positive {stock.positiveCount} / negative {stock.negativeCount}
                   {stock.signalDate != null && ` / ${stock.signalDate}`}
                 </p>
                 {stock.reason != null && (
-                  <p className="mt-1 text-gray-500 text-sm">{stock.reason}</p>
+                  <p className="mt-1 text-muted-foreground text-sm">{stock.reason}</p>
                 )}
               </div>
             </li>

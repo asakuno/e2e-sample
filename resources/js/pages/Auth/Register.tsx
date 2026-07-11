@@ -34,7 +34,7 @@ export default function Register() {
       <Head title="新規会員登録" />
       <GuestLayout title="新規会員登録">
         {/* サブタイトル */}
-        <p className="-mt-8 mb-8 text-center text-slate-500 text-sm">
+        <p className="-mt-8 mb-8 text-center text-muted-foreground text-sm">
           アカウントを作成してサービスを開始しましょう
         </p>
 
@@ -84,7 +84,7 @@ export default function Register() {
               autoComplete="new-password"
               required
             />
-            <p className="mt-1 text-xs text-slate-400">8文字以上の英数字を含めてください</p>
+            <p className="mt-1 text-muted-foreground text-xs">8文字以上の英数字を含めてください</p>
           </div>
 
           {/* パスワード（確認用） */}
@@ -103,11 +103,11 @@ export default function Register() {
           </div>
 
           {/* 利用規約同意テキスト */}
-          <p className="mb-6 text-center text-slate-500 text-xs">
+          <p className="mb-6 text-center text-muted-foreground text-xs">
             「アカウントを作成する」をクリックすることで、弊社の
-            <span className="font-medium text-slate-700">利用規約</span>
+            <span className="font-medium text-foreground">利用規約</span>
             および
-            <span className="font-medium text-slate-700">プライバシーポリシー</span>
+            <span className="font-medium text-foreground">プライバシーポリシー</span>
             に同意したものとみなされます。
           </p>
 
@@ -115,14 +115,14 @@ export default function Register() {
           <PrimaryButton processing={processing}>アカウントを作成する</PrimaryButton>
 
           {/* 区切り線 */}
-          <hr className="my-6 border-slate-200" />
+          <hr className="my-6 border-border" />
 
           {/* フッターリンク */}
-          <div className="text-center text-[13px] text-slate-600">
+          <div className="text-center text-[13px] text-muted-foreground">
             <InertiaActionLink
               href={showLogin.url()}
               pendingClassName="opacity-70"
-              className="transition hover:text-[#326CCB] hover:underline"
+              className="inline-flex min-h-11 items-center rounded-md px-3 py-2 transition-colors duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               既にアカウントをお持ちの方はこちら &rarr;
             </InertiaActionLink>

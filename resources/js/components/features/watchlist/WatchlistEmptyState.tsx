@@ -4,18 +4,18 @@ import { index as stocksIndex } from '@/routes/stocks';
 
 export function WatchlistEmptyState() {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-10 text-center shadow-sm">
-      <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-gray-100">
-        <Search aria-hidden="true" className="size-5 text-gray-500" />
+    <div className="rounded-lg border border-border bg-card p-10 text-center text-card-foreground shadow-sm">
+      <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted">
+        <Search aria-hidden="true" className="size-5 text-muted-foreground" />
       </div>
-      <p className="mt-4 font-medium text-gray-900">監視銘柄がありません</p>
-      <p className="mt-2 text-gray-500 text-sm">
+      <p className="mt-4 font-medium">監視銘柄がありません</p>
+      <p className="mt-2 text-muted-foreground text-sm">
         銘柄一覧から気になる銘柄をウォッチリストに追加してください。
       </p>
       <InertiaActionLink
         href={stocksIndex.url()}
         pendingClassName="opacity-70"
-        className="mt-5 inline-flex min-h-11 items-center justify-center rounded-md bg-gray-900 px-4 py-2 font-medium text-sm text-white transition-[background-color,transform] hover:bg-gray-700 active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
+        className="mt-5 inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground text-sm transition-[background-color,transform] duration-motion-fast ease-standard hover:bg-primary/90 active:translate-y-px focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 motion-reduce:active:translate-y-0"
       >
         銘柄を探す
       </InertiaActionLink>

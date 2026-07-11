@@ -13,8 +13,8 @@ export function StockPriceChart({ prices, currency }: StockPriceChartProps) {
 
   if (chartPrices.length === 0) {
     return (
-      <div className="flex min-h-72 items-center justify-center rounded-md border border-dashed border-gray-300 bg-gray-50">
-        <p className="text-gray-500 text-sm">価格履歴がありません</p>
+      <div className="flex min-h-72 items-center justify-center rounded-md border border-border border-dashed bg-muted">
+        <p className="text-muted-foreground text-sm">価格履歴がありません</p>
       </div>
     );
   }
@@ -42,7 +42,7 @@ export function StockPriceChart({ prices, currency }: StockPriceChartProps) {
   const last = chartPrices[chartPrices.length - 1]!;
 
   return (
-    <div className="overflow-hidden rounded-md border border-gray-200 bg-gray-50">
+    <div className="overflow-hidden rounded-md border border-border bg-muted">
       <svg
         viewBox={`0 0 ${width} ${height}`}
         role="img"
@@ -51,8 +51,8 @@ export function StockPriceChart({ prices, currency }: StockPriceChartProps) {
       >
         <defs>
           <linearGradient id="price-line" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0%" stopColor="#2563eb" />
-            <stop offset="100%" stopColor="#059669" />
+            <stop offset="0%" stopColor="var(--chart-1)" />
+            <stop offset="100%" stopColor="var(--chart-2)" />
           </linearGradient>
         </defs>
         {[0, 1, 2, 3].map((line) => {
@@ -65,7 +65,7 @@ export function StockPriceChart({ prices, currency }: StockPriceChartProps) {
               x2={width - paddingX}
               y1={y}
               y2={y}
-              stroke="#e5e7eb"
+              className="stroke-border"
               strokeWidth="1"
             />
           );
@@ -78,10 +78,18 @@ export function StockPriceChart({ prices, currency }: StockPriceChartProps) {
 
           const point = coordinates[index]!;
 
-          return <circle key={price.price_date} cx={point.x} cy={point.y} fill="#111827" r="4" />;
+          return (
+            <circle
+              key={price.price_date}
+              cx={point.x}
+              cy={point.y}
+              className="fill-foreground"
+              r="4"
+            />
+          );
         })}
       </svg>
-      <div className="flex justify-between border-gray-200 border-t bg-white px-4 py-3 text-gray-600 text-xs">
+      <div className="flex justify-between border-border border-t bg-card px-4 py-3 text-muted-foreground text-xs tabular-nums">
         <span>{formatShortDate(first.price_date)}</span>
         <span>
           {formatPrice(min, currency)} - {formatPrice(max, currency)}

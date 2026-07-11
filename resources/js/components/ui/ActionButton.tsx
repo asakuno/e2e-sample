@@ -29,6 +29,7 @@ export function ActionButton({
       type="button"
       disabled={isDisabled}
       aria-busy={ariaBusy ?? (isPending || undefined)}
+      data-pending={isPending ? 'true' : undefined}
       onClick={() => {
         runAction(action);
       }}

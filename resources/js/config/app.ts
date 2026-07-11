@@ -2,5 +2,5 @@
 export const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 export const progressConfig = {
-  color: '#4B5563',
+  color: 'var(--primary)',
 } as const;

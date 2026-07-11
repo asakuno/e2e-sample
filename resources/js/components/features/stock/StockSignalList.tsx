@@ -1,4 +1,5 @@
 import type { StockSignal } from '@/types/stocks';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 interface StockSignalListProps {
   signals: StockSignal[];
@@ -12,18 +13,20 @@ export function StockSignalList({ signals }: StockSignalListProps) {
   return (
     <div className="mt-4 flex flex-col gap-3">
       {signals.map((signal) => (
-        <article key={signal.id} className="rounded-md border border-gray-200 bg-gray-50 p-4">
+        <article key={signal.id} className="rounded-md border border-border bg-muted p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="font-semibold text-gray-950 text-sm">{signal.signal_date}</p>
-              <p className="mt-1 text-gray-500 text-xs">
+              <p className="font-semibold text-foreground text-sm tabular-nums">
+                {signal.signal_date}
+              </p>
+              <p className="mt-1 text-muted-foreground text-xs tabular-nums">
                 generated {formatSignalDateTime(signal.generated_at)}
               </p>
             </div>
             <ScoreBadge score={signal.total_score} />
           </div>
           {signal.reason !== null && (
-            <p className="mt-3 text-gray-700 text-sm leading-6">{signal.reason}</p>
+            <p className="mt-3 text-foreground text-sm leading-6">{signal.reason}</p>
           )}
           <dl className="mt-3 grid grid-cols-3 gap-2 text-xs">
             <InsightMetric label="news" value={formatScore(signal.news_score)} />
@@ -43,31 +46,26 @@ export function StockSignalList({ signals }: StockSignalListProps) {
 
 function InsightMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border border-gray-200 bg-white px-2 py-1.5">
-      <dt className="text-gray-500">{label}</dt>
-      <dd className="mt-0.5 font-semibold text-gray-950">{value}</dd>
+    <div className="rounded border border-border bg-card px-2 py-1.5">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 font-semibold text-card-foreground tabular-nums">{value}</dd>
     </div>
   );
 }
 
 function ScoreBadge({ score }: { score: number }) {
-  const colorClass =
-    score > 0
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-      : score < 0
-        ? 'border-rose-200 bg-rose-50 text-rose-700'
-        : 'border-gray-200 bg-white text-gray-700';
+  const variant = score > 0 ? 'positive' : score < 0 ? 'negative' : 'neutral';
 
   return (
-    <span className={`rounded-full border px-2.5 py-1 font-semibold text-xs ${colorClass}`}>
+    <StatusBadge variant={variant} className="font-semibold tabular-nums">
       total {formatScore(score)}
-    </span>
+    </StatusBadge>
   );
 }
 
 function CountBadge({ label, value }: { label: string; value: number }) {
   return (
-    <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 text-gray-600">
+    <span className="rounded-full border border-border bg-card px-2 py-0.5 text-muted-foreground tabular-nums">
       {label} {value}
     </span>
   );
@@ -75,7 +73,7 @@ function CountBadge({ label, value }: { label: string; value: number }) {
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="mt-4 rounded-md border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center text-gray-500 text-sm">
+    <div className="mt-4 rounded-md border border-border border-dashed bg-muted px-4 py-6 text-center text-muted-foreground text-sm">
       {message}
     </div>
   );

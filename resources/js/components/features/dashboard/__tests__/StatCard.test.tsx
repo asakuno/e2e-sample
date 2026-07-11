@@ -11,9 +11,9 @@ describe('StatCard', () => {
     label: '総ユーザー数',
     value: '1,234',
     change: '+12.5%',
-    changeDirection: 'up',
+    changeTone: 'positive',
     icon: 'group',
-    iconColorClass: 'text-blue-500',
+    iconColorClass: 'text-info',
   };
 
   it('ラベルが表示されること', () => {
@@ -31,16 +31,21 @@ describe('StatCard', () => {
     expect(screen.getByText('+12.5%')).toBeInTheDocument();
   });
 
-  it('up 方向で緑色のスタイルが適用されること', () => {
+  it('表示色だけから変化方向を推測して読み上げないこと', () => {
     render(<StatCard {...defaultProps} />);
-    const change = screen.getByText('+12.5%');
-    expect(change.className).toContain('text-green');
+    expect(screen.getByText('+12.5%')).not.toHaveAttribute('aria-label');
   });
 
-  it('down 方向で赤色のスタイルが適用されること', () => {
-    render(<StatCard {...defaultProps} change="-5.2%" changeDirection="down" />);
-    const change = screen.getByText('-5.2%');
-    expect(change.className).toContain('text-red');
+  it('明示された読み上げラベルを付与すること', () => {
+    render(
+      <StatCard
+        {...defaultProps}
+        change="-5.2%"
+        changeTone="negative"
+        changeAccessibleLabel="前週比5.2%減少"
+      />,
+    );
+    expect(screen.getByLabelText('前週比5.2%減少')).toBeInTheDocument();
   });
 
   it('アイコンが表示されること', () => {

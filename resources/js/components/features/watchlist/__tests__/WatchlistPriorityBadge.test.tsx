@@ -13,6 +13,8 @@ describe('WatchlistPriorityBadge', () => {
 
     // Assert
     expect(actual).toBeInTheDocument();
+    expect(actual).toHaveAttribute('data-priority', 'high');
+    expect(actual).not.toHaveAttribute('data-variant');
   });
 
   it('priority が 2 の場合、中が表示されること', () => {
@@ -25,6 +27,20 @@ describe('WatchlistPriorityBadge', () => {
 
     // Assert
     expect(actual).toBeInTheDocument();
+    expect(actual).toHaveAttribute('data-priority', 'medium');
+  });
+
+  it('priority が 1 の場合、低が表示されること', () => {
+    // Arrange
+    const expected = '低';
+
+    // Act
+    render(<WatchlistPriorityBadge priority={1} />);
+    const actual = screen.getByText(expected);
+
+    // Assert
+    expect(actual).toBeInTheDocument();
+    expect(actual).toHaveAttribute('data-priority', 'low');
   });
 
   it('未知の priority の場合、数値付きラベルが表示されること', () => {
@@ -37,5 +53,6 @@ describe('WatchlistPriorityBadge', () => {
 
     // Assert
     expect(actual).toBeInTheDocument();
+    expect(actual).toHaveAttribute('data-priority', 'custom');
   });
 });

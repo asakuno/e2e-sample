@@ -41,7 +41,9 @@ export default function Dashboard({
           </div>
 
           {latestAnalysisAt != null && (
-            <p className="text-gray-500 text-sm">最新分析日時: {latestAnalysisAt}</p>
+            <p className="text-muted-foreground text-sm tabular-nums">
+              最新分析日時: {latestAnalysisAt}
+            </p>
           )}
 
           {/* 分析推移 + 注目銘柄 */}

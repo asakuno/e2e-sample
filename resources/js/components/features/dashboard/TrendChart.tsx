@@ -6,6 +6,12 @@
 import { cn } from '@/lib/utils';
 import type { TrendData } from '@/types/dashboard';
 
+const CHANGE_DIRECTION_LABEL: Record<TrendData['changeDirection'], string> = {
+  up: '上昇',
+  down: '下降',
+  neutral: '変化なし',
+};
+
 /** SVGチャートの描画サイズ */
 const CHART_WIDTH = 300;
 const CHART_HEIGHT = 120;
@@ -43,20 +49,21 @@ export function TrendChart({
   const pathD = buildPath(points);
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5">
+    <div className="rounded-xl border border-border bg-card p-5 text-card-foreground">
       <div className="mb-3 flex items-baseline gap-3">
-        <span className="font-bold text-2xl text-gray-900">{total}</span>
+        <span className="font-bold text-2xl tabular-nums">{total}</span>
         <span
+          aria-label={`${CHANGE_DIRECTION_LABEL[changeDirection]}: ${changePercent}`}
           className={cn(
-            'font-medium text-sm',
-            changeDirection === 'up' && 'text-green-600',
-            changeDirection === 'down' && 'text-red-600',
-            changeDirection === 'neutral' && 'text-gray-500',
+            'font-medium text-sm tabular-nums',
+            changeDirection === 'up' && 'text-positive',
+            changeDirection === 'down' && 'text-negative',
+            changeDirection === 'neutral' && 'text-muted-foreground',
           )}
         >
           {changePercent}
         </span>
-        <span className="text-gray-500 text-sm">{description}</span>
+        <span className="text-muted-foreground text-sm">{description}</span>
       </div>
 
       {/* SVG折れ線グラフ */}
@@ -67,13 +74,7 @@ export function TrendChart({
           role="img"
           aria-label="トレンドグラフ"
         >
-          <path
-            d={pathD}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="text-blue-500"
-          />
+          <path d={pathD} fill="none" stroke="currentColor" strokeWidth="2" className="text-info" />
         </svg>
       )}
     </div>

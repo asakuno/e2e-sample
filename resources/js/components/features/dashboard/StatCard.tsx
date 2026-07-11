@@ -12,7 +12,8 @@ export interface StatCardData {
   subLabel?: string;
   subValue?: string;
   change?: string;
-  changeDirection?: 'up' | 'down' | 'neutral';
+  changeTone?: 'positive' | 'negative' | 'neutral';
+  changeAccessibleLabel?: string;
   icon: AppIconName;
   iconColorClass: string;
 }
@@ -23,31 +24,33 @@ export function StatCard({
   subLabel,
   subValue,
   change,
-  changeDirection,
+  changeTone = 'neutral',
+  changeAccessibleLabel,
   icon,
   iconColorClass,
 }: StatCardData) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5">
+    <div className="rounded-xl border border-border bg-card p-5 text-card-foreground">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-gray-500 text-sm">{label}</p>
-          <p className="mt-1 font-bold text-2xl text-gray-900">{value}</p>
+          <p className="text-muted-foreground text-sm">{label}</p>
+          <p className="mt-1 font-bold text-2xl tabular-nums">{value}</p>
           {subLabel != null && subValue != null && (
-            <p className="mt-1 text-gray-400 text-xs">
+            <p className="mt-1 text-muted-foreground text-xs tabular-nums">
               {subLabel}: {subValue}
             </p>
           )}
         </div>
         <AppIcon name={icon} className={cn('size-7', iconColorClass)} />
       </div>
-      {change != null && changeDirection != null && (
+      {change != null && (
         <p
+          aria-label={changeAccessibleLabel}
           className={cn(
-            'mt-3 font-medium text-sm',
-            changeDirection === 'up' && 'text-green-600',
-            changeDirection === 'down' && 'text-red-600',
-            changeDirection === 'neutral' && 'text-gray-500',
+            'mt-3 font-medium text-sm tabular-nums',
+            changeTone === 'positive' && 'text-positive',
+            changeTone === 'negative' && 'text-negative',
+            changeTone === 'neutral' && 'text-muted-foreground',
           )}
         >
           {change}

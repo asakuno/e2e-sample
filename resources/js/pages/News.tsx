@@ -12,13 +12,14 @@ export default function News({ news, filters, stockOptions, sentimentOptions }: 
         <div className="flex flex-col gap-6">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <h1 className="font-bold text-2xl text-gray-950">News</h1>
-              <p className="mt-1 text-gray-500 text-sm">
+              <h1 className="font-bold text-2xl text-foreground">News</h1>
+              <p className="mt-1 text-muted-foreground text-sm">
                 市場ニュースを銘柄、sentiment、公開期間で絞り込み、AI分析の要点を確認できます。
               </p>
             </div>
-            <div className="rounded-md border border-gray-200 bg-white px-3 py-2 text-gray-600 text-sm">
-              表示件数 <span className="font-semibold text-gray-950">{news.length}</span>
+            <div className="rounded-md border border-border bg-card px-3 py-2 text-muted-foreground text-sm">
+              表示件数{' '}
+              <span className="font-semibold text-foreground tabular-nums">{news.length}</span>
             </div>
           </div>
 

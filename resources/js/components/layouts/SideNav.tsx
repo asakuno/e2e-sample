@@ -5,32 +5,54 @@
  */
 import { usePage } from '@inertiajs/react';
 import { NavItem } from '@/components/layouts/NavItem';
+import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
+import { dashboard } from '@/routes';
+import { index as newsIndex } from '@/routes/news';
+import { index as stocksIndex } from '@/routes/stocks';
+import { index as watchlistIndex } from '@/routes/watchlist';
 
 /** ナビゲーション項目定義 */
 const NAV_ITEMS = [
-  { href: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
-  { href: '/stocks', icon: 'query_stats', label: 'Stocks' },
-  { href: '/watchlist', icon: 'visibility', label: 'Watchlist' },
-  { href: '/news', icon: 'newspaper', label: 'News' },
+  { href: dashboard.url(), icon: 'dashboard', label: 'Dashboard' },
+  { href: stocksIndex.url(), icon: 'query_stats', label: 'Stocks' },
+  { href: watchlistIndex.url(), icon: 'visibility', label: 'Watchlist' },
+  { href: newsIndex.url(), icon: 'newspaper', label: 'News' },
 ] as const;
 
-export function SideNav() {
+type SideNavProps = {
+  onNavigate?: () => void;
+};
+
+export function SideNav({ onNavigate }: SideNavProps) {
   const { url } = usePage();
 
+  return <SideNavView currentUrl={url} {...(onNavigate ? { onNavigate } : {})} />;
+}
+
+type SideNavViewProps = {
+  currentUrl: string;
+  onNavigate?: () => void;
+};
+
+export function SideNavView({ currentUrl, onNavigate }: SideNavViewProps) {
   return (
     <nav
       aria-label="メインナビゲーション"
-      className="flex h-full w-60 flex-col border-gray-200 border-r bg-white"
+      className="flex h-full w-full flex-col overflow-y-auto overscroll-contain border-sidebar-border border-r bg-sidebar text-sidebar-foreground"
     >
-      {/* ロゴ */}
-      <div className="flex h-16 items-center px-6">
-        <div className="flex flex-col">
-          <span className="font-bold text-gray-900 text-lg">Stock Insight</span>
-          <span className="text-gray-500 text-xs">Market analysis app</span>
-        </div>
+      <div className="flex min-h-16 items-center px-6">
+        <InertiaActionLink
+          href={dashboard.url()}
+          aria-label="Stock Insight ホーム"
+          onClick={() => onNavigate?.()}
+          pendingClassName="opacity-70"
+          className="flex min-h-11 flex-col justify-center rounded-lg pr-10 transition-opacity duration-motion-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring"
+        >
+          <span className="font-bold text-lg leading-6">Stock Insight</span>
+          <span className="text-sidebar-foreground/70 text-xs leading-4">Market analysis app</span>
+        </InertiaActionLink>
       </div>
 
-      {/* ナビゲーション項目 */}
       <div className="flex flex-1 flex-col gap-1 px-3 py-2">
         {NAV_ITEMS.map((item) => (
           <NavItem
@@ -38,18 +60,24 @@ export function SideNav() {
             href={item.href}
             icon={item.icon}
             label={item.label}
-            active={url.startsWith(item.href)}
+            active={isCurrentRoute(currentUrl, item.href)}
+            {...(onNavigate ? { onNavigate } : {})}
           />
         ))}
       </div>
 
-      {/* 注意表示 */}
-      <div className="border-gray-200 border-t px-4 py-4">
-        <p className="font-medium text-gray-700 text-xs">注意</p>
-        <p className="mt-1 text-gray-500 text-xs leading-5">
+      <div className="border-sidebar-border border-t px-4 py-4">
+        <p className="font-medium text-xs">注意</p>
+        <p className="mt-1 text-sidebar-foreground/70 text-xs leading-5">
           表示内容は投資判断の参考情報であり、投資助言ではありません。
         </p>
       </div>
     </nav>
   );
+}
+
+function isCurrentRoute(currentUrl: string, href: string) {
+  const pathname = currentUrl.split(/[?#]/, 1)[0] ?? currentUrl;
+
+  return pathname === href || pathname.startsWith(`${href}/`);
 }

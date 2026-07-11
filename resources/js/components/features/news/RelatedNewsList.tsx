@@ -14,20 +14,20 @@ export function RelatedNewsList({ articles }: RelatedNewsListProps) {
   return (
     <div className="mt-4 flex flex-col gap-3">
       {articles.map((article) => (
-        <article key={article.id} className="rounded-md border border-gray-200 bg-gray-50 p-4">
+        <article key={article.id} className="rounded-md border border-border bg-muted p-4">
           <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2 text-gray-500 text-xs">
+              <div className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs tabular-nums">
                 <span>{article.source ?? article.provider}</span>
                 {article.published_at !== null && (
                   <span>{formatNewsDateTime(article.published_at)}</span>
                 )}
               </div>
-              <h3 className="mt-2 font-semibold text-gray-950 text-sm leading-6">
+              <h3 className="mt-2 font-semibold text-foreground text-sm leading-6">
                 {article.title}
               </h3>
               {article.summary !== null && (
-                <p className="mt-2 line-clamp-2 text-gray-600 text-sm leading-6">
+                <p className="mt-2 line-clamp-2 text-muted-foreground text-sm leading-6">
                   {article.summary}
                 </p>
               )}
@@ -35,8 +35,8 @@ export function RelatedNewsList({ articles }: RelatedNewsListProps) {
             <a
               href={article.url}
               target="_blank"
-              rel="noreferrer"
-              className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 font-medium text-gray-700 text-sm transition-[background-color,border-color,color,transform] hover:border-gray-300 hover:bg-gray-50 hover:text-gray-950 active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-md border border-border bg-card px-3 py-2 font-medium text-foreground text-sm transition-[background-color,border-color,color,transform] duration-motion-fast ease-standard hover:border-ring hover:bg-muted active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:active:translate-y-0"
             >
               元記事
               <ExternalLink aria-hidden="true" className="size-4" />
@@ -50,7 +50,7 @@ export function RelatedNewsList({ articles }: RelatedNewsListProps) {
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="mt-4 rounded-md border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center text-gray-500 text-sm">
+    <div className="mt-4 rounded-md border border-border border-dashed bg-muted px-4 py-6 text-center text-muted-foreground text-sm">
       {message}
     </div>
   );
