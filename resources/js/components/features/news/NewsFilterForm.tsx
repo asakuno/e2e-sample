@@ -10,7 +10,8 @@ interface NewsFilterFormProps {
   filters: NewsFilters;
   stockOptions: NewsSelectOption[];
   sentimentOptions: NewsSelectOption[];
-  processing?: boolean;
+  searchProcessing?: boolean;
+  resetProcessing?: boolean;
   onFiltersChange: (filters: NewsFilters) => void;
   onSubmit: () => void;
   onReset: () => void;
@@ -20,11 +21,14 @@ export function NewsFilterForm({
   filters,
   stockOptions,
   sentimentOptions,
-  processing = false,
+  searchProcessing = false,
+  resetProcessing = false,
   onFiltersChange,
   onSubmit,
   onReset,
 }: NewsFilterFormProps) {
+  const processing = searchProcessing || resetProcessing;
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     onSubmit();
@@ -119,20 +123,21 @@ export function NewsFilterForm({
               type="submit"
               className="h-11 flex-1 xl:flex-none"
               disabled={processing}
-              aria-busy={processing || undefined}
+              aria-busy={searchProcessing || undefined}
             >
               <Search />
-              {processing ? '検索中...' : '検索'}
+              {searchProcessing ? '検索中...' : '検索'}
             </Button>
             <Button
               type="button"
               variant="outline"
               className="h-11 flex-1 xl:flex-none"
               disabled={processing}
+              aria-busy={resetProcessing || undefined}
               onClick={onReset}
             >
               <X />
-              クリア
+              {resetProcessing ? 'クリア中...' : 'クリア'}
             </Button>
           </div>
         </div>

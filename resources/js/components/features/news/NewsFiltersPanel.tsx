@@ -16,22 +16,27 @@ export function NewsFiltersPanel({
   stockOptions,
   sentimentOptions,
 }: NewsFiltersPanelProps) {
-  const [isPending, startTransition] = useTransition();
+  const [isSearchPending, startSearchTransition] = useTransition();
+  const [isResetPending, startResetTransition] = useTransition();
   const [filters, setFilters] = useState<NewsFilters>(initialFilters);
 
-  const submitFilters = (nextFilters = filters) => {
-    startTransition(async () => {
-      await runInertiaAction(
-        (visitOptions) => {
-          router.get(index.url(), compactFilters(nextFilters), visitOptions);
-        },
-        {
-          only: ['news', 'filters'],
-          preserveScroll: true,
-          preserveState: true,
-          replace: true,
-        },
-      );
+  const requestFilters = (nextFilters: NewsFilters) => {
+    return runInertiaAction(
+      (visitOptions) => {
+        router.get(index.url(), compactFilters(nextFilters), visitOptions);
+      },
+      {
+        only: ['news', 'filters'],
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+      },
+    );
+  };
+
+  const submitFilters = () => {
+    startSearchTransition(async () => {
+      await requestFilters(filters);
     });
   };
 
@@ -45,7 +50,9 @@ export function NewsFiltersPanel({
       to: '',
     };
     setFilters(emptyFilters);
-    submitFilters(emptyFilters);
+    startResetTransition(async () => {
+      await requestFilters(emptyFilters);
+    });
   };
 
   return (
@@ -53,7 +60,8 @@ export function NewsFiltersPanel({
       filters={filters}
       stockOptions={stockOptions}
       sentimentOptions={sentimentOptions}
-      processing={isPending}
+      searchProcessing={isSearchPending}
+      resetProcessing={isResetPending}
       onFiltersChange={setFilters}
       onSubmit={submitFilters}
       onReset={resetFilters}

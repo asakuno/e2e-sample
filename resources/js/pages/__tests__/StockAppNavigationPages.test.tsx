@@ -412,6 +412,27 @@ describe('Stock app navigation pages', () => {
     );
   });
 
+  it('News ページでクリアした場合、検索ボタンを検索中表示にしないこと', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    routerGetMock.mockClear();
+    render(<News {...newsProps} />);
+    const expected = {
+      searchLabel: '検索',
+      resetLabel: 'クリア中...',
+    };
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'クリア' }));
+    const actual = {
+      searchLabel: screen.getByRole('button', { name: expected.searchLabel }).textContent?.trim(),
+      resetLabel: screen.getByRole('button', { name: expected.resetLabel }).textContent?.trim(),
+    };
+
+    // Assert
+    expect(actual).toEqual(expected);
+  });
+
   it('News ページでダッシュボードから選択した記事を検索フォームより先に表示すること', () => {
     render(<News {...newsProps} filters={{ ...newsProps.filters, article_id: '1' }} />);
 
