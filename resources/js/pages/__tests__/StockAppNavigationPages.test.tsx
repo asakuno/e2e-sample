@@ -370,15 +370,17 @@ describe('Stock app navigation pages', () => {
 
   it('News ページにニュース一覧とAI分析が表示されること', () => {
     render(<News {...newsProps} />);
+
+    const detailsButton = screen.getByRole('button', {
+      name: '記事と分析の詳細：Apple announces new product',
+    });
+
     expect(document.querySelector('title')).toHaveTextContent('News');
     expect(screen.getByRole('heading', { name: 'News' })).toBeInTheDocument();
     expect(screen.getByText('Apple announces new product')).toBeInTheDocument();
-    expect(screen.getByText('AI要約: 売上成長にポジティブ')).toBeInTheDocument();
-    expect(screen.getByText('impact score')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '元記事' })).toHaveAttribute(
-      'href',
-      'https://example.com/apple-news',
-    );
+    expect(screen.getByText('AI要約: 売上成長にポジティブ')).toBeVisible();
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('link', { name: /元記事を読む/ })).not.toBeInTheDocument();
   });
 
   it('News ページのフィルタフォームがクエリパラメータ付きで再取得すること', async () => {
@@ -410,6 +412,27 @@ describe('Stock app navigation pages', () => {
     );
   });
 
+  it('News ページでクリアした場合、検索ボタンを検索中表示にしないこと', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    routerGetMock.mockClear();
+    render(<News {...newsProps} />);
+    const expected = {
+      searchLabel: '検索',
+      resetLabel: 'クリア中...',
+    };
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'クリア' }));
+    const actual = {
+      searchLabel: screen.getByRole('button', { name: expected.searchLabel }).textContent?.trim(),
+      resetLabel: screen.getByRole('button', { name: expected.resetLabel }).textContent?.trim(),
+    };
+
+    // Assert
+    expect(actual).toEqual(expected);
+  });
+
   it('News ページでダッシュボードから選択した記事を検索フォームより先に表示すること', () => {
     render(<News {...newsProps} filters={{ ...newsProps.filters, article_id: '1' }} />);
 
@@ -420,13 +443,62 @@ describe('Stock app navigation pages', () => {
       name: 'Apple announces new product',
     });
     const otherNewsSearchHeading = screen.getByRole('heading', { name: '他のニュースを探す' });
+    const detailsButton = screen.getByRole('button', {
+      name: '記事と分析の詳細：Apple announces new product',
+    });
 
     expect(selectedStatus).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '一覧に戻す' })).toHaveAttribute('href', '/news');
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Apple product summary')).toBeVisible();
+    expect(screen.getByRole('link', { name: /元記事を読む/ })).toHaveAttribute(
+      'href',
+      'https://example.com/apple-news',
+    );
     expect(
       articleHeading.compareDocumentPosition(otherNewsSearchHeading) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it('News ページで別の記事が選択された場合、新しい記事だけを初期展開すること', () => {
+    // Arrange
+    const firstArticle = newsProps.news[0];
+
+    if (firstArticle === undefined) {
+      throw new Error('Newsページのテスト記事がありません');
+    }
+
+    const secondArticle = {
+      ...firstArticle,
+      id: 2,
+      title: 'Microsoft announces cloud expansion',
+      url: 'https://example.com/microsoft-news',
+    };
+    const { rerender } = render(
+      <News {...newsProps} filters={{ ...newsProps.filters, article_id: '1' }} />,
+    );
+
+    // Act
+    rerender(
+      <News
+        {...newsProps}
+        news={[secondArticle]}
+        filters={{ ...newsProps.filters, article_id: '2' }}
+      />,
+    );
+
+    // Assert
+    expect(
+      screen.queryByRole('button', {
+        name: '記事と分析の詳細：Apple announces new product',
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: '記事と分析の詳細：Microsoft announces cloud expansion',
+      }),
+    ).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('News ページで選択中の記事を引き継がずに他のニュースを検索すること', async () => {

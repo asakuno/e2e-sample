@@ -19,6 +19,8 @@ export default function News({ news, filters, stockOptions, sentimentOptions }: 
     filters.from,
     filters.to,
   ].join(':');
+  const newsListKey = `${filtersKey}:${news.map((article) => article.id).join(',')}`;
+  const selectedArticleId = hasSelectedArticle ? Number(filters.article_id) : null;
 
   const filtersPanel = (
     <NewsFiltersPanel
@@ -49,8 +51,12 @@ export default function News({ news, filters, stockOptions, sentimentOptions }: 
 
           {hasSelectedArticle ? (
             <>
-              <SelectedArticleNotice title={news[0]?.title ?? null} />
-              <NewsArticleList articles={news} />
+              <SelectedArticleNotice />
+              <NewsArticleList
+                key={newsListKey}
+                articles={news}
+                initialExpandedArticleId={selectedArticleId}
+              />
               <section aria-labelledby="other-news-search-heading" className="flex flex-col gap-4">
                 <div>
                   <h2
@@ -69,7 +75,7 @@ export default function News({ news, filters, stockOptions, sentimentOptions }: 
           ) : (
             <>
               {filtersPanel}
-              <NewsArticleList articles={news} />
+              <NewsArticleList key={newsListKey} articles={news} />
             </>
           )}
         </div>
@@ -78,7 +84,7 @@ export default function News({ news, filters, stockOptions, sentimentOptions }: 
   );
 }
 
-function SelectedArticleNotice({ title }: { title: string | null }) {
+function SelectedArticleNotice() {
   return (
     <Surface
       tone="subtle"
@@ -89,7 +95,9 @@ function SelectedArticleNotice({ title }: { title: string | null }) {
         <h2 className="font-semibold text-foreground text-base">
           ダッシュボードから選択した記事を表示中
         </h2>
-        {title !== null && <p className="mt-1 truncate text-muted-foreground text-sm">{title}</p>}
+        <p className="mt-1 text-muted-foreground text-sm">
+          記事の詳細は、この画面内で開閉できます。
+        </p>
       </div>
       <InertiaActionLink
         href={newsIndex.url()}
