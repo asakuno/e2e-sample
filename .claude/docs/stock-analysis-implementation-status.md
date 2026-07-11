@@ -1,7 +1,7 @@
 # Stock Analysis Implementation Status
 
 作成日: 2026-06-15
-更新日: 2026-06-16
+更新日: 2026-06-17
 
 ## 確認対象
 
@@ -57,6 +57,16 @@
   - AI要約表示
   - impact_score 表示
   - 元記事URLへの導線
+- Dashboard 画面
+  - Inertia props による実データ表示
+  - ウォッチリスト銘柄数
+  - 直近ポジティブ材料数
+  - 直近ネガティブ材料数
+  - 未分析ニュース数
+  - 直近7日の分析件数推移
+  - 注目銘柄ランキング
+  - 重要ニュース一覧
+  - 最新分析日時
 - Stock Detail 画面
   - 銘柄基本情報
   - 最新価格
@@ -72,9 +82,6 @@
 
 ### 部分実装
 
-- Dashboard 画面
-  - 画面とコンポーネントは存在する。
-  - 表示データはモックであり、ウォッチリスト・ニュース・シグナル等の実データ集計には接続されていない。
 - Stock Detail 画面
   - 株価・企業情報の表示は実装済み。
   - 関連ニュース、AI分析結果、シグナル表示は実装済み。
@@ -82,14 +89,6 @@
 
 ### 未実装
 
-- Dashboard 画面
-  - ウォッチリスト銘柄数
-  - 直近ポジティブ材料数
-  - 直近ネガティブ材料数
-  - 未分析ニュース数
-  - 注目銘柄ランキング
-  - 重要ニュース一覧
-  - 最新分析日時
 - Stock Detail 画面
   - ポジティブ材料
   - ネガティブ材料
@@ -162,6 +161,20 @@
   - sentiment フィルタ
   - 期間フィルタ
   - 関連銘柄・AI分析結果との結合取得
+- Dashboard Backend
+  - `DashboardPageController` の集計 props
+  - `GetDashboardSummaryUseCase`
+  - `DashboardRepositoryInterface`
+  - `DashboardRepository`
+  - Dashboard 用 Data
+  - ウォッチリスト銘柄数集計
+  - 直近ポジティブ材料数集計
+  - 直近ネガティブ材料数集計
+  - 未分析ニュース数集計
+  - 直近7日の分析件数推移集計
+  - 注目銘柄ランキング取得
+  - 重要ニュース取得
+  - 最新分析日時取得
 - テスト
   - 認証系 Feature / UseCase / Data テスト
   - メール認証 Feature テスト
@@ -169,6 +182,7 @@
   - 株式分析系 Model relation テスト
   - Watchlist Web Controller / UseCase テスト
   - News Web Controller / UseCase テスト
+  - Dashboard Web Controller / UseCase テスト
 
 ### 部分実装
 
@@ -184,12 +198,6 @@
 
 - パスワードリセット
 - プロフィール編集
-- Dashboard 集計
-  - Dashboard 用 UseCase / Service
-  - ウォッチリスト集計
-  - 注目銘柄ランキング
-  - 重要ニュース取得
-  - 最新分析日時取得
 - Stock Detail 画面向け取得処理
   - ユーザーメモ取得
 - 株価取得バッチ
@@ -247,6 +255,7 @@
 1. 設計とルートの差分を決める
    - `/watchlists` に寄せるか、現状の `/watchlist` を正とするか。
    - `/stocks/{symbol}` に寄せるか、ID ベースを正とするか。
-2. Dashboard を実データ集計に置き換える
-3. 株価取得、ニュース取得、AI分析、シグナル生成のバッチ系を実装する
-4. Stock Detail のユーザーメモ・アラート導線・材料表示を補完する
+2. 株価取得、ニュース取得、AI分析、シグナル生成のバッチ系を実装する
+   - 画面は実データ表示に接続済みのため、次はデータを継続投入・分析・集計する処理がボトルネック。
+   - 最初の実装単位はニュース取得バッチを推奨する。News / Stock Detail / Dashboard / AI分析の入力データになるため、E2E の価値が出やすい。
+3. Stock Detail のユーザーメモ・アラート導線・材料表示を補完する

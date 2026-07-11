@@ -62,12 +62,13 @@ deptrac:
           value: app/Enums/.*
 
   ruleset:
-    # Presentation can depend on: Request, UseCase, Resource
+    # Presentation can depend on: Request, UseCase, Resource, Enum
     Presentation:
       - Presentation
       - Request
       - UseCase
       - Resource
+      - Enum
 
     # Request can depend on: Data (DTOs)
     Request:
@@ -104,15 +105,17 @@ deptrac:
       - Model
       - Enum
 
-    # Resource can depend on: Model
+    # Resource can depend on: Model, Data (output DTOs)
     Resource:
       - Resource
       - Model
+      - Data
       - Enum
 
-    # Data (DTOs) has minimal dependencies
+    # Data (DTOs) can convert Models into output DTOs
     Data:
       - Data
+      - Model
       - Enum
 
     # Policy can depend on: Model
@@ -123,3 +126,8 @@ deptrac:
     # Enum has no dependencies
     Enum:
       - Enum
+
+  # Route Model Binding used only for Policy authorization in the HTTP layer.
+  skip_violations:
+    App\Http\Controllers\Web\WatchlistPageController:
+      - App\Models\Watchlist

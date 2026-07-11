@@ -16,7 +16,7 @@ use Tests\TestCase;
 
 final class ListNewsUseCaseTest extends TestCase
 {
-    public function test_ニュース一覧をDTOに変換して取得できる(): void
+    public function test_ニュース一覧を_dt_oに変換して取得できる(): void
     {
         // Arrange
         $stock = new Stock([
@@ -39,7 +39,7 @@ final class ListNewsUseCaseTest extends TestCase
         ]);
         $article->id = 20;
         $article->setRelation('stocks', new Collection([$stock]));
-        $article->setRelation('analysisResults', new Collection());
+        $article->setRelation('analysisResults', new Collection);
 
         $filters = new NewsSearchData(
             stockId: null,
@@ -95,7 +95,7 @@ final class ListNewsUseCaseTest extends TestCase
         ], $result);
     }
 
-    public function test_分析結果をDTOに変換して取得できる(): void
+    public function test_分析結果を_dt_oに変換して取得できる(): void
     {
         // Arrange
         $stock = new Stock([
@@ -123,7 +123,7 @@ final class ListNewsUseCaseTest extends TestCase
             'provider' => 'rss',
         ]);
         $article->id = 21;
-        $article->setRelation('stocks', new Collection());
+        $article->setRelation('stocks', new Collection);
         $article->setRelation('analysisResults', new Collection([$analysis]));
 
         $filters = new NewsSearchData(

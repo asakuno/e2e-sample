@@ -6,7 +6,6 @@ namespace App\Enums;
 
 use App\Enums\Traits\HasSelectArray;
 use Carbon\CarbonInterface;
-use Illuminate\Support\Carbon;
 
 enum StockPricePeriod: string
 {
