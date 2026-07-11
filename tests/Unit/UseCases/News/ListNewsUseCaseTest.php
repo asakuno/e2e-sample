@@ -45,8 +45,10 @@ final class ListNewsUseCaseTest extends TestCase
             articleId: null,
             stockId: null,
             sentiment: null,
+            analysisStatus: null,
             from: null,
             to: null,
+            userId: 1,
         );
 
         $repository = $this->createMock(NewsRepositoryInterface::class);
@@ -131,8 +133,10 @@ final class ListNewsUseCaseTest extends TestCase
             articleId: null,
             stockId: null,
             sentiment: AnalysisSentiment::Positive,
+            analysisStatus: null,
             from: null,
             to: null,
+            userId: 1,
         );
 
         $repository = $this->createMock(NewsRepositoryInterface::class);

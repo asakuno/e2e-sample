@@ -28,6 +28,11 @@ interface DashboardRepositoryInterface
     public function findTopSignals(int $userId, int $limit): Collection;
 
     /**
+     * @return Collection<int, StockSignal>
+     */
+    public function findAttentionSignals(int $userId, int $limit): Collection;
+
+    /**
      * @return Collection<int, AnalysisResult>
      */
     public function findImportantNewsAnalyses(int $userId, int $limit): Collection;

@@ -34,10 +34,10 @@ describe('presentDashboardPriorityFeed', () => {
     // Arrange
     const stats: DashboardStatData[] = [{ kind: 'unanalyzedNews', value: 4 }];
     const importantNews = [createNews(1, 'green'), createNews(2)];
-    const topStocks = [createStock(1), createStock(2)];
+    const attentionStocks = [createStock(1), createStock(2)];
 
     // Act
-    const actual = presentDashboardPriorityFeed(stats, importantNews, topStocks);
+    const actual = presentDashboardPriorityFeed(stats, importantNews, attentionStocks);
 
     // Assert
     expect(actual.map(({ id }) => id)).toEqual([
@@ -50,10 +50,10 @@ describe('presentDashboardPriorityFeed', () => {
   it('代表が不足する場合は2件目以降の重要ニュースを先に補い最大3件にすること', () => {
     // Arrange
     const importantNews = [createNews(1), createNews(2), createNews(3), createNews(4)];
-    const topStocks = [createStock(1), createStock(2)];
+    const attentionStocks = [createStock(1), createStock(2)];
 
     // Act
-    const actual = presentDashboardPriorityFeed([], importantNews, topStocks);
+    const actual = presentDashboardPriorityFeed([], importantNews, attentionStocks);
 
     // Assert
     expect(actual.map(({ id }) => id)).toEqual([
@@ -65,10 +65,10 @@ describe('presentDashboardPriorityFeed', () => {
 
   it('重要ニュースの補充候補がない場合は2件目以降の注目銘柄で補うこと', () => {
     // Arrange
-    const topStocks = [createStock(1), createStock(2), createStock(3)];
+    const attentionStocks = [createStock(1), createStock(2), createStock(3)];
 
     // Act
-    const actual = presentDashboardPriorityFeed([], [], topStocks);
+    const actual = presentDashboardPriorityFeed([], [], attentionStocks);
 
     // Assert
     expect(actual.map(({ id }) => id)).toEqual(['top-stock-1', 'top-stock-2', 'top-stock-3']);
@@ -185,7 +185,7 @@ describe('presentDashboardPriorityFeed', () => {
     expect(actual?.meta).toBe('シグナルスコア 3.00');
   });
 
-  it('未分析ニュース件数が正の場合だけリンクなしの表示データを作ること', () => {
+  it('未分析ニュース件数が正の場合だけ未分析一覧への表示データを作ること', () => {
     // Arrange
     const stats: DashboardStatData[] = [{ kind: 'unanalyzedNews', value: 1234 }];
 
@@ -200,6 +200,7 @@ describe('presentDashboardPriorityFeed', () => {
       variant: 'warning',
       title: '1,234件のニュースが分析待ちです',
       description: 'ウォッチ銘柄に関するニュースを確認してください',
+      href: '/news?analysis_status=unanalyzed',
     });
   });
 

@@ -67,6 +67,7 @@ final class GetDashboardSummaryUseCase
                 points: $this->buildTrendPoints($recentCounts, $recentFrom, $today),
             ),
             topStocks: $this->buildTopStocks($userId),
+            attentionStocks: $this->buildAttentionStocks($userId),
             importantNews: $this->buildImportantNews($userId),
             latestAnalysisAt: $latestAnalysisAt?->format('Y-m-d H:i'),
         );
@@ -135,6 +136,27 @@ final class GetDashboardSummaryUseCase
             ->unique('stock_id')
             ->take(5)
             ->values()
+            ->map(fn ($signal): DashboardTopStockData => new DashboardTopStockData(
+                id: $signal->stock->id,
+                symbol: $signal->stock->symbol,
+                name: $signal->stock->name,
+                market: $signal->stock->market,
+                totalScore: (float) $signal->total_score,
+                positiveCount: $signal->positive_count,
+                negativeCount: $signal->negative_count,
+                reason: $signal->reason,
+                signalDate: $this->formatDate($signal->signal_date),
+            ))
+            ->all();
+    }
+
+    /**
+     * @return array<int, DashboardTopStockData>
+     */
+    private function buildAttentionStocks(int $userId): array
+    {
+        return $this->dashboardRepository
+            ->findAttentionSignals($userId, 5)
             ->map(fn ($signal): DashboardTopStockData => new DashboardTopStockData(
                 id: $signal->stock->id,
                 symbol: $signal->stock->symbol,

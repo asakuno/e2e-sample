@@ -104,7 +104,14 @@ const newsProps: NewsPageProps = {
   auth: stocksProps.auth,
   flash: {},
   errors: {},
-  filters: { stock_id: '', sentiment: '', from: '', to: '' },
+  filters: {
+    article_id: '',
+    stock_id: '',
+    sentiment: '',
+    analysis_status: '',
+    from: '',
+    to: '',
+  },
   stockOptions: [{ value: 1, label: 'AAPL Apple Inc.' }],
   sentimentOptions: [
     { value: 1, label: 'ポジティブ' },
@@ -381,13 +388,57 @@ describe('Stock app navigation pages', () => {
     render(<News {...newsProps} />);
     await user.selectOptions(screen.getByLabelText('銘柄'), '1');
     await user.selectOptions(screen.getByLabelText('sentiment'), '1');
+    await user.selectOptions(screen.getByLabelText('分析状態'), 'unanalyzed');
+    expect(screen.getByLabelText('sentiment')).toBeDisabled();
     await user.type(screen.getByLabelText('期間 From'), '2026-06-01');
     await user.type(screen.getByLabelText('期間 To'), '2026-06-30');
     await user.click(screen.getByRole('button', { name: '検索' }));
 
     expect(routerGetMock).toHaveBeenCalledWith(
       '/news',
-      { stock_id: '1', sentiment: '1', from: '2026-06-01', to: '2026-06-30' },
+      {
+        stock_id: '1',
+        analysis_status: 'unanalyzed',
+        from: '2026-06-01',
+        to: '2026-06-30',
+      },
+      expect.objectContaining({
+        only: ['news', 'filters'],
+        preserveState: true,
+        replace: true,
+      }),
+    );
+  });
+
+  it('News ページでダッシュボードから選択した記事を検索フォームより先に表示すること', () => {
+    render(<News {...newsProps} filters={{ ...newsProps.filters, article_id: '1' }} />);
+
+    const selectedStatus = screen.getByRole('heading', {
+      name: 'ダッシュボードから選択した記事を表示中',
+    });
+    const articleHeading = screen.getByRole('heading', {
+      name: 'Apple announces new product',
+    });
+    const otherNewsSearchHeading = screen.getByRole('heading', { name: '他のニュースを探す' });
+
+    expect(selectedStatus).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '一覧に戻す' })).toHaveAttribute('href', '/news');
+    expect(
+      articleHeading.compareDocumentPosition(otherNewsSearchHeading) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('News ページで選択中の記事を引き継がずに他のニュースを検索すること', async () => {
+    const user = userEvent.setup();
+    routerGetMock.mockClear();
+
+    render(<News {...newsProps} filters={{ ...newsProps.filters, article_id: '1' }} />);
+    await user.click(screen.getByRole('button', { name: '検索' }));
+
+    expect(routerGetMock).toHaveBeenCalledWith(
+      '/news',
+      {},
       expect.objectContaining({
         only: ['news', 'filters'],
         preserveState: true,

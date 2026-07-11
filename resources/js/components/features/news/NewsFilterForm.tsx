@@ -33,7 +33,7 @@ export function NewsFilterForm({
   return (
     <Surface asChild padding="md">
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-[1fr_180px_160px_160px_auto] xl:items-end">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 xl:items-end 2xl:grid-cols-[minmax(180px,1fr)_150px_150px_145px_145px_auto]">
           <div>
             <FieldLabel htmlFor="news-filter-stock">銘柄</FieldLabel>
             <select
@@ -57,7 +57,7 @@ export function NewsFilterForm({
             <select
               id="news-filter-sentiment"
               value={filters.sentiment}
-              disabled={processing}
+              disabled={processing || filters.analysis_status === 'unanalyzed'}
               onChange={(event) => onFiltersChange({ ...filters, sentiment: event.target.value })}
               className={fieldControlVariants()}
             >
@@ -67,6 +67,26 @@ export function NewsFilterForm({
                   {option.label}
                 </option>
               ))}
+            </select>
+          </div>
+
+          <div>
+            <FieldLabel htmlFor="news-filter-analysis-status">分析状態</FieldLabel>
+            <select
+              id="news-filter-analysis-status"
+              value={filters.analysis_status}
+              disabled={processing}
+              onChange={(event) =>
+                onFiltersChange({
+                  ...filters,
+                  analysis_status: event.target.value as NewsFilters['analysis_status'],
+                  sentiment: event.target.value === 'unanalyzed' ? '' : filters.sentiment,
+                })
+              }
+              className={fieldControlVariants()}
+            >
+              <option value="">すべて</option>
+              <option value="unanalyzed">未分析（ウォッチ銘柄）</option>
             </select>
           </div>
 
@@ -94,7 +114,7 @@ export function NewsFilterForm({
             />
           </div>
 
-          <div className="flex gap-2 md:col-span-2 xl:col-span-1">
+          <div className="flex gap-2 md:col-span-2 xl:col-span-3 2xl:col-span-1">
             <Button
               type="submit"
               className="h-11 flex-1 xl:flex-none"

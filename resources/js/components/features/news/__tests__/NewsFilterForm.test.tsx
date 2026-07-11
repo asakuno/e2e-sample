@@ -12,6 +12,7 @@ describe('NewsFilterForm', () => {
       resetDisabled: true,
       stockDisabled: true,
       sentimentDisabled: true,
+      analysisStatusDisabled: true,
       fromDisabled: true,
       toDisabled: true,
     };
@@ -19,7 +20,14 @@ describe('NewsFilterForm', () => {
     // Act
     render(
       <NewsFilterForm
-        filters={{ stock_id: '', sentiment: '', from: '', to: '' }}
+        filters={{
+          article_id: '',
+          stock_id: '',
+          sentiment: '',
+          analysis_status: '',
+          from: '',
+          to: '',
+        }}
         stockOptions={[]}
         sentimentOptions={[]}
         processing
@@ -30,6 +38,9 @@ describe('NewsFilterForm', () => {
     );
     const searchButton = screen.getByRole('button', { name: expected.searchLabel });
     const resetButton = screen.getByRole('button', { name: 'クリア' });
+    const unanalyzedOption = screen.getByRole('option', {
+      name: '未分析（ウォッチ銘柄）',
+    });
     const actual = {
       searchLabel: searchButton.textContent?.trim(),
       searchDisabled: searchButton.hasAttribute('disabled'),
@@ -37,11 +48,13 @@ describe('NewsFilterForm', () => {
       resetDisabled: resetButton.hasAttribute('disabled'),
       stockDisabled: screen.getByLabelText('銘柄').hasAttribute('disabled'),
       sentimentDisabled: screen.getByLabelText('sentiment').hasAttribute('disabled'),
+      analysisStatusDisabled: screen.getByLabelText('分析状態').hasAttribute('disabled'),
       fromDisabled: screen.getByLabelText('期間 From').hasAttribute('disabled'),
       toDisabled: screen.getByLabelText('期間 To').hasAttribute('disabled'),
     };
 
     // Assert
     expect(actual).toEqual(expected);
+    expect(unanalyzedOption).toHaveValue('unanalyzed');
   });
 });

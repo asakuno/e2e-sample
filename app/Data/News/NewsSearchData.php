@@ -14,11 +14,15 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 #[MapName(SnakeCaseMapper::class)]
 final class NewsSearchData extends Data
 {
+    public const string ANALYSIS_STATUS_UNANALYZED = 'unanalyzed';
+
     public function __construct(
         public readonly ?int $articleId,
         public readonly ?int $stockId,
         public readonly ?AnalysisSentiment $sentiment,
+        public readonly ?string $analysisStatus,
         public readonly ?string $from,
         public readonly ?string $to,
+        public readonly int $userId,
     ) {}
 }

@@ -29,23 +29,32 @@ final class NewsIndexRequest extends FormRequest
                 'integer',
                 Rule::in(array_map(fn (AnalysisSentiment $sentiment): int => $sentiment->value, AnalysisSentiment::cases())),
             ],
+            'analysis_status' => [
+                'nullable',
+                'string',
+                Rule::in([NewsSearchData::ANALYSIS_STATUS_UNANALYZED]),
+            ],
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
         ];
     }
 
-    public function toNewsSearchData(): NewsSearchData
+    public function toNewsSearchData(int $userId): NewsSearchData
     {
         $validated = $this->validated();
+        $analysisStatus = $validated['analysis_status'] ?? null;
 
         return NewsSearchData::from([
             'article_id' => isset($validated['article_id']) ? (int) $validated['article_id'] : null,
             'stock_id' => isset($validated['stock_id']) ? (int) $validated['stock_id'] : null,
-            'sentiment' => isset($validated['sentiment'])
+            'sentiment' => $analysisStatus !== NewsSearchData::ANALYSIS_STATUS_UNANALYZED
+                && isset($validated['sentiment'])
                 ? AnalysisSentiment::from((int) $validated['sentiment'])
                 : null,
+            'analysis_status' => $analysisStatus,
             'from' => $validated['from'] ?? null,
             'to' => $validated['to'] ?? null,
+            'user_id' => $userId,
         ]);
     }
 }

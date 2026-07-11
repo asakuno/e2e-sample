@@ -36,7 +36,14 @@ export function NewsFiltersPanel({
   };
 
   const resetFilters = () => {
-    const emptyFilters = { stock_id: '', sentiment: '', from: '', to: '' };
+    const emptyFilters: NewsFilters = {
+      article_id: '',
+      stock_id: '',
+      sentiment: '',
+      analysis_status: '',
+      from: '',
+      to: '',
+    };
     setFilters(emptyFilters);
     submitFilters(emptyFilters);
   };
@@ -56,8 +63,10 @@ export function NewsFiltersPanel({
 
 function compactFilters(filters: NewsFilters): Partial<NewsFilters> {
   return {
+    ...(filters.article_id !== '' ? { article_id: filters.article_id } : {}),
     ...(filters.stock_id !== '' ? { stock_id: filters.stock_id } : {}),
     ...(filters.sentiment !== '' ? { sentiment: filters.sentiment } : {}),
+    ...(filters.analysis_status !== '' ? { analysis_status: filters.analysis_status } : {}),
     ...(filters.from !== '' ? { from: filters.from } : {}),
     ...(filters.to !== '' ? { to: filters.to } : {}),
   };

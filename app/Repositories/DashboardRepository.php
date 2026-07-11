@@ -80,6 +80,38 @@ final class DashboardRepository implements DashboardRepositoryInterface
     }
 
     /**
+     * @return Collection<int, StockSignal>
+     */
+    public function findAttentionSignals(int $userId, int $limit): Collection
+    {
+        $stockIds = $this->activeStockIds($userId);
+
+        if ($stockIds === []) {
+            return new Collection;
+        }
+
+        $rankedSignals = StockSignal::query()
+            ->select('stock_signals.*')
+            ->selectRaw(<<<'SQL'
+                ROW_NUMBER() OVER (
+                    PARTITION BY stock_id
+                    ORDER BY ABS(total_score) DESC, signal_date DESC, id DESC
+                ) AS attention_rank
+                SQL)
+            ->whereIn('stock_id', $stockIds);
+
+        return StockSignal::query()
+            ->fromSub($rankedSignals, 'ranked_stock_signals')
+            ->with('stock')
+            ->where('attention_rank', 1)
+            ->orderByRaw('ABS(total_score) DESC')
+            ->orderByDesc('signal_date')
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
      * @return Collection<int, AnalysisResult>
      */
     public function findImportantNewsAnalyses(int $userId, int $limit): Collection
@@ -90,10 +122,21 @@ final class DashboardRepository implements DashboardRepositoryInterface
             return new Collection;
         }
 
-        return AnalysisResult::query()
-            ->with(['stock', 'analysable'])
+        $rankedAnalyses = AnalysisResult::query()
+            ->select('analysis_results.*')
+            ->selectRaw(<<<'SQL'
+                ROW_NUMBER() OVER (
+                    PARTITION BY analysable_id
+                    ORDER BY ABS(impact_score) DESC, analyzed_at DESC, id DESC
+                ) AS article_rank
+                SQL)
             ->whereIn('stock_id', $stockIds)
-            ->where('analysable_type', NewsArticle::class)
+            ->where('analysable_type', NewsArticle::class);
+
+        return AnalysisResult::query()
+            ->fromSub($rankedAnalyses, 'ranked_news_analyses')
+            ->with(['stock', 'analysable'])
+            ->where('article_rank', 1)
             ->orderByRaw('ABS(impact_score) DESC')
             ->orderByDesc('analyzed_at')
             ->orderByDesc('id')

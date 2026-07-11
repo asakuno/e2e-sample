@@ -1,7 +1,7 @@
 /**
  * ダッシュボードページ
  *
- * ログイン後のメイン画面。確認優先度の高い項目を起点に、
+ * ログイン後のメイン画面。現在の確認候補を起点に、
  * 全体の状況と分析推移を表示する。
  */
 import { Head, usePage } from '@inertiajs/react';
@@ -20,12 +20,13 @@ export default function Dashboard({
   stats,
   recentTrend,
   topStocks,
+  attentionStocks,
   importantNews,
   latestAnalysisAt,
 }: DashboardPageProps) {
   const { props } = usePage<AppPageProps>();
   const userName = props.auth.user?.name ?? '';
-  const priorityItems = presentDashboardPriorityFeed(stats, importantNews, topStocks);
+  const priorityItems = presentDashboardPriorityFeed(stats, importantNews, attentionStocks);
   const summaryStats = stats.filter((stat) => stat.kind !== 'latestAnalysis');
 
   return (

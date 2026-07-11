@@ -41,8 +41,10 @@ export interface NewsArticle {
 }
 
 export interface NewsFilters {
+  article_id: string;
   stock_id: string;
   sentiment: string;
+  analysis_status: '' | 'unanalyzed';
   from: string;
   to: string;
 }

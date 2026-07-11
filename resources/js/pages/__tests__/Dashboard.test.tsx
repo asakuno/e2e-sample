@@ -84,6 +84,20 @@ const topStocks: TopStockData[] = [
   },
 ];
 
+const attentionStocks: TopStockData[] = [
+  {
+    id: 2,
+    symbol: 'TSLA',
+    name: 'Tesla Inc.',
+    market: 'us',
+    totalScore: -9,
+    positiveCount: 1,
+    negativeCount: 5,
+    reason: '強いネガティブシグナルを検出',
+    signalDate: '2026-06-15',
+  },
+];
+
 const importantNews: ActivityItemData[] = [
   {
     id: 1,
@@ -103,6 +117,7 @@ const defaultProps = {
   stats,
   recentTrend,
   topStocks,
+  attentionStocks,
   importantNews,
   latestAnalysisAt: '2026-06-15 11:00',
 };
@@ -133,18 +148,17 @@ describe('Dashboard', () => {
       'href',
       '/news?article_id=1',
     );
-    expect(screen.getByRole('link', { name: /AAPL Apple Inc\./ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /TSLA Tesla Inc\./ })).toHaveAttribute(
       'href',
-      '/stocks/1',
+      '/stocks/2',
     );
     expect(screen.getByText('1件のニュースが分析待ちです')).toBeInTheDocument();
-    expect(
-      screen.queryByRole('link', { name: /1件のニュースが分析待ちです/ }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'ニュースをすべて見る' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /1件のニュースが分析待ちです/ })).toHaveAttribute(
       'href',
-      '/news',
+      '/news?analysis_status=unanalyzed',
     );
+    expect(screen.getByRole('link', { name: 'ニュース一覧' })).toHaveAttribute('href', '/news');
+    expect(screen.getByRole('link', { name: '銘柄一覧' })).toHaveAttribute('href', '/stocks');
   });
 
   it('状況サマリーに4種類の集計を表示し、最新分析日時を重複表示しないこと', () => {
@@ -169,23 +183,25 @@ describe('Dashboard', () => {
     expect(screen.getByText('AAPL')).toBeInTheDocument();
   });
 
-  it('優先項目がない場合に空状態と銘柄探索導線を表示すること', () => {
+  it('確認候補がない場合に空状態と銘柄探索導線を表示すること', () => {
     render(
       <Dashboard
         {...defaultProps}
         stats={statsWithoutPriorityItems}
         importantNews={[]}
         topStocks={[]}
+        attentionStocks={[]}
         latestAnalysisAt={null}
       />,
     );
 
-    expect(screen.getByText('現時点で優先して確認する項目はありません')).toBeInTheDocument();
+    expect(screen.getByText('現時点で確認する項目はありません')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '銘柄を探す' })).toHaveAttribute('href', '/stocks');
-    expect(screen.queryByRole('link', { name: 'ニュースをすべて見る' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'ニュース一覧' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '銘柄一覧' })).not.toBeInTheDocument();
   });
 
-  it('モバイルのDOM順が優先フィード、サマリー、ランキング、分析推移の順であること', () => {
+  it('モバイルのDOM順が確認候補、サマリー、ランキング、分析推移の順であること', () => {
     render(<Dashboard {...defaultProps} />);
     const sections = [
       screen.getByRole('heading', { name: '現在の確認候補' }),

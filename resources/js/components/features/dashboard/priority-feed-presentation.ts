@@ -84,6 +84,7 @@ function presentUnanalyzedNews(count: number): DashboardPriorityFeedItem {
     variant: 'warning',
     title: `${count.toLocaleString('ja-JP')}件のニュースが分析待ちです`,
     description: 'ウォッチ銘柄に関するニュースを確認してください',
+    href: newsIndex.url({ query: { analysis_status: 'unanalyzed' } }),
   };
 }
 
@@ -93,19 +94,19 @@ function presentUnanalyzedNews(count: number): DashboardPriorityFeedItem {
 export function presentDashboardPriorityFeed(
   stats: DashboardStatData[],
   importantNews: ActivityItemData[],
-  topStocks: TopStockData[],
+  attentionStocks: TopStockData[],
 ): DashboardPriorityFeedItem[] {
   const items: DashboardPriorityFeedItem[] = [];
   const firstImportantNews = importantNews[0];
-  const firstTopStock = topStocks[0];
+  const firstAttentionStock = attentionStocks[0];
   const unanalyzedNewsCount = stats.find((stat) => stat.kind === 'unanalyzedNews')?.value;
 
   if (firstImportantNews !== undefined) {
     items.push(presentImportantNews(firstImportantNews));
   }
 
-  if (firstTopStock !== undefined) {
-    items.push(presentTopStock(firstTopStock));
+  if (firstAttentionStock !== undefined) {
+    items.push(presentTopStock(firstAttentionStock));
   }
 
   if (typeof unanalyzedNewsCount === 'number' && unanalyzedNewsCount > 0) {
@@ -114,7 +115,7 @@ export function presentDashboardPriorityFeed(
 
   const supplementalItems = [
     ...importantNews.slice(1).map(presentImportantNews),
-    ...topStocks.slice(1).map(presentTopStock),
+    ...attentionStocks.slice(1).map(presentTopStock),
   ];
 
   return [...items, ...supplementalItems].slice(0, 3);

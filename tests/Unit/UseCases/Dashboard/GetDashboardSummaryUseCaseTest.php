@@ -91,6 +91,11 @@ final class GetDashboardSummaryUseCaseTest extends TestCase
                 return new Collection([$this->signal]);
             }
 
+            public function findAttentionSignals(int $userId, int $limit): Collection
+            {
+                return new Collection([$this->signal]);
+            }
+
             public function findImportantNewsAnalyses(int $userId, int $limit): Collection
             {
                 return new Collection([$this->analysis]);
@@ -130,6 +135,7 @@ final class GetDashboardSummaryUseCaseTest extends TestCase
         $this->assertSame(3, $result->recentTrend->total);
         $this->assertSame('+200.0%', $result->recentTrend->changePercent);
         $this->assertSame('AAPL', $result->topStocks[0]->symbol);
+        $this->assertSame('AAPL', $result->attentionStocks[0]->symbol);
         $this->assertSame(30, $result->importantNews[0]->articleId);
         $this->assertSame('Apple product news', $result->importantNews[0]->title);
         $this->assertSame('2026-06-15 11:00', $result->latestAnalysisAt);

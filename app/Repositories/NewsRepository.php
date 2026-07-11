@@ -7,6 +7,7 @@ namespace App\Repositories;
 use App\Data\News\NewsSearchData;
 use App\Models\NewsArticle;
 use App\Models\Stock;
+use App\Models\Watchlist;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -39,6 +40,21 @@ final class NewsRepository implements NewsRepositoryInterface
                     'analysisResults',
                     fn (Builder $query): Builder => $query->where('sentiment', $filters->sentiment->value)
                 )
+            )
+            ->when(
+                $filters->analysisStatus === NewsSearchData::ANALYSIS_STATUS_UNANALYZED,
+                fn (Builder $query): Builder => $query
+                    ->whereDoesntHave('analysisResults')
+                    ->whereHas(
+                        'stocks',
+                        fn (Builder $query): Builder => $query->whereIn(
+                            'stocks.id',
+                            Watchlist::query()
+                                ->forUser($filters->userId)
+                                ->active()
+                                ->select('stock_id'),
+                        ),
+                    ),
             )
             ->when(
                 $filters->from !== null,

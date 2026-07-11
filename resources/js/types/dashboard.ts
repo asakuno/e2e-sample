@@ -65,6 +65,7 @@ export interface DashboardPageProps extends AppPageProps {
   stats: DashboardStatData[];
   recentTrend: TrendData;
   topStocks: TopStockData[];
+  attentionStocks: TopStockData[];
   importantNews: ActivityItemData[];
   latestAnalysisAt: string | null;
 }

@@ -22,13 +22,15 @@ class NewsPageController extends Controller
      */
     public function __invoke(NewsIndexRequest $request, ListNewsUseCase $useCase): Response
     {
-        $filters = $request->toNewsSearchData();
+        $filters = $request->toNewsSearchData((int) $request->user()->getAuthIdentifier());
 
         return Inertia::render('News', [
             'news' => fn (): array => NewsArticleResource::collection($useCase->execute($filters))->resolve($request),
             'filters' => [
+                'article_id' => $filters->articleId === null ? '' : (string) $filters->articleId,
                 'stock_id' => $filters->stockId === null ? '' : (string) $filters->stockId,
                 'sentiment' => $filters->sentiment === null ? '' : (string) $filters->sentiment->value,
+                'analysis_status' => $filters->analysisStatus ?? '',
                 'from' => $filters->from ?? '',
                 'to' => $filters->to ?? '',
             ],
