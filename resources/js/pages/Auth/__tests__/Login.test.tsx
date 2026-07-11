@@ -55,9 +55,9 @@ describe('Login', () => {
     expect(screen.getByRole('button', { name: 'ログインする' })).toBeInTheDocument();
   });
 
-  it('「パスワードをお忘れですか？」リンクが表示されること', () => {
+  it('未実装のパスワード再設定導線を表示しないこと', () => {
     render(<Login />);
-    expect(screen.getByText('パスワードをお忘れですか？')).toBeInTheDocument();
+    expect(screen.queryByText('パスワードをお忘れですか？')).not.toBeInTheDocument();
   });
 
   it('「新規登録はこちら」リンクが表示されること', () => {

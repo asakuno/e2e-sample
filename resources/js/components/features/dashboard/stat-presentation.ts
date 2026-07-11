@@ -14,27 +14,27 @@ const STAT_PRESENTATIONS = {
   watchlist: {
     label: 'ウォッチリスト銘柄数',
     icon: 'visibility',
-    iconColorClass: 'text-blue-600',
+    iconColorClass: 'text-info',
   },
   positiveAnalysis: {
     label: '直近ポジティブ材料',
     icon: 'trending_up',
-    iconColorClass: 'text-green-600',
+    iconColorClass: 'text-positive',
   },
   negativeAnalysis: {
     label: '直近ネガティブ材料',
     icon: 'trending_down',
-    iconColorClass: 'text-red-600',
+    iconColorClass: 'text-negative',
   },
   unanalyzedNews: {
     label: '未分析ニュース',
     icon: 'article',
-    iconColorClass: 'text-orange-600',
+    iconColorClass: 'text-warning',
   },
   latestAnalysis: {
     label: '最新分析日時',
     icon: 'schedule',
-    iconColorClass: 'text-gray-600',
+    iconColorClass: 'text-muted-foreground',
   },
 } as const satisfies Record<DashboardStatKind, DashboardStatPresentation>;
 

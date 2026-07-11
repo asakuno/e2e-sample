@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { ActionLink } from '../ActionLink';
@@ -37,6 +37,58 @@ describe('ActionLink', () => {
 
     // Assert
     expect(actual).toBe(expected);
+  });
+
+  it('action が処理中の場合、重複した通常クリックを受け付けないこと', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    let resolveAction: () => void = () => {};
+    const action = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveAction = resolve;
+        }),
+    );
+    const expected = 1;
+    render(
+      <ActionLink href="#stocks-pending" action={action}>
+        銘柄一覧
+      </ActionLink>,
+    );
+    const link = screen.getByRole('link', { name: '銘柄一覧' });
+
+    // Act
+    await user.click(link);
+    fireEvent.click(link);
+    const actual = action.mock.calls.length;
+
+    // Assert
+    expect(actual).toBe(expected);
+
+    await act(async () => {
+      resolveAction();
+    });
+  });
+
+  it('aria-disabled=true の場合、クリック処理を受け付けないこと', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const action = vi.fn();
+    const onClick = vi.fn();
+    render(
+      <ActionLink href="#stocks-disabled" action={action} onClick={onClick} aria-disabled="true">
+        銘柄一覧
+      </ActionLink>,
+    );
+    const link = screen.getByRole('link', { name: '銘柄一覧' });
+
+    // Act
+    await user.click(link);
+
+    // Assert
+    expect(link).toHaveAttribute('aria-disabled', 'true');
+    expect(action).not.toHaveBeenCalled();
+    expect(onClick).not.toHaveBeenCalled();
   });
 
   it('metaKey クリックの場合、action が呼ばれないこと', () => {

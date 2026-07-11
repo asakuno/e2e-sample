@@ -10,10 +10,10 @@ interface WatchlistTableProps {
 
 export function WatchlistTable({ items, onEditMemo, removeAction }: WatchlistTableProps) {
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-sm">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted">
             <tr>
               <HeaderCell>コード</HeaderCell>
               <HeaderCell>企業名</HeaderCell>
@@ -23,7 +23,7 @@ export function WatchlistTable({ items, onEditMemo, removeAction }: WatchlistTab
               <HeaderCell align="right">操作</HeaderCell>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
+          <tbody className="divide-y divide-border bg-card">
             {items.map((item) => (
               <WatchlistRow
                 key={item.id}
@@ -49,7 +49,7 @@ function HeaderCell({
   return (
     <th
       scope="col"
-      className={`whitespace-nowrap px-4 py-3 font-semibold text-gray-500 text-xs uppercase tracking-normal ${
+      className={`whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-normal ${
         align === 'right' ? 'text-right' : 'text-left'
       }`}
     >

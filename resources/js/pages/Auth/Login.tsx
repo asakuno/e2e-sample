@@ -67,12 +67,11 @@ export default function Login() {
           <PrimaryButton processing={processing}>ログインする</PrimaryButton>
 
           {/* フッターリンク */}
-          <div className="mt-6 flex items-center justify-between text-[13px] text-slate-600">
-            <span className="cursor-default text-slate-400">パスワードをお忘れですか？</span>
+          <div className="mt-6 flex justify-end text-[13px] text-muted-foreground">
             <InertiaActionLink
               href={showRegister.url()}
               pendingClassName="opacity-70"
-              className="transition hover:text-[#326CCB] hover:underline"
+              className="inline-flex min-h-11 items-center rounded-md px-3 py-2 transition-colors duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               新規登録はこちら
             </InertiaActionLink>

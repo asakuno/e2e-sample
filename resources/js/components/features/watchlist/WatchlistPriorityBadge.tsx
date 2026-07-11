@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 interface WatchlistPriorityBadgeProps {
   priority: number;
@@ -8,38 +8,38 @@ export function WatchlistPriorityBadge({ priority }: WatchlistPriorityBadgeProps
   const presentation = priorityPresentation(priority);
 
   return (
-    <span
-      className={cn(
-        'inline-flex rounded-full px-2.5 py-1 font-medium text-xs',
-        presentation.className,
-      )}
-    >
+    <StatusBadge variant={presentation.variant} className="tabular-nums">
       {presentation.label}
-    </span>
+    </StatusBadge>
   );
 }
 
-function priorityPresentation(priority: number): { label: string; className: string } {
+type PriorityBadgeVariant = 'negative' | 'warning' | 'neutral';
+
+function priorityPresentation(priority: number): {
+  label: string;
+  variant: PriorityBadgeVariant;
+} {
   switch (priority) {
     case 3:
       return {
         label: '高',
-        className: 'bg-red-50 text-red-700',
+        variant: 'negative',
       };
     case 2:
       return {
         label: '中',
-        className: 'bg-amber-50 text-amber-700',
+        variant: 'warning',
       };
     case 1:
       return {
         label: '低',
-        className: 'bg-gray-100 text-gray-700',
+        variant: 'neutral',
       };
     default:
       return {
         label: `優先度 ${priority}`,
-        className: 'bg-gray-100 text-gray-700',
+        variant: 'neutral',
       };
   }
 }

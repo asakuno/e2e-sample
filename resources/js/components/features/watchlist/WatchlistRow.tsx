@@ -20,22 +20,22 @@ export function WatchlistRow({ item, onEditMemo, removeAction }: WatchlistRowPro
   };
 
   return (
-    <tr className="transition hover:bg-gray-50">
+    <tr className="transition-colors duration-motion-fast ease-standard hover:bg-muted/50">
       <td className="whitespace-nowrap px-4 py-4">
-        <div className="font-semibold text-gray-900 text-sm">{item.stock.symbol}</div>
-        <div className="text-gray-500 text-xs">{item.stock.market.toUpperCase()}</div>
+        <div className="font-semibold text-foreground text-sm">{item.stock.symbol}</div>
+        <div className="text-muted-foreground text-xs">{item.stock.market.toUpperCase()}</div>
       </td>
       <td className="min-w-64 px-4 py-4">
-        <div className="font-medium text-gray-900 text-sm">{item.stock.name}</div>
-        <div className="text-gray-500 text-xs">{item.stock.industry ?? '-'}</div>
+        <div className="font-medium text-foreground text-sm">{item.stock.name}</div>
+        <div className="text-muted-foreground text-xs">{item.stock.industry ?? '-'}</div>
       </td>
       <td className="whitespace-nowrap px-4 py-4">
         <WatchlistPriorityBadge priority={item.priority} />
       </td>
-      <td className="min-w-72 px-4 py-4 text-gray-600 text-sm">
+      <td className="min-w-72 px-4 py-4 text-muted-foreground text-sm">
         {item.memo != null && item.memo !== '' ? item.memo : '-'}
       </td>
-      <td className="whitespace-nowrap px-4 py-4 text-gray-600 text-sm">
+      <td className="whitespace-nowrap px-4 py-4 text-muted-foreground text-sm">
         {item.stock.sector ?? '-'}
       </td>
       <td className="whitespace-nowrap px-4 py-4 text-right">
@@ -64,7 +64,7 @@ export function WatchlistRow({ item, onEditMemo, removeAction }: WatchlistRowPro
           <InertiaActionLink
             href={stockShow.url(item.stock.id)}
             pendingClassName="opacity-70"
-            className="inline-flex min-h-8 items-center gap-1 rounded-md px-2 py-1 font-medium text-gray-700 text-sm transition-[background-color,color,transform] hover:bg-gray-100 hover:text-gray-950 active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
+            className="inline-flex min-h-11 items-center gap-1 rounded-md px-3 py-2 font-medium text-muted-foreground text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-muted hover:text-foreground active:translate-y-px focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 motion-reduce:transform-none"
           >
             詳細
             <ArrowRight aria-hidden="true" className="size-4" />

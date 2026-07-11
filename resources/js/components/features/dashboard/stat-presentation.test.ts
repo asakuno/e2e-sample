@@ -13,7 +13,7 @@ describe('presentDashboardStat', () => {
       change: '監視中',
       changeDirection: 'neutral',
       icon: 'visibility',
-      iconColorClass: 'text-blue-600',
+      iconColorClass: 'text-info',
     };
 
     // Act
@@ -34,7 +34,7 @@ describe('presentDashboardStat', () => {
       change: 'AI分析結果',
       changeDirection: 'up',
       icon: 'trending_up',
-      iconColorClass: 'text-green-600',
+      iconColorClass: 'text-positive',
     };
 
     // Act
@@ -55,7 +55,7 @@ describe('presentDashboardStat', () => {
       change: 'AI分析結果',
       changeDirection: 'down',
       icon: 'trending_down',
-      iconColorClass: 'text-red-600',
+      iconColorClass: 'text-negative',
     };
 
     // Act
@@ -74,7 +74,7 @@ describe('presentDashboardStat', () => {
       change: 'ウォッチ銘柄関連',
       changeDirection: 'neutral',
       icon: 'article',
-      iconColorClass: 'text-orange-600',
+      iconColorClass: 'text-warning',
     };
 
     // Act
@@ -93,7 +93,7 @@ describe('presentDashboardStat', () => {
       change: 'ウォッチ銘柄関連',
       changeDirection: 'up',
       icon: 'article',
-      iconColorClass: 'text-orange-600',
+      iconColorClass: 'text-warning',
     };
 
     // Act
@@ -114,7 +114,7 @@ describe('presentDashboardStat', () => {
       change: '最終更新',
       changeDirection: 'neutral',
       icon: 'schedule',
-      iconColorClass: 'text-gray-600',
+      iconColorClass: 'text-muted-foreground',
     };
 
     // Act
@@ -133,7 +133,7 @@ describe('presentDashboardStat', () => {
       change: '最終更新',
       changeDirection: 'neutral',
       icon: 'schedule',
-      iconColorClass: 'text-gray-600',
+      iconColorClass: 'text-muted-foreground',
     };
 
     // Act
@@ -152,7 +152,7 @@ describe('presentDashboardStat', () => {
       change: '分析結果なし',
       changeDirection: 'neutral',
       icon: 'schedule',
-      iconColorClass: 'text-gray-600',
+      iconColorClass: 'text-muted-foreground',
     };
 
     // Act

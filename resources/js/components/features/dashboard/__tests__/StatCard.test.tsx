@@ -13,7 +13,7 @@ describe('StatCard', () => {
     change: '+12.5%',
     changeDirection: 'up',
     icon: 'group',
-    iconColorClass: 'text-blue-500',
+    iconColorClass: 'text-info',
   };
 
   it('ラベルが表示されること', () => {
@@ -31,16 +31,14 @@ describe('StatCard', () => {
     expect(screen.getByText('+12.5%')).toBeInTheDocument();
   });
 
-  it('up 方向で緑色のスタイルが適用されること', () => {
+  it('up 方向を上昇として読み上げられること', () => {
     render(<StatCard {...defaultProps} />);
-    const change = screen.getByText('+12.5%');
-    expect(change.className).toContain('text-green');
+    expect(screen.getByLabelText('上昇: +12.5%')).toBeInTheDocument();
   });
 
-  it('down 方向で赤色のスタイルが適用されること', () => {
+  it('down 方向を下降として読み上げられること', () => {
     render(<StatCard {...defaultProps} change="-5.2%" changeDirection="down" />);
-    const change = screen.getByText('-5.2%');
-    expect(change.className).toContain('text-red');
+    expect(screen.getByLabelText('下降: -5.2%')).toBeInTheDocument();
   });
 
   it('アイコンが表示されること', () => {

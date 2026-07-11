@@ -20,9 +20,9 @@ export function StockTable({
 }: StockTableProps) {
   if (stocks.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-white p-10 text-center shadow-sm">
-        <p className="font-medium text-gray-900">該当する銘柄がありません</p>
-        <p className="mt-2 text-gray-500 text-sm">検索条件を変更して再度お試しください。</p>
+      <div className="rounded-lg border border-border bg-card p-10 text-center shadow-sm">
+        <p className="font-medium text-card-foreground">該当する銘柄がありません</p>
+        <p className="mt-2 text-muted-foreground text-sm">検索条件を変更して再度お試しください。</p>
       </div>
     );
   }
@@ -30,10 +30,10 @@ export function StockTable({
   const watchlistedStockIdSet = new Set(watchlistedStockIds);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted">
             <tr>
               <HeaderCell>コード</HeaderCell>
               <HeaderCell>企業名</HeaderCell>
@@ -44,7 +44,7 @@ export function StockTable({
               <HeaderCell align="right">操作</HeaderCell>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
+          <tbody className="divide-y divide-border bg-card">
             {stocks.map((stock) => (
               <StockTableRow
                 key={stock.id}
@@ -75,23 +75,29 @@ function StockTableRow({
   addToWatchlistAction?: ((stock: StockListItem) => Promise<void>) | undefined;
 }) {
   return (
-    <tr className="transition hover:bg-gray-50">
+    <tr className="transition-colors hover:bg-muted">
       <td className="whitespace-nowrap px-4 py-4">
-        <div className="font-semibold text-gray-900 text-sm">{stock.symbol}</div>
-        <div className="text-gray-500 text-xs">{stock.country}</div>
+        <div className="font-semibold text-foreground text-sm">{stock.symbol}</div>
+        <div className="text-muted-foreground text-xs">{stock.country}</div>
       </td>
       <td className="min-w-60 px-4 py-4">
-        <div className="font-medium text-gray-900 text-sm">{stock.name}</div>
-        <div className="text-gray-500 text-xs">{stock.industry ?? '-'}</div>
+        <div className="font-medium text-foreground text-sm">{stock.name}</div>
+        <div className="text-muted-foreground text-xs">{stock.industry ?? '-'}</div>
       </td>
       <td className="whitespace-nowrap px-4 py-4">
-        <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-1 font-medium text-gray-700 text-xs">
+        <span className="inline-flex rounded-full bg-muted px-2.5 py-1 font-medium text-foreground text-xs">
           {marketLabel(stock.market, marketOptions)}
         </span>
       </td>
-      <td className="whitespace-nowrap px-4 py-4 text-gray-600 text-sm">{stock.exchange ?? '-'}</td>
-      <td className="whitespace-nowrap px-4 py-4 text-gray-600 text-sm">{stock.sector ?? '-'}</td>
-      <td className="whitespace-nowrap px-4 py-4 text-gray-600 text-sm">{stock.currency}</td>
+      <td className="whitespace-nowrap px-4 py-4 text-muted-foreground text-sm">
+        {stock.exchange ?? '-'}
+      </td>
+      <td className="whitespace-nowrap px-4 py-4 text-muted-foreground text-sm">
+        {stock.sector ?? '-'}
+      </td>
+      <td className="whitespace-nowrap px-4 py-4 text-muted-foreground text-sm">
+        {stock.currency}
+      </td>
       <td className="whitespace-nowrap px-4 py-4 text-right">
         <div className="inline-flex items-center justify-end gap-1">
           {addToWatchlistAction != null && (
@@ -117,7 +123,7 @@ function StockTableRow({
           <InertiaActionLink
             href={show.url(stock.id)}
             pendingClassName="opacity-70"
-            className="inline-flex min-h-8 items-center gap-1 rounded-md px-2 py-1 font-medium text-gray-700 text-sm transition-[background-color,color,transform] hover:bg-gray-100 hover:text-gray-950 active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
+            className="inline-flex min-h-11 items-center gap-1 rounded-md px-3 py-2 font-medium text-foreground text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-muted active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transform-none"
           >
             開く
             <ArrowRight aria-hidden="true" className="size-4" />
@@ -138,7 +144,7 @@ function HeaderCell({
   return (
     <th
       scope="col"
-      className={`whitespace-nowrap px-4 py-3 font-semibold text-gray-500 text-xs uppercase tracking-normal ${
+      className={`whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs uppercase tracking-normal ${
         align === 'right' ? 'text-right' : 'text-left'
       }`}
     >

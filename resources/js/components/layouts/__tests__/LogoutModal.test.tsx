@@ -15,49 +15,83 @@ describe('LogoutModal', () => {
   };
 
   it('open=true でモーダルが表示されること', () => {
+    // Arrange
+    const expected = {
+      title: 'ログアウトしますか？',
+      description: '現在のセッションを終了し、ログイン画面へ戻ります。',
+    };
+
+    // Act
     render(<LogoutModal {...defaultProps} />);
-    expect(screen.getByText('ログアウト確認')).toBeInTheDocument();
-    expect(screen.getByText(/ログアウトしてもよろしいですか/)).toBeInTheDocument();
+    const actual = {
+      title: screen.getByRole('heading').textContent,
+      description: screen.getByText(expected.description).textContent,
+    };
+
+    // Assert
+    expect(actual).toEqual(expected);
   });
 
   it('open=false でモーダルが非表示であること', () => {
+    // Arrange & Act
     render(<LogoutModal {...defaultProps} open={false} />);
-    expect(screen.queryByText('ログアウト確認')).not.toBeInTheDocument();
+    const actual = screen.queryByRole('dialog');
+
+    // Assert
+    expect(actual).not.toBeInTheDocument();
   });
 
   it('ログアウトボタンクリックで action が呼ばれること', async () => {
+    // Arrange
     const user = userEvent.setup();
     const action = vi.fn();
     render(<LogoutModal {...defaultProps} action={action} />);
 
+    // Act
     await user.click(screen.getByRole('button', { name: 'ログアウト' }));
+
+    // Assert
     expect(action).toHaveBeenCalledOnce();
   });
 
   it('キャンセルクリックで onClose が呼ばれること', async () => {
+    // Arrange
     const user = userEvent.setup();
     const onClose = vi.fn();
     render(<LogoutModal {...defaultProps} onClose={onClose} />);
 
+    // Act
     await user.click(screen.getByRole('button', { name: 'キャンセル' }));
+
+    // Assert
     expect(onClose).toHaveBeenCalledOnce();
   });
 
   it('processing=true でログアウトボタンが無効化されること', () => {
-    render(<LogoutModal {...defaultProps} processing={true} />);
-    expect(screen.getByRole('button', { name: 'ログアウト中...' })).toBeDisabled();
-  });
+    // Arrange
+    const expected = {
+      busy: 'true',
+      disabled: true,
+    };
 
-  it('processing=true でスピナーとテキストが表示されること', () => {
+    // Act
     render(<LogoutModal {...defaultProps} processing={true} />);
-    expect(screen.getByText('ログアウト中...')).toBeInTheDocument();
     const button = screen.getByRole('button', { name: 'ログアウト中...' });
-    expect(button.querySelector('.animate-spin')).toBeInTheDocument();
+    const actual = {
+      busy: button.getAttribute('aria-busy'),
+      disabled: button.hasAttribute('disabled'),
+    };
+
+    // Assert
+    expect(actual).toEqual(expected);
   });
 
   it('processing=false で通常テキストが表示されること', () => {
+    // Arrange & Act
     render(<LogoutModal {...defaultProps} processing={false} />);
-    expect(screen.getByRole('button', { name: 'ログアウト' })).toBeInTheDocument();
-    expect(screen.queryByText('ログアウト中...')).not.toBeInTheDocument();
+    const actual = screen.getByRole('button', { name: 'ログアウト' });
+
+    // Assert
+    expect(actual).toBeInTheDocument();
   });
 });

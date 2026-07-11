@@ -2,6 +2,7 @@
  * NavItem コンポーネントテスト
  */
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
 vi.mock('@inertiajs/react', () => ({
@@ -18,27 +19,52 @@ describe('NavItem', () => {
   } as const;
 
   it('ラベルが表示されること', () => {
+    // Arrange & Act
     render(<NavItem {...defaultProps} />);
-    expect(screen.getByText('ダッシュボード')).toBeInTheDocument();
-  });
+    const actual = screen.getByRole('link', { name: 'ダッシュボード' });
 
-  it('アイコンが表示されること', () => {
-    const { container } = render(<NavItem {...defaultProps} />);
-    expect(container.querySelector('svg')).toBeInTheDocument();
+    // Assert
+    expect(actual).toBeInTheDocument();
   });
 
   it('active=true で aria-current="page" が設定されること', () => {
+    // Arrange & Act
     render(<NavItem {...defaultProps} active={true} />);
-    expect(screen.getByRole('link')).toHaveAttribute('aria-current', 'page');
+    const actual = screen.getByRole('link');
+
+    // Assert
+    expect(actual).toHaveAttribute('aria-current', 'page');
   });
 
   it('active=false で aria-current が設定されないこと', () => {
+    // Arrange & Act
     render(<NavItem {...defaultProps} active={false} />);
-    expect(screen.getByRole('link')).not.toHaveAttribute('aria-current');
+    const actual = screen.getByRole('link');
+
+    // Assert
+    expect(actual).not.toHaveAttribute('aria-current');
   });
 
   it('リンクの href が正しいこと', () => {
+    // Arrange & Act
     render(<NavItem {...defaultProps} />);
-    expect(screen.getByRole('link')).toHaveAttribute('href', '/dashboard');
+    const actual = screen.getByRole('link');
+    const expected = '/dashboard';
+
+    // Assert
+    expect(actual).toHaveAttribute('href', expected);
+  });
+
+  it('リンクを選択した場合、onNavigate が呼ばれること', async () => {
+    // Arrange
+    const onNavigate = vi.fn();
+    const user = userEvent.setup();
+    render(<NavItem {...defaultProps} onNavigate={onNavigate} />);
+
+    // Act
+    await user.click(screen.getByRole('link', { name: 'ダッシュボード' }));
+
+    // Assert
+    expect(onNavigate).toHaveBeenCalledOnce();
   });
 });

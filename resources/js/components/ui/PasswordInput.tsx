@@ -6,6 +6,7 @@
  */
 import { useState } from 'react';
 import type React from 'react';
+import { FieldError, FieldLabel, fieldControlVariants } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 
 type PasswordInputProps = Omit<React.ComponentPropsWithoutRef<'input'>, 'id' | 'type'> & {
@@ -47,9 +48,7 @@ export function PasswordInput({
 
   return (
     <div>
-      <label htmlFor={id} className="mb-2 block font-medium text-gray-700 text-sm">
-        {label}
-      </label>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <div className="relative">
         <input
           {...inputProps}
@@ -59,8 +58,8 @@ export function PasswordInput({
           aria-invalid={error ? true : ariaInvalid}
           aria-describedby={describedBy || undefined}
           className={cn(
-            'w-full rounded border px-4 py-3 pr-12 text-gray-600 shadow-sm focus:outline-none focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-[#2767cf]',
-            error ? 'border-red-500' : 'border-gray-300',
+            fieldControlVariants({ invalid: Boolean(error) }),
+            'px-4 py-3 pr-12',
             className,
           )}
         />
@@ -69,7 +68,7 @@ export function PasswordInput({
           aria-label={isVisible ? 'パスワードを非表示' : 'パスワードを表示'}
           disabled={disabled}
           onClick={handleVisibleChange}
-          className="absolute top-1/2 right-2 -translate-y-1/2 p-2 text-gray-500 hover:text-gray-700"
+          className="absolute top-1/2 right-0 flex size-11 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors duration-motion-fast hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/35 motion-reduce:transform-none"
         >
           {/* 目アイコン SVG */}
           <svg
@@ -108,11 +107,7 @@ export function PasswordInput({
           </svg>
         </button>
       </div>
-      {error && (
-        <p id={errorId} role="alert" className="mt-1 text-red-600 text-sm">
-          {error}
-        </p>
-      )}
+      {error && <FieldError id={errorId}>{error}</FieldError>}
     </div>
   );
 }

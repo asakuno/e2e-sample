@@ -18,9 +18,11 @@ export function ActionLink({
   target,
   children,
   'aria-busy': ariaBusy,
+  'aria-disabled': ariaDisabled,
   ...props
 }: ActionLinkProps) {
   const { isPending, runAction } = useActionRunner();
+  const isDisabled = isPending || ariaDisabled === true || ariaDisabled === 'true';
 
   return (
     <a
@@ -28,9 +30,15 @@ export function ActionLink({
       href={href}
       target={target}
       aria-busy={ariaBusy ?? (isPending || undefined)}
+      aria-disabled={isDisabled || undefined}
       data-pending={isPending ? 'true' : undefined}
       className={cn(className, isPending && pendingClassName)}
       onClick={(event) => {
+        if (isDisabled) {
+          event.preventDefault();
+          return;
+        }
+
         onClick?.(event);
 
         if (!shouldHandleNavigation(event, target)) {

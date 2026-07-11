@@ -1,5 +1,6 @@
 import type React from 'react';
 import { Button } from '@/components/ui/button';
+import { FieldError, FieldLabel, fieldControlVariants } from '@/components/ui/field';
 import type { WatchlistPriorityOption } from '@/types/watchlist';
 
 interface WatchlistMemoFormProps {
@@ -31,6 +32,9 @@ export function WatchlistMemoForm({
   onSubmit,
   onCancel,
 }: WatchlistMemoFormProps) {
+  const memoErrorId = 'watchlist-memo-error';
+  const priorityErrorId = 'watchlist-priority-error';
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     onSubmit();
@@ -39,33 +43,32 @@ export function WatchlistMemoForm({
   return (
     <form onSubmit={handleSubmit} className="grid gap-4">
       <div>
-        <label htmlFor="watchlist-memo" className="mb-2 block font-medium text-gray-700 text-sm">
-          メモ
-        </label>
+        <FieldLabel htmlFor="watchlist-memo">メモ</FieldLabel>
         <textarea
           id="watchlist-memo"
           value={memo}
           onChange={(event) => onMemoChange(event.target.value)}
           onBlur={onMemoBlur}
+          disabled={processing}
+          aria-invalid={memoError != null}
+          aria-describedby={memoError != null ? memoErrorId : undefined}
           rows={4}
-          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 text-sm shadow-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+          className={fieldControlVariants({ invalid: memoError != null, kind: 'textarea' })}
         />
-        {memoError != null && <p className="mt-1 text-red-600 text-sm">{memoError}</p>}
+        {memoError != null && <FieldError id={memoErrorId}>{memoError}</FieldError>}
       </div>
 
       <div>
-        <label
-          htmlFor="watchlist-priority"
-          className="mb-2 block font-medium text-gray-700 text-sm"
-        >
-          優先度
-        </label>
+        <FieldLabel htmlFor="watchlist-priority">優先度</FieldLabel>
         <select
           id="watchlist-priority"
           value={priority}
           onChange={(event) => onPriorityChange(Number(event.target.value))}
           onBlur={onPriorityBlur}
-          className="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-gray-900 text-sm shadow-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+          disabled={processing}
+          aria-invalid={priorityError != null}
+          aria-describedby={priorityError != null ? priorityErrorId : undefined}
+          className={fieldControlVariants({ invalid: priorityError != null })}
         >
           {priorityOptions.map((option) => (
             <option key={option.value} value={option.value}>
@@ -73,7 +76,7 @@ export function WatchlistMemoForm({
             </option>
           ))}
         </select>
-        {priorityError != null && <p className="mt-1 text-red-600 text-sm">{priorityError}</p>}
+        {priorityError != null && <FieldError id={priorityErrorId}>{priorityError}</FieldError>}
       </div>
 
       <div className="flex justify-end gap-2">

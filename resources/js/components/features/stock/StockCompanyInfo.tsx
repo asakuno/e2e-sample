@@ -6,8 +6,8 @@ type StockCompanyInfoProps = {
 
 export function StockCompanyInfo({ stock }: StockCompanyInfoProps) {
   return (
-    <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-      <h2 className="font-semibold text-gray-950 text-lg">企業情報</h2>
+    <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+      <h2 className="font-semibold text-card-foreground text-lg">企業情報</h2>
       <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
         <InfoItem label="国" value={stock.country} />
         <InfoItem label="市場" value={stock.market.toUpperCase()} />
@@ -23,8 +23,8 @@ export function StockCompanyInfo({ stock }: StockCompanyInfoProps) {
 function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-gray-500">{label}</dt>
-      <dd className="mt-1 font-medium text-gray-900">{value}</dd>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="mt-1 font-medium text-foreground">{value}</dd>
     </div>
   );
 }

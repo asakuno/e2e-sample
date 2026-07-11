@@ -9,12 +9,14 @@ type StockPriceHistoryTableProps = {
 
 export function StockPriceHistoryTable({ prices, currency }: StockPriceHistoryTableProps) {
   if (prices.length === 0) {
-    return <p className="px-5 py-8 text-center text-gray-500 text-sm">価格履歴がありません</p>;
+    return (
+      <p className="px-5 py-8 text-center text-muted-foreground text-sm">価格履歴がありません</p>
+    );
   }
 
   return (
-    <table className="min-w-full divide-y divide-gray-200">
-      <thead className="sticky top-0 bg-gray-50">
+    <table className="min-w-full divide-y divide-border tabular-nums">
+      <thead className="sticky top-0 bg-muted">
         <tr>
           <TableHeader>日付</TableHeader>
           <TableHeader align="right">始値</TableHeader>
@@ -24,10 +26,10 @@ export function StockPriceHistoryTable({ prices, currency }: StockPriceHistoryTa
           <TableHeader align="right">出来高</TableHeader>
         </tr>
       </thead>
-      <tbody className="divide-y divide-gray-100 bg-white">
+      <tbody className="divide-y divide-border bg-card">
         {[...prices].reverse().map((price) => (
-          <tr key={price.price_date} className="hover:bg-gray-50">
-            <td className="whitespace-nowrap px-4 py-3 text-gray-700 text-sm">
+          <tr key={price.price_date} className="transition-colors hover:bg-muted">
+            <td className="whitespace-nowrap px-4 py-3 text-foreground text-sm">
               {price.price_date}
             </td>
             <TableCell>{formatPrice(price.open, currency)}</TableCell>
@@ -52,7 +54,7 @@ function TableHeader({
   return (
     <th
       scope="col"
-      className={`whitespace-nowrap px-4 py-3 font-semibold text-gray-500 text-xs ${
+      className={`whitespace-nowrap px-4 py-3 font-semibold text-muted-foreground text-xs ${
         align === 'right' ? 'text-right' : 'text-left'
       }`}
     >
@@ -64,8 +66,8 @@ function TableHeader({
 function TableCell({ children, strong = false }: { children: React.ReactNode; strong?: boolean }) {
   return (
     <td
-      className={`whitespace-nowrap px-4 py-3 text-right text-sm ${
-        strong ? 'font-semibold text-gray-950' : 'text-gray-700'
+      className={`whitespace-nowrap px-4 py-3 text-right text-foreground text-sm ${
+        strong ? 'font-semibold' : ''
       }`}
     >
       {children}

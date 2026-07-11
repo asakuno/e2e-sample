@@ -12,17 +12,21 @@ interface NavItemProps {
   icon: AppIconName;
   label: string;
   active?: boolean;
+  onNavigate?: () => void;
 }
 
-export function NavItem({ href, icon, label, active = false }: NavItemProps) {
+export function NavItem({ href, icon, label, active = false, onNavigate }: NavItemProps) {
   return (
     <InertiaActionLink
       href={href}
       aria-current={active ? 'page' : undefined}
+      onClick={() => onNavigate?.()}
       pendingClassName="opacity-70"
       className={cn(
-        'flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 font-medium text-sm transition-[background-color,color,transform] active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2',
-        active ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
+        'flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 font-medium text-sm transition-[background-color,color,transform] duration-motion-fast active:translate-y-px motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring',
+        active
+          ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+          : 'text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
       )}
     >
       <AppIcon name={icon} className="size-5" />

@@ -19,7 +19,7 @@ export function StockDetailContent({ stock, children }: StockDetailContentProps)
       <InertiaActionLink
         href={index.url()}
         pendingClassName="opacity-70"
-        className="inline-flex min-h-8 w-fit items-center gap-2 rounded-md px-2 py-1 font-medium text-gray-600 text-sm transition-[background-color,color,transform] hover:bg-gray-100 hover:text-gray-950 active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
+        className="inline-flex min-h-11 w-fit items-center gap-2 rounded-md px-3 py-2 font-medium text-muted-foreground text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-muted hover:text-foreground active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transform-none"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
         銘柄一覧
@@ -28,13 +28,13 @@ export function StockDetailContent({ stock, children }: StockDetailContentProps)
       <StockDetailHeader stock={stock} />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
-              <BarChart3 aria-hidden="true" className="size-5 text-gray-500" />
-              <h2 className="font-semibold text-gray-950 text-lg">価格履歴</h2>
+              <BarChart3 aria-hidden="true" className="size-5 text-muted-foreground" />
+              <h2 className="font-semibold text-card-foreground text-lg">価格履歴</h2>
             </div>
-            <div className="inline-flex w-fit overflow-hidden rounded-md border border-gray-200 bg-gray-50 p-1">
+            <div className="inline-flex w-fit overflow-hidden rounded-md border border-border bg-muted p-1">
               {stock.period_options.map((option) => {
                 const isActive = option.value === stock.selected_period;
 
@@ -43,10 +43,10 @@ export function StockDetailContent({ stock, children }: StockDetailContentProps)
                     key={option.value}
                     href={show.url(stock.id, { query: { period: option.value } })}
                     pendingClassName="opacity-70"
-                    className={`rounded px-3 py-1.5 font-medium text-sm transition ${
+                    className={`inline-flex min-h-11 items-center rounded px-3 py-2 font-medium text-sm tabular-nums transition-[background-color,color,box-shadow] duration-motion-fast ease-standard ${
                       isActive
-                        ? 'bg-white text-gray-950 shadow-sm'
-                        : 'hover:bg-white/80 text-gray-500 hover:text-gray-900'
+                        ? 'bg-card text-card-foreground shadow-sm'
+                        : 'text-muted-foreground hover:bg-card/80 hover:text-foreground'
                     }`}
                     aria-current={isActive ? 'page' : undefined}
                   >
@@ -67,9 +67,9 @@ export function StockDetailContent({ stock, children }: StockDetailContentProps)
 
       {children}
 
-      <section className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-        <div className="border-gray-200 border-b px-5 py-4">
-          <h2 className="font-semibold text-gray-950 text-lg">価格履歴一覧</h2>
+      <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+        <div className="border-border border-b px-5 py-4">
+          <h2 className="font-semibold text-card-foreground text-lg">価格履歴一覧</h2>
         </div>
         <div className="max-h-96 overflow-auto">
           <StockPriceHistoryTable prices={stock.price_history} currency={stock.currency} />

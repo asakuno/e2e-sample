@@ -19,10 +19,10 @@ export function RecentActivity({
   title = '最近のアクティビティ',
 }: RecentActivityProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5">
-      <h3 className="mb-4 font-semibold text-base text-gray-900">{title}</h3>
+    <div className="rounded-xl border border-border bg-card p-5 text-card-foreground">
+      <h3 className="mb-4 font-semibold text-base">{title}</h3>
       {activities.length === 0 ? (
-        <p className="text-gray-500 text-sm">{emptyMessage}</p>
+        <p className="text-muted-foreground text-sm">{emptyMessage}</p>
       ) : (
         <div className="flex flex-col gap-4">
           {activities.map((activity) => (

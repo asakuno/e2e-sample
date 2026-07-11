@@ -5,6 +5,7 @@
  * アクセシビリティ対応（aria-invalid, aria-describedby）。
  */
 import type React from 'react';
+import { FieldError, FieldLabel, fieldControlVariants } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 
 type InputFieldProps = Omit<React.ComponentPropsWithoutRef<'input'>, 'id'> & {
@@ -27,25 +28,15 @@ export function InputField({
 
   return (
     <div>
-      <label htmlFor={id} className="mb-2 block font-medium text-gray-700 text-sm">
-        {label}
-      </label>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <input
         {...inputProps}
         id={id}
         aria-invalid={error ? true : ariaInvalid}
         aria-describedby={describedBy || undefined}
-        className={cn(
-          'w-full rounded border px-4 py-3 text-gray-600 placeholder-gray-400 shadow-sm focus:outline-none focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-[#2767cf]',
-          error ? 'border-red-500' : 'border-gray-300',
-          className,
-        )}
+        className={cn(fieldControlVariants({ invalid: Boolean(error) }), 'px-4 py-3', className)}
       />
-      {error && (
-        <p id={errorId} role="alert" className="mt-1 text-red-600 text-sm">
-          {error}
-        </p>
-      )}
+      {error && <FieldError id={errorId}>{error}</FieldError>}
     </div>
   );
 }

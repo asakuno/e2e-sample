@@ -16,7 +16,7 @@ export function VerifyEmailContent({ status, cooldown, onResend }: VerifyEmailCo
       {/* メールアイコン */}
       <div className="-mt-6 mb-4 flex justify-center">
         <svg
-          className="h-12 w-12 text-slate-400"
+          className="h-12 w-12 text-muted-foreground"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -32,7 +32,7 @@ export function VerifyEmailContent({ status, cooldown, onResend }: VerifyEmailCo
         </svg>
       </div>
 
-      <p className="-mt-2 mb-6 text-center text-slate-500 text-sm">
+      <p className="-mt-2 mb-6 text-center text-muted-foreground text-sm">
         登録いただいたメールアドレスに認証リンクを送信しました。
         メール内のリンクをクリックして認証を完了してください。
       </p>
@@ -40,7 +40,7 @@ export function VerifyEmailContent({ status, cooldown, onResend }: VerifyEmailCo
       {status === 'verification-link-sent' && (
         <div
           role="status"
-          className="mb-6 rounded-md bg-green-50 p-3 text-center text-green-700 text-sm"
+          className="mb-6 rounded-md bg-positive-muted p-3 text-center text-positive text-sm"
         >
           認証リンクを再送しました。
         </div>
@@ -50,19 +50,19 @@ export function VerifyEmailContent({ status, cooldown, onResend }: VerifyEmailCo
         action={onResend}
         disabled={cooldown > 0}
         pendingLabel="送信中..."
-        className="h-auto w-full cursor-pointer rounded bg-[#2767cf] px-4 py-3 font-bold text-base text-white shadow-md transition duration-200 hover:bg-blue-700"
+        className="h-auto w-full rounded bg-primary px-4 py-3 font-bold text-base text-primary-foreground tabular-nums shadow-md transition-colors duration-motion-normal ease-standard hover:bg-primary/90"
       >
         {cooldown > 0 ? `再送可能まで ${cooldown}秒` : '認証メールを再送する'}
       </ActionButton>
 
-      <hr className="my-6 border-slate-200" />
+      <hr className="my-6 border-border" />
 
-      <div className="text-center text-[13px] text-slate-600">
+      <div className="text-center text-[13px] text-muted-foreground">
         <Link
           href={logout.url()}
           method={logout().method}
           as="button"
-          className="transition hover:text-[#326CCB] hover:underline"
+          className="inline-flex min-h-11 items-center justify-center rounded-md px-3 py-2 transition-colors duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           ログアウト
         </Link>
