@@ -12,6 +12,7 @@ final class DashboardActivityItemData extends Data
 {
     public function __construct(
         public readonly int $id,
+        public readonly ?int $articleId,
         public readonly string $title,
         public readonly string $description,
         public readonly string $timeAgo,

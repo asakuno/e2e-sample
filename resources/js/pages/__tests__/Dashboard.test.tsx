@@ -38,9 +38,25 @@ const stats: DashboardStatData[] = [
     value: 2,
   },
   {
+    kind: 'negativeAnalysis',
+    value: 1,
+  },
+  {
     kind: 'unanalyzedNews',
     value: 1,
   },
+  {
+    kind: 'latestAnalysis',
+    value: '2026-06-15 11:00',
+  },
+];
+
+const statsWithoutPriorityItems: DashboardStatData[] = [
+  { kind: 'watchlist', value: 0 },
+  { kind: 'positiveAnalysis', value: 0 },
+  { kind: 'negativeAnalysis', value: 0 },
+  { kind: 'unanalyzedNews', value: 0 },
+  { kind: 'latestAnalysis', value: null },
 ];
 
 const recentTrend: TrendData = {
@@ -71,9 +87,10 @@ const topStocks: TopStockData[] = [
 const importantNews: ActivityItemData[] = [
   {
     id: 1,
+    articleId: 1,
     title: 'Apple announces new product',
     description: 'AAPL / impact 8: 売上成長にポジティブ',
-    timeAgo: '2026-06-15 11:00',
+    timeAgo: '30分前',
     dotColor: 'green',
   },
 ];
@@ -96,16 +113,48 @@ describe('Dashboard', () => {
     expect(document.querySelector('title')).toHaveTextContent('ダッシュボード');
   });
 
-  it('WelcomeBanner が表示されること', () => {
+  it('ページ見出しと主要セクションが表示されること', () => {
     render(<Dashboard {...defaultProps} />);
-    expect(screen.getByText('マーケットダッシュボード')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'マーケットダッシュボード' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '現在の確認候補' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '状況サマリー' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '分析推移' })).toBeInTheDocument();
   });
 
-  it('実データ集計の StatCard が表示されること', () => {
+  it('確認候補に3種類の項目と利用可能な導線が表示されること', () => {
+    render(<Dashboard {...defaultProps} />);
+
+    expect(screen.getByText('ポジティブ材料')).toBeInTheDocument();
+    expect(screen.getByText('注目シグナル')).toBeInTheDocument();
+    expect(screen.getByText('分析待ち')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Apple announces new product/ })).toHaveAttribute(
+      'href',
+      '/news?article_id=1',
+    );
+    expect(screen.getByRole('link', { name: /AAPL Apple Inc\./ })).toHaveAttribute(
+      'href',
+      '/stocks/1',
+    );
+    expect(screen.getByText('1件のニュースが分析待ちです')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /1件のニュースが分析待ちです/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'ニュースをすべて見る' })).toHaveAttribute(
+      'href',
+      '/news',
+    );
+  });
+
+  it('状況サマリーに4種類の集計を表示し、最新分析日時を重複表示しないこと', () => {
     render(<Dashboard {...defaultProps} />);
     expect(screen.getByText('ウォッチリスト銘柄数')).toBeInTheDocument();
     expect(screen.getByText('直近ポジティブ材料')).toBeInTheDocument();
+    expect(screen.getByText('直近ネガティブ材料')).toBeInTheDocument();
     expect(screen.getByText('未分析ニュース')).toBeInTheDocument();
+    expect(document.body.textContent?.match(/最新分析日時/g) ?? []).toHaveLength(1);
+    expect(screen.getByText('2026-06-15 11:00')).toBeInTheDocument();
   });
 
   it('TrendChart が表示されること', () => {
@@ -114,12 +163,45 @@ describe('Dashboard', () => {
     expect(screen.getByText('直近7日の分析件数')).toBeInTheDocument();
   });
 
-  it('注目銘柄ランキングと重要ニュースが表示されること', () => {
+  it('注目銘柄ランキングが表示されること', () => {
     render(<Dashboard {...defaultProps} />);
     expect(screen.getByText('注目銘柄ランキング')).toBeInTheDocument();
     expect(screen.getByText('AAPL')).toBeInTheDocument();
-    expect(screen.getByText('重要ニュース')).toBeInTheDocument();
-    expect(screen.getByText('Apple announces new product')).toBeInTheDocument();
+  });
+
+  it('優先項目がない場合に空状態と銘柄探索導線を表示すること', () => {
+    render(
+      <Dashboard
+        {...defaultProps}
+        stats={statsWithoutPriorityItems}
+        importantNews={[]}
+        topStocks={[]}
+        latestAnalysisAt={null}
+      />,
+    );
+
+    expect(screen.getByText('現時点で優先して確認する項目はありません')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '銘柄を探す' })).toHaveAttribute('href', '/stocks');
+    expect(screen.queryByRole('link', { name: 'ニュースをすべて見る' })).not.toBeInTheDocument();
+  });
+
+  it('モバイルのDOM順が優先フィード、サマリー、ランキング、分析推移の順であること', () => {
+    render(<Dashboard {...defaultProps} />);
+    const sections = [
+      screen.getByRole('heading', { name: '現在の確認候補' }),
+      screen.getByRole('heading', { name: '状況サマリー' }),
+      screen.getByRole('heading', { name: '注目銘柄ランキング' }),
+      screen.getByRole('heading', { name: '分析推移' }),
+    ];
+
+    for (const [index, section] of sections.entries()) {
+      const nextSection = sections[index + 1];
+      if (nextSection !== undefined) {
+        expect(
+          section.compareDocumentPosition(nextSection) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      }
+    }
   });
 
   it('main 要素が存在すること', () => {

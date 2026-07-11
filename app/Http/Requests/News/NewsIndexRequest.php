@@ -22,6 +22,7 @@ final class NewsIndexRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'article_id' => ['nullable', 'integer', Rule::exists('news_articles', 'id')],
             'stock_id' => ['nullable', 'integer', Rule::exists('stocks', 'id')],
             'sentiment' => [
                 'nullable',
@@ -38,6 +39,7 @@ final class NewsIndexRequest extends FormRequest
         $validated = $this->validated();
 
         return NewsSearchData::from([
+            'article_id' => isset($validated['article_id']) ? (int) $validated['article_id'] : null,
             'stock_id' => isset($validated['stock_id']) ? (int) $validated['stock_id'] : null,
             'sentiment' => isset($validated['sentiment'])
                 ? AnalysisSentiment::from((int) $validated['sentiment'])

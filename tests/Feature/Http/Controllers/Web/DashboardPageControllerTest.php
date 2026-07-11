@@ -100,6 +100,7 @@ final class DashboardPageControllerTest extends TestCase
             ->where('recentTrend.total', 1)
             ->where('topStocks.0.symbol', 'AAPL')
             ->where('topStocks.0.totalScore', 8.25)
+            ->where('importantNews.0.articleId', $positiveNews->id)
             ->where('importantNews.0.title', 'Apple product news')
             ->where('latestAnalysisAt', '2026-06-15 11:00')
         );

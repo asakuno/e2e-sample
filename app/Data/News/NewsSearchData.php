@@ -15,6 +15,7 @@ use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 final class NewsSearchData extends Data
 {
     public function __construct(
+        public readonly ?int $articleId,
         public readonly ?int $stockId,
         public readonly ?AnalysisSentiment $sentiment,
         public readonly ?string $from,

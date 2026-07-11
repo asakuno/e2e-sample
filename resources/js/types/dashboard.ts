@@ -40,6 +40,7 @@ export interface TrendData {
 /** アクティビティアイテムデータ */
 export interface ActivityItemData {
   id: number;
+  articleId: number | null;
   title: string;
   description: string;
   timeAgo: string;

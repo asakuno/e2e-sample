@@ -11,6 +11,7 @@ use App\Models\Stock;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 final class NewsPageControllerTest extends TestCase
@@ -104,6 +105,54 @@ final class NewsPageControllerTest extends TestCase
             ->where('news.0.title', 'Apple news')
             ->where('filters.stock_id', (string) $apple->id)
         );
+    }
+
+    public function test_記事識別子でニュースを1件に絞り込める(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $targetArticle = NewsArticle::factory()->create(['title' => 'Target news']);
+        NewsArticle::factory()->create(['title' => 'Other news']);
+
+        // Act
+        $response = $this->actingAs($user)->get(route('news.index', [
+            'article_id' => $targetArticle->id,
+        ]));
+
+        // Assert
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('News')
+            ->has('news', 1)
+            ->where('news.0.id', $targetArticle->id)
+            ->where('news.0.title', 'Target news')
+        );
+    }
+
+    #[DataProvider('無効な記事識別子')]
+    public function test_無効な記事識別子はバリデーションエラーになる(int|string $articleId): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+
+        // Act
+        $response = $this->actingAs($user)->get(route('news.index', [
+            'article_id' => $articleId,
+        ]));
+
+        // Assert
+        $response->assertSessionHasErrors(['article_id']);
+    }
+
+    /**
+     * @return array<string, array{int|string}>
+     */
+    public static function 無効な記事識別子(): array
+    {
+        return [
+            '整数でない' => ['invalid'],
+            '存在しない' => [999999],
+        ];
     }
 
     public function test_感情分析でニュースを絞り込める(): void

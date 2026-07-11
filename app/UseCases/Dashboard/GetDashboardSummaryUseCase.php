@@ -162,6 +162,7 @@ final class GetDashboardSummaryUseCase
 
                 return new DashboardActivityItemData(
                     id: $analysis->id,
+                    articleId: $article instanceof NewsArticle ? (int) $article->getKey() : null,
                     title: $article instanceof NewsArticle ? $article->title : "{$analysis->stock->symbol} の分析結果",
                     description: "{$analysis->stock->symbol} / impact {$impactScore}: {$analysis->summary}",
                     timeAgo: $this->formatDateTime($analysis->analyzed_at) ?? '',

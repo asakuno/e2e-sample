@@ -42,6 +42,7 @@ final class ListNewsUseCaseTest extends TestCase
         $article->setRelation('analysisResults', new Collection);
 
         $filters = new NewsSearchData(
+            articleId: null,
             stockId: null,
             sentiment: null,
             from: null,
@@ -127,6 +128,7 @@ final class ListNewsUseCaseTest extends TestCase
         $article->setRelation('analysisResults', new Collection([$analysis]));
 
         $filters = new NewsSearchData(
+            articleId: null,
             stockId: null,
             sentiment: AnalysisSentiment::Positive,
             from: null,

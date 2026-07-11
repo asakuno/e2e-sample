@@ -10,6 +10,7 @@ describe('RecentActivity', () => {
   const activities: ActivityItemData[] = [
     {
       id: 1,
+      articleId: null,
       title: 'タスク完了',
       description: 'タスクAを完了',
       timeAgo: '1分前',
@@ -17,6 +18,7 @@ describe('RecentActivity', () => {
     },
     {
       id: 2,
+      articleId: null,
       title: 'コメント追加',
       description: 'コメントを投稿',
       timeAgo: '3分前',

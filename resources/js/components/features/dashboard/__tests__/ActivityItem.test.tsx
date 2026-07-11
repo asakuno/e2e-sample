@@ -9,6 +9,7 @@ import { ActivityItem } from '../ActivityItem';
 describe('ActivityItem', () => {
   const defaultProps: ActivityItemData = {
     id: 1,
+    articleId: null,
     title: 'プロジェクト作成',
     description: '新規プロジェクト「テスト」を作成しました',
     timeAgo: '5分前',

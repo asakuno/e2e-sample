@@ -23,6 +23,10 @@ final class NewsRepository implements NewsRepositoryInterface
                 'analysisResults' => fn ($query) => $query->with('stock')->orderByDesc('analyzed_at')->orderByDesc('id'),
             ])
             ->when(
+                $filters->articleId !== null,
+                fn (Builder $query): Builder => $query->whereKey($filters->articleId)
+            )
+            ->when(
                 $filters->stockId !== null,
                 fn (Builder $query): Builder => $query->whereHas(
                     'stocks',
