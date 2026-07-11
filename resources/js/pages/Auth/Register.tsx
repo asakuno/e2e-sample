@@ -7,18 +7,14 @@
 
 import { Head, useForm } from '@inertiajs/react';
 import type React from 'react';
-import { useState } from 'react';
 import { register, showLogin } from '@/actions/App/Http/Controllers/Web/AuthPageController';
+import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
 import { InputField } from '@/components/ui/InputField';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { GuestLayout } from '@/layouts/GuestLayout';
-import { ActionLink } from '@/components/ui/ActionLink';
-import { visitAction } from '@/lib/inertia-actions';
 
 export default function Register() {
-  const [passwordVisible, setPasswordVisible] = useState(false);
-  const [passwordConfirmationVisible, setPasswordConfirmationVisible] = useState(false);
   const form = useForm({
     name: '',
     email: '',
@@ -81,11 +77,9 @@ export default function Register() {
               id="password"
               label="パスワード"
               value={data.password}
-              visible={passwordVisible}
               placeholder="8文字以上の英数字"
               error={errors.password}
               onChange={(e) => setData('password', e.target.value)}
-              onVisibleChange={setPasswordVisible}
               onBlur={() => validate('password')}
               autoComplete="new-password"
               required
@@ -99,11 +93,9 @@ export default function Register() {
               id="password_confirmation"
               label="パスワード（確認用）"
               value={data.password_confirmation}
-              visible={passwordConfirmationVisible}
               placeholder="パスワードを再入力"
               error={errors.password_confirmation}
               onChange={(e) => setData('password_confirmation', e.target.value)}
-              onVisibleChange={setPasswordConfirmationVisible}
               onBlur={() => validate('password_confirmation')}
               autoComplete="new-password"
               required
@@ -127,14 +119,13 @@ export default function Register() {
 
           {/* フッターリンク */}
           <div className="text-center text-[13px] text-slate-600">
-            <ActionLink
+            <InertiaActionLink
               href={showLogin.url()}
-              action={visitAction(showLogin.url())}
               pendingClassName="opacity-70"
               className="transition hover:text-[#326CCB] hover:underline"
             >
               既にアカウントをお持ちの方はこちら &rarr;
-            </ActionLink>
+            </InertiaActionLink>
           </div>
         </form>
       </GuestLayout>

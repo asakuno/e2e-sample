@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Unit\UseCases\Dashboard;
 
+use App\Data\Dashboard\DashboardStatData;
 use App\Enums\AnalysisSentiment;
+use App\Enums\DashboardStatKind;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
 use App\Models\Stock;
@@ -113,11 +115,18 @@ final class GetDashboardSummaryUseCaseTest extends TestCase
         $result = $useCase->execute(1);
 
         // Assert
-        $this->assertSame('ウォッチリスト銘柄数', $result->stats[0]->label);
-        $this->assertSame('1', $result->stats[0]->value);
-        $this->assertSame('2', $result->stats[1]->value);
-        $this->assertSame('1', $result->stats[2]->value);
-        $this->assertSame('3', $result->stats[3]->value);
+        $expectedStats = [
+            ['kind' => DashboardStatKind::Watchlist, 'value' => 1],
+            ['kind' => DashboardStatKind::PositiveAnalysis, 'value' => 2],
+            ['kind' => DashboardStatKind::NegativeAnalysis, 'value' => 1],
+            ['kind' => DashboardStatKind::UnanalyzedNews, 'value' => 3],
+            ['kind' => DashboardStatKind::LatestAnalysis, 'value' => '2026-06-15 11:00'],
+        ];
+        $actualStats = array_map(
+            fn (DashboardStatData $stat): array => ['kind' => $stat->kind, 'value' => $stat->value],
+            $result->stats,
+        );
+        $this->assertSame($expectedStats, $actualStats);
         $this->assertSame(3, $result->recentTrend->total);
         $this->assertSame('+200.0%', $result->recentTrend->changePercent);
         $this->assertSame('AAPL', $result->topStocks[0]->symbol);

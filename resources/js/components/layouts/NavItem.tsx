@@ -3,23 +3,21 @@
  *
  * アイコン + ラベルのリンク。active 状態でハイライト表示。
  */
-import { ActionLink } from '@/components/ui/ActionLink';
-import { visitAction } from '@/lib/inertia-actions';
+import { AppIcon, type AppIconName } from '@/components/ui/AppIcon';
+import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
 import { cn } from '@/lib/utils';
-import { AppIcon } from '@/components/ui/AppIcon';
 
 interface NavItemProps {
   href: string;
-  icon: string;
+  icon: AppIconName;
   label: string;
   active?: boolean;
 }
 
 export function NavItem({ href, icon, label, active = false }: NavItemProps) {
   return (
-    <ActionLink
+    <InertiaActionLink
       href={href}
-      action={visitAction(href)}
       aria-current={active ? 'page' : undefined}
       pendingClassName="opacity-70"
       className={cn(
@@ -29,6 +27,6 @@ export function NavItem({ href, icon, label, active = false }: NavItemProps) {
     >
       <AppIcon name={icon} className="size-5" />
       {label}
-    </ActionLink>
+    </InertiaActionLink>
   );
 }

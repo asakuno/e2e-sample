@@ -54,4 +54,51 @@ describe('InputField', () => {
       'email-error',
     );
   });
+
+  it('native input props と className が入力要素に渡されること', () => {
+    // Arrange
+    const expected = {
+      inputMode: 'email' as const,
+      maxLength: 120,
+      dataField: 'account-email',
+      className: 'custom-input',
+    };
+
+    // Act
+    render(
+      <InputField
+        {...defaultProps}
+        inputMode={expected.inputMode}
+        maxLength={expected.maxLength}
+        data-field={expected.dataField}
+        className={expected.className}
+      />,
+    );
+    const actual = screen.getByLabelText('メールアドレス');
+
+    // Assert
+    expect({
+      inputMode: actual.getAttribute('inputmode'),
+      maxLength: actual.getAttribute('maxlength'),
+      dataField: actual.getAttribute('data-field'),
+      hasClassName: actual.classList.contains(expected.className),
+    }).toEqual({
+      inputMode: expected.inputMode,
+      maxLength: String(expected.maxLength),
+      dataField: expected.dataField,
+      hasClassName: true,
+    });
+  });
+
+  it('既存の aria-describedby にエラーIDが追記されること', () => {
+    // Arrange
+    const expected = 'email-help email-error';
+
+    // Act
+    render(<InputField {...defaultProps} aria-describedby="email-help" error="必須項目です" />);
+    const actual = screen.getByLabelText('メールアドレス').getAttribute('aria-describedby');
+
+    // Assert
+    expect(actual).toBe(expected);
+  });
 });

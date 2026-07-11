@@ -1,5 +1,7 @@
 import { ExternalLink } from 'lucide-react';
 import type { NewsAnalysis, NewsArticle, NewsArticleStock } from '@/types/news';
+import { formatNewsDateTime } from './news-presenter';
+import { SentimentBadge } from './SentimentBadge';
 
 interface NewsArticleListProps {
   articles: NewsArticle[];
@@ -32,7 +34,9 @@ function NewsArticleCard({ article }: { article: NewsArticle }) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 text-gray-500 text-xs">
               <span>{article.source ?? article.provider}</span>
-              {article.published_at !== null && <span>{formatDateTime(article.published_at)}</span>}
+              {article.published_at !== null && (
+                <span>{formatNewsDateTime(article.published_at)}</span>
+              )}
               {article.language !== null && (
                 <span className="rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-600">
                   {article.language.toUpperCase()}
@@ -122,25 +126,4 @@ function AnalysisSummary({ analyses }: { analyses: NewsAnalysis[] }) {
       ))}
     </div>
   );
-}
-
-function SentimentBadge({ sentiment, label }: { sentiment: number; label: string }) {
-  const colorClass =
-    sentiment > 0
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-      : sentiment < 0
-        ? 'border-rose-200 bg-rose-50 text-rose-700'
-        : 'border-gray-200 bg-white text-gray-700';
-
-  return (
-    <span className={`rounded-full border px-2 py-0.5 font-medium text-xs ${colorClass}`}>
-      {label}
-    </span>
-  );
-}
-
-function formatDateTime(value: string): string {
-  const normalized = value.replace('T', ' ');
-
-  return normalized.length >= 16 ? normalized.slice(0, 16) : normalized;
 }

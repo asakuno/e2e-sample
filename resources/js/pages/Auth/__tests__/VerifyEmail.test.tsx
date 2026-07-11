@@ -1,12 +1,18 @@
 /**
  * メール認証ページテスト
  */
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 // Inertia.js モック
 const mockPost = vi.fn();
+
+type MockVisitOptions = {
+  onBefore?: (visit: unknown) => boolean | void;
+  onSuccess?: () => void;
+  onFinish?: (visit: unknown) => void;
+};
 
 vi.mock('@inertiajs/react', () => ({
   useForm: vi.fn(() => ({
@@ -26,6 +32,15 @@ import VerifyEmail from '../VerifyEmail';
 describe('VerifyEmail', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPost.mockImplementation((_url: string, options: MockVisitOptions) => {
+      const visit = {};
+      const shouldContinue = options.onBefore?.(visit);
+
+      if (shouldContinue === false) return;
+
+      options.onSuccess?.();
+      options.onFinish?.(visit);
+    });
   });
 
   it('メール認証の説明テキストが表示されること', () => {
@@ -65,6 +80,37 @@ describe('VerifyEmail', () => {
         onSuccess: expect.any(Function),
       }),
     );
+  });
+
+  it('再送リクエストが完了するまで送信中表示を維持すること', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    let finishRequest = () => {};
+    mockPost.mockImplementationOnce((_url: string, options: MockVisitOptions) => {
+      const visit = {};
+      options.onBefore?.(visit);
+      finishRequest = () => options.onFinish?.(visit);
+    });
+    const expected = {
+      disabled: true,
+      busy: 'true',
+    };
+    render(<VerifyEmail />);
+
+    // Act
+    await user.click(screen.getByRole('button', { name: '認証メールを再送する' }));
+    const pendingButton = await screen.findByRole('button', { name: '送信中...' });
+    const actual = {
+      disabled: pendingButton.hasAttribute('disabled'),
+      busy: pendingButton.getAttribute('aria-busy'),
+    };
+
+    // Assert
+    expect(actual).toEqual(expected);
+
+    await act(async () => {
+      finishRequest();
+    });
   });
 
   it('ページタイトルが「メール認証」であること', () => {

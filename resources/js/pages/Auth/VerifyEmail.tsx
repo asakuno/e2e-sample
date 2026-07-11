@@ -9,18 +9,25 @@ import { Head, useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import { send } from '@/actions/App/Http/Controllers/Web/EmailVerificationPageController';
 import { VerifyEmailContent } from '@/components/features/auth/VerifyEmailContent';
+import type { ActionCallback } from '@/components/ui/ActionScope';
+import { runInertiaAction } from '@/lib/inertia-actions';
 
 interface VerifyEmailProps {
   status?: string;
 }
 
 export default function VerifyEmail({ status }: VerifyEmailProps) {
-  const { post, processing } = useForm({});
+  const { post } = useForm({});
   const [cooldown, setCooldown] = useState(0);
 
-  const resendVerificationEmail = () => {
-    post(send.url(), {
-      onSuccess: () => setCooldown(60),
+  const resendVerificationEmail: ActionCallback = ({ transition }) => {
+    return runInertiaAction((visitOptions) => {
+      post(send.url(), {
+        ...visitOptions,
+        onSuccess: () => {
+          transition(() => setCooldown(60));
+        },
+      });
     });
   };
 
@@ -33,12 +40,7 @@ export default function VerifyEmail({ status }: VerifyEmailProps) {
   return (
     <>
       <Head title="メール認証" />
-      <VerifyEmailContent
-        status={status}
-        cooldown={cooldown}
-        processing={processing}
-        onResend={resendVerificationEmail}
-      />
+      <VerifyEmailContent status={status} cooldown={cooldown} onResend={resendVerificationEmail} />
     </>
   );
 }

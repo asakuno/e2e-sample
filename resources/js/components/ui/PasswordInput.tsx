@@ -4,36 +4,47 @@
  * 目アイコンによる表示/非表示トグル付きのパスワード入力フィールド。
  * アクセシビリティ対応（aria-label, aria-invalid, aria-describedby）。
  */
+import { useState } from 'react';
 import type React from 'react';
 import { cn } from '@/lib/utils';
 
-interface PasswordInputProps {
+type PasswordInputProps = Omit<React.ComponentPropsWithoutRef<'input'>, 'id' | 'type'> & {
   id: string;
-  label: string;
-  value: string;
-  visible: boolean;
-  placeholder?: string;
+  label: React.ReactNode;
   error?: string | undefined;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onVisibleChange: (visible: boolean) => void;
-  onBlur?: () => void;
-  autoComplete?: string;
-  required?: boolean;
-}
+  visible?: boolean;
+  defaultVisible?: boolean;
+  onVisibleChange?: (visible: boolean) => void;
+};
 
 export function PasswordInput({
   id,
   label,
-  value,
   visible,
-  placeholder,
+  defaultVisible = false,
   error,
-  onChange,
   onVisibleChange,
-  onBlur,
-  autoComplete,
-  required,
+  className,
+  disabled,
+  'aria-describedby': ariaDescribedBy,
+  'aria-invalid': ariaInvalid,
+  ...inputProps
 }: PasswordInputProps) {
+  const [uncontrolledVisible, setUncontrolledVisible] = useState(defaultVisible);
+  const isVisible = visible ?? uncontrolledVisible;
+  const errorId = `${id}-error`;
+  const describedBy = [ariaDescribedBy, error ? errorId : undefined].filter(Boolean).join(' ');
+
+  const handleVisibleChange = () => {
+    const nextVisible = !isVisible;
+
+    if (visible === undefined) {
+      setUncontrolledVisible(nextVisible);
+    }
+
+    onVisibleChange?.(nextVisible);
+  };
+
   return (
     <div>
       <label htmlFor={id} className="mb-2 block font-medium text-gray-700 text-sm">
@@ -41,25 +52,23 @@ export function PasswordInput({
       </label>
       <div className="relative">
         <input
+          {...inputProps}
           id={id}
-          type={visible ? 'text' : 'password'}
-          value={value}
-          placeholder={placeholder}
-          onChange={onChange}
-          onBlur={onBlur}
-          autoComplete={autoComplete}
-          required={required}
-          aria-invalid={error ? 'true' : undefined}
-          aria-describedby={error ? `${id}-error` : undefined}
+          type={isVisible ? 'text' : 'password'}
+          disabled={disabled}
+          aria-invalid={error ? true : ariaInvalid}
+          aria-describedby={describedBy || undefined}
           className={cn(
             'w-full rounded border px-4 py-3 pr-12 text-gray-600 shadow-sm focus:outline-none focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-[#2767cf]',
             error ? 'border-red-500' : 'border-gray-300',
+            className,
           )}
         />
         <button
           type="button"
-          aria-label={visible ? 'パスワードを非表示' : 'パスワードを表示'}
-          onClick={() => onVisibleChange(!visible)}
+          aria-label={isVisible ? 'パスワードを非表示' : 'パスワードを表示'}
+          disabled={disabled}
+          onClick={handleVisibleChange}
           className="absolute top-1/2 right-2 -translate-y-1/2 p-2 text-gray-500 hover:text-gray-700"
         >
           {/* 目アイコン SVG */}
@@ -72,7 +81,7 @@ export function PasswordInput({
             viewBox="0 0 24 24"
             xmlns="http://www.w3.org/2000/svg"
           >
-            {visible ? (
+            {isVisible ? (
               <>
                 {/* 目を閉じるアイコン */}
                 <path
@@ -100,7 +109,7 @@ export function PasswordInput({
         </button>
       </div>
       {error && (
-        <p id={`${id}-error`} role="alert" className="mt-1 text-red-600 text-sm">
+        <p id={errorId} role="alert" className="mt-1 text-red-600 text-sm">
           {error}
         </p>
       )}

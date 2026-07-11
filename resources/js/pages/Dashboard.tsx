@@ -10,6 +10,7 @@ import { StatCard } from '@/components/features/dashboard/StatCard';
 import { TopStocksRanking } from '@/components/features/dashboard/TopStocksRanking';
 import { TrendChart } from '@/components/features/dashboard/TrendChart';
 import { WelcomeBanner } from '@/components/features/dashboard/WelcomeBanner';
+import { presentDashboardStat } from '@/components/features/dashboard/stat-presentation';
 import { AuthenticatedLayout } from '@/layouts/AuthenticatedLayout';
 import type { DashboardPageProps } from '@/types/dashboard';
 import type { AppPageProps } from '@/types/index.d.ts';
@@ -35,7 +36,7 @@ export default function Dashboard({
           {/* 統計カード */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
             {stats.map((stat) => (
-              <StatCard key={stat.label} {...stat} />
+              <StatCard key={stat.kind} {...presentDashboardStat(stat)} />
             ))}
           </div>
 

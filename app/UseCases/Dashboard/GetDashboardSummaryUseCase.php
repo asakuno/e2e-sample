@@ -11,6 +11,7 @@ use App\Data\Dashboard\DashboardTopStockData;
 use App\Data\Dashboard\DashboardTrendData;
 use App\Data\Dashboard\DashboardTrendPointData;
 use App\Enums\AnalysisSentiment;
+use App\Enums\DashboardStatKind;
 use App\Models\NewsArticle;
 use App\Repositories\DashboardRepositoryInterface;
 use Carbon\CarbonImmutable;
@@ -83,54 +84,24 @@ final class GetDashboardSummaryUseCase
     ): array {
         return [
             new DashboardStatData(
-                label: 'ウォッチリスト銘柄数',
-                value: number_format($watchlistCount),
-                subLabel: null,
-                subValue: null,
-                change: '監視中',
-                changeDirection: 'neutral',
-                icon: 'visibility',
-                iconColorClass: 'text-blue-600',
+                kind: DashboardStatKind::Watchlist,
+                value: $watchlistCount,
             ),
             new DashboardStatData(
-                label: '直近ポジティブ材料',
-                value: number_format($positiveCount),
-                subLabel: '対象',
-                subValue: '直近7日',
-                change: 'AI分析結果',
-                changeDirection: 'up',
-                icon: 'trending_up',
-                iconColorClass: 'text-green-600',
+                kind: DashboardStatKind::PositiveAnalysis,
+                value: $positiveCount,
             ),
             new DashboardStatData(
-                label: '直近ネガティブ材料',
-                value: number_format($negativeCount),
-                subLabel: '対象',
-                subValue: '直近7日',
-                change: 'AI分析結果',
-                changeDirection: 'down',
-                icon: 'trending_down',
-                iconColorClass: 'text-red-600',
+                kind: DashboardStatKind::NegativeAnalysis,
+                value: $negativeCount,
             ),
             new DashboardStatData(
-                label: '未分析ニュース',
-                value: number_format($unanalysedNewsCount),
-                subLabel: null,
-                subValue: null,
-                change: 'ウォッチ銘柄関連',
-                changeDirection: $unanalysedNewsCount > 0 ? 'neutral' : 'up',
-                icon: 'article',
-                iconColorClass: 'text-orange-600',
+                kind: DashboardStatKind::UnanalyzedNews,
+                value: $unanalysedNewsCount,
             ),
             new DashboardStatData(
-                label: '最新分析日時',
-                value: $latestAnalysisAt?->format('Y-m-d') ?? '未分析',
-                subLabel: $latestAnalysisAt === null ? null : '時刻',
-                subValue: $latestAnalysisAt?->format('H:i'),
-                change: $latestAnalysisAt === null ? '分析結果なし' : '最終更新',
-                changeDirection: 'neutral',
-                icon: 'schedule',
-                iconColorClass: 'text-gray-600',
+                kind: DashboardStatKind::LatestAnalysis,
+                value: $latestAnalysisAt?->format('Y-m-d H:i'),
             ),
         ];
     }

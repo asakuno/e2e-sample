@@ -1,6 +1,5 @@
 import { ArrowLeft, BarChart3 } from 'lucide-react';
-import { ActionLink } from '@/components/ui/ActionLink';
-import { visitAction } from '@/lib/inertia-actions';
+import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
 import { index, show } from '@/routes/stocks';
 import type { StockDetail } from '@/types/stocks';
 import { StockCompanyInfo } from './StockCompanyInfo';
@@ -16,15 +15,14 @@ type StockDetailContentProps = {
 export function StockDetailContent({ stock }: StockDetailContentProps) {
   return (
     <div className="flex flex-col gap-6">
-      <ActionLink
+      <InertiaActionLink
         href={index.url()}
-        action={visitAction(index.url())}
         pendingClassName="opacity-70"
         className="inline-flex min-h-8 w-fit items-center gap-2 rounded-md px-2 py-1 font-medium text-gray-600 text-sm transition-[background-color,color,transform] hover:bg-gray-100 hover:text-gray-950 active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
         銘柄一覧
-      </ActionLink>
+      </InertiaActionLink>
 
       <StockDetailHeader stock={stock} />
 
@@ -40,10 +38,9 @@ export function StockDetailContent({ stock }: StockDetailContentProps) {
                 const isActive = option.value === stock.selected_period;
 
                 return (
-                  <ActionLink
+                  <InertiaActionLink
                     key={option.value}
                     href={show.url(stock.id, { query: { period: option.value } })}
-                    action={visitAction(show.url(stock.id, { query: { period: option.value } }))}
                     pendingClassName="opacity-70"
                     className={`rounded px-3 py-1.5 font-medium text-sm transition ${
                       isActive
@@ -53,7 +50,7 @@ export function StockDetailContent({ stock }: StockDetailContentProps) {
                     aria-current={isActive ? 'page' : undefined}
                   >
                     {option.label}
-                  </ActionLink>
+                  </InertiaActionLink>
                 );
               })}
             </div>
@@ -67,7 +64,11 @@ export function StockDetailContent({ stock }: StockDetailContentProps) {
         <StockCompanyInfo stock={stock} />
       </div>
 
-      <StockInsightsPanel stock={stock} />
+      <StockInsightsPanel
+        relatedNews={stock.related_news}
+        analyses={stock.analyses}
+        signals={stock.signals}
+      />
 
       <section className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
         <div className="border-gray-200 border-b px-5 py-4">

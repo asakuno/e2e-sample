@@ -91,12 +91,12 @@ final class DashboardPageControllerTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page
             ->component('Dashboard')
-            ->where('stats.0.label', 'ウォッチリスト銘柄数')
-            ->where('stats.0.value', '1')
-            ->where('stats.1.label', '直近ポジティブ材料')
-            ->where('stats.1.value', '1')
-            ->where('stats.3.label', '未分析ニュース')
-            ->where('stats.3.value', '1')
+            ->where('stats.0.kind', 'watchlist')
+            ->where('stats.0.value', 1)
+            ->where('stats.1.kind', 'positiveAnalysis')
+            ->where('stats.1.value', 1)
+            ->where('stats.3.kind', 'unanalyzedNews')
+            ->where('stats.3.value', 1)
             ->where('recentTrend.total', 1)
             ->where('topStocks.0.symbol', 'AAPL')
             ->where('topStocks.0.totalScore', 8.25)

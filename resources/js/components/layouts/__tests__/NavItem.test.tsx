@@ -5,11 +5,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
 vi.mock('@inertiajs/react', () => ({
-  Link: ({ href, children, ...props }: Record<string, unknown>) => (
-    <a href={href as string} {...props}>
-      {children as React.ReactNode}
-    </a>
-  ),
+  router: { visit: vi.fn() },
 }));
 
 import { NavItem } from '../NavItem';
@@ -19,7 +15,7 @@ describe('NavItem', () => {
     href: '/dashboard',
     icon: 'dashboard',
     label: 'ダッシュボード',
-  };
+  } as const;
 
   it('ラベルが表示されること', () => {
     render(<NavItem {...defaultProps} />);

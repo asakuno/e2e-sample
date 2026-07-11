@@ -20,35 +20,26 @@ vi.mock('@inertiajs/react', () => ({
   })),
 }));
 
-import type { ActivityItemData, StatCardData, TopStockData, TrendData } from '@/types/dashboard';
+import type {
+  ActivityItemData,
+  DashboardStatData,
+  TopStockData,
+  TrendData,
+} from '@/types/dashboard';
 import Dashboard from '../Dashboard';
 
-const stats: StatCardData[] = [
+const stats: DashboardStatData[] = [
   {
-    label: 'ウォッチリスト銘柄数',
-    value: '3',
-    change: '監視中',
-    changeDirection: 'neutral',
-    icon: 'visibility',
-    iconColorClass: 'text-blue-600',
+    kind: 'watchlist',
+    value: 3,
   },
   {
-    label: '直近ポジティブ材料',
-    value: '2',
-    subLabel: '対象',
-    subValue: '直近7日',
-    change: 'AI分析結果',
-    changeDirection: 'up',
-    icon: 'trending_up',
-    iconColorClass: 'text-green-600',
+    kind: 'positiveAnalysis',
+    value: 2,
   },
   {
-    label: '未分析ニュース',
-    value: '1',
-    change: 'ウォッチ銘柄関連',
-    changeDirection: 'neutral',
-    icon: 'article',
-    iconColorClass: 'text-orange-600',
+    kind: 'unanalyzedNews',
+    value: 1,
   },
 ];
 

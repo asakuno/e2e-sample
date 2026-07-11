@@ -1,8 +1,7 @@
 import type React from 'react';
 import { ArrowRight, Check, Eye } from 'lucide-react';
 import { ActionButton } from '@/components/ui/ActionButton';
-import { ActionLink } from '@/components/ui/ActionLink';
-import { visitAction } from '@/lib/inertia-actions';
+import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
 import { show } from '@/routes/stocks';
 import type { StockListItem, StockMarketOption } from '@/types/stocks';
 
@@ -10,7 +9,7 @@ interface StockTableProps {
   stocks: StockListItem[];
   marketOptions: StockMarketOption[];
   watchlistedStockIds?: number[];
-  addToWatchlistAction?: ((stock: StockListItem) => void | Promise<void>) | undefined;
+  addToWatchlistAction?: ((stock: StockListItem) => Promise<void>) | undefined;
 }
 
 export function StockTable({
@@ -73,7 +72,7 @@ function StockTableRow({
   stock: StockListItem;
   marketOptions: StockMarketOption[];
   isInWatchlist: boolean;
-  addToWatchlistAction?: ((stock: StockListItem) => void | Promise<void>) | undefined;
+  addToWatchlistAction?: ((stock: StockListItem) => Promise<void>) | undefined;
 }) {
   return (
     <tr className="transition hover:bg-gray-50">
@@ -115,15 +114,14 @@ function StockTableRow({
               {isInWatchlist ? '追加済み' : '追加'}
             </ActionButton>
           )}
-          <ActionLink
+          <InertiaActionLink
             href={show.url(stock.id)}
-            action={visitAction(show.url(stock.id))}
             pendingClassName="opacity-70"
             className="inline-flex min-h-8 items-center gap-1 rounded-md px-2 py-1 font-medium text-gray-700 text-sm transition-[background-color,color,transform] hover:bg-gray-100 hover:text-gray-950 active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
           >
             開く
             <ArrowRight aria-hidden="true" className="size-4" />
-          </ActionLink>
+          </InertiaActionLink>
         </div>
       </td>
     </tr>

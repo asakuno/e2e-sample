@@ -1,9 +1,9 @@
-import { AppIcon } from '@/components/ui/AppIcon';
+import { AppIcon, type AppIconName } from '@/components/ui/AppIcon';
 
 interface FeaturePlaceholderProps {
   title: string;
   description: string;
-  icon: string;
+  icon: AppIconName;
   items: string[];
 }
 

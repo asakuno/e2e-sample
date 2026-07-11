@@ -1,5 +1,6 @@
 import { router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
+import { runInertiaAction } from '@/lib/inertia-actions';
 import { index } from '@/routes/news';
 import type { NewsFilters, NewsSelectOption } from '@/types/news';
 import { NewsFilterForm } from './NewsFilterForm';
@@ -15,14 +16,22 @@ export function NewsFiltersPanel({
   stockOptions,
   sentimentOptions,
 }: NewsFiltersPanelProps) {
+  const [isPending, startTransition] = useTransition();
   const [filters, setFilters] = useState<NewsFilters>(initialFilters);
 
   const submitFilters = (nextFilters = filters) => {
-    router.get(index.url(), compactFilters(nextFilters), {
-      only: ['news', 'filters'],
-      preserveScroll: true,
-      preserveState: true,
-      replace: true,
+    startTransition(async () => {
+      await runInertiaAction(
+        (visitOptions) => {
+          router.get(index.url(), compactFilters(nextFilters), visitOptions);
+        },
+        {
+          only: ['news', 'filters'],
+          preserveScroll: true,
+          preserveState: true,
+          replace: true,
+        },
+      );
     });
   };
 
@@ -37,6 +46,7 @@ export function NewsFiltersPanel({
       filters={filters}
       stockOptions={stockOptions}
       sentimentOptions={sentimentOptions}
+      processing={isPending}
       onFiltersChange={setFilters}
       onSubmit={submitFilters}
       onReset={resetFilters}

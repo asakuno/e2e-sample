@@ -23,32 +23,20 @@ describe('PrimaryButton', () => {
   });
 
   it('disabled 時にクリックできないこと', async () => {
-    const action = vi.fn();
+    const onClick = vi.fn();
     const user = userEvent.setup();
     render(
-      <PrimaryButton disabled action={action}>
+      <PrimaryButton disabled onClick={onClick}>
         ログインする
       </PrimaryButton>,
     );
     await user.click(screen.getByRole('button'));
-    expect(action).not.toHaveBeenCalled();
+    expect(onClick).not.toHaveBeenCalled();
   });
 
   it('type="submit" がデフォルトであること', () => {
     render(<PrimaryButton>送信</PrimaryButton>);
     expect(screen.getByRole('button')).toHaveAttribute('type', 'submit');
-  });
-
-  it('action 指定時は button type で action が呼ばれること', async () => {
-    const action = vi.fn();
-    const user = userEvent.setup();
-    render(<PrimaryButton action={action}>実行する</PrimaryButton>);
-
-    const button = screen.getByRole('button', { name: '実行する' });
-    expect(button).toHaveAttribute('type', 'button');
-
-    await user.click(button);
-    expect(action).toHaveBeenCalledOnce();
   });
 
   it('processingLabel を指定できること', () => {
@@ -58,5 +46,17 @@ describe('PrimaryButton', () => {
       </PrimaryButton>,
     );
     expect(screen.getByRole('button', { name: '送信中...' })).toBeInTheDocument();
+  });
+
+  it('native button props が透過されること', () => {
+    // Arrange
+    const expected = 'auth-submit';
+
+    // Act
+    render(<PrimaryButton data-testid={expected}>送信</PrimaryButton>);
+    const actual = screen.getByTestId(expected);
+
+    // Assert
+    expect(actual).toHaveAttribute('type', 'submit');
   });
 });
