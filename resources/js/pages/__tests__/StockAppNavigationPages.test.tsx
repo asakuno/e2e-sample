@@ -372,7 +372,7 @@ describe('Stock app navigation pages', () => {
     render(<News {...newsProps} />);
 
     const detailsButton = screen.getByRole('button', {
-      name: '記事の詳細：Apple announces new product',
+      name: '記事と分析の詳細：Apple announces new product',
     });
 
     expect(document.querySelector('title')).toHaveTextContent('News');
@@ -423,7 +423,7 @@ describe('Stock app navigation pages', () => {
     });
     const otherNewsSearchHeading = screen.getByRole('heading', { name: '他のニュースを探す' });
     const detailsButton = screen.getByRole('button', {
-      name: '記事の詳細：Apple announces new product',
+      name: '記事と分析の詳細：Apple announces new product',
     });
 
     expect(selectedStatus).toBeInTheDocument();
@@ -470,12 +470,12 @@ describe('Stock app navigation pages', () => {
     // Assert
     expect(
       screen.queryByRole('button', {
-        name: '記事の詳細：Apple announces new product',
+        name: '記事と分析の詳細：Apple announces new product',
       }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole('button', {
-        name: '記事の詳細：Microsoft announces cloud expansion',
+        name: '記事と分析の詳細：Microsoft announces cloud expansion',
       }),
     ).toHaveAttribute('aria-expanded', 'true');
   });

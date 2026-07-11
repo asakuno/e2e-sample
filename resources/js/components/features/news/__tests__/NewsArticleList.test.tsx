@@ -106,7 +106,7 @@ describe('NewsArticleList', () => {
     // Act
     render(<NewsArticleList articles={[article]} />);
     const toggle = screen.getByRole('button', {
-      name: `記事の詳細：${article.title}`,
+      name: `記事と分析の詳細：${article.title}`,
     });
     const details = getDetailsElement(toggle);
 
@@ -128,6 +128,15 @@ describe('NewsArticleList', () => {
     expect(visiblePrimary).toBeVisible();
     expect(hiddenPrimary).not.toBeVisible();
     expect(positiveSummary).not.toBeVisible();
+  });
+
+  it('折りたたみ時に代表分析の選定基準を表示すること', () => {
+    // Arrange & Act
+    render(<NewsArticleList articles={[buildArticle()]} />);
+    const actual = screen.getByText('影響度が最も大きい分析');
+
+    // Assert
+    expect(actual).toBeVisible();
   });
 
   it('折りたたみ時は関連銘柄を2件まで表示し、残数と他の分析件数を示すこと', () => {
@@ -153,7 +162,7 @@ describe('NewsArticleList', () => {
     expect(within(compactStocks).getByText('AAPL')).toBeVisible();
     expect(within(compactStocks).getByText('MSFT')).toBeVisible();
     expect(within(compactStocks).queryByText('GOOGL')).not.toBeInTheDocument();
-    expect(within(compactStocks).getByText('他1銘柄')).toBeInTheDocument();
+    expect(within(compactStocks).getByText('他1銘柄')).toBeVisible();
     expect(screen.getByText('他1件の分析')).toBeVisible();
   });
 
@@ -163,7 +172,7 @@ describe('NewsArticleList', () => {
     const article = buildArticle();
     render(<NewsArticleList articles={[article]} />);
     const toggle = screen.getByRole('button', {
-      name: `記事の詳細：${article.title}`,
+      name: `記事と分析の詳細：${article.title}`,
     });
     const details = getDetailsElement(toggle);
 
@@ -193,7 +202,7 @@ describe('NewsArticleList', () => {
     // Act
     render(<NewsArticleList articles={[article]} initialExpandedArticleId={article.id} />);
     const toggle = screen.getByRole('button', {
-      name: `記事の詳細：${article.title}`,
+      name: `記事と分析の詳細：${article.title}`,
     });
     const details = getDetailsElement(toggle);
     const detailQueries = within(details);
@@ -223,10 +232,10 @@ describe('NewsArticleList', () => {
     const secondArticle = buildArticle({ id: 2, title: 'Microsoftの決算発表' });
     render(<NewsArticleList articles={[firstArticle, secondArticle]} />);
     const firstToggle = screen.getByRole('button', {
-      name: `記事の詳細：${firstArticle.title}`,
+      name: `記事と分析の詳細：${firstArticle.title}`,
     });
     const secondToggle = screen.getByRole('button', {
-      name: `記事の詳細：${secondArticle.title}`,
+      name: `記事と分析の詳細：${secondArticle.title}`,
     });
 
     // Act
@@ -246,7 +255,7 @@ describe('NewsArticleList', () => {
     const article = buildArticle({ analyses: [] });
     render(<NewsArticleList articles={[article]} />);
     const toggle = screen.getByRole('button', {
-      name: `記事の詳細：${article.title}`,
+      name: `記事と分析の詳細：${article.title}`,
     });
 
     // Act & Assert
@@ -279,7 +288,7 @@ describe('NewsArticleList', () => {
       <NewsArticleList articles={[article]} initialExpandedArticleId={article.id} />,
     );
     const matchingToggle = screen.getByRole('button', {
-      name: `記事の詳細：${article.title}`,
+      name: `記事と分析の詳細：${article.title}`,
     });
 
     // Assert
@@ -290,7 +299,7 @@ describe('NewsArticleList', () => {
     unmount();
     render(<NewsArticleList articles={[article]} initialExpandedArticleId={999} />);
     const missingToggle = screen.getByRole('button', {
-      name: `記事の詳細：${article.title}`,
+      name: `記事と分析の詳細：${article.title}`,
     });
 
     // Assert

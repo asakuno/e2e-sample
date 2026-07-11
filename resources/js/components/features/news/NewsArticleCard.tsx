@@ -68,7 +68,7 @@ export function NewsArticleCard({
           className="mt-4 w-full justify-between px-3 motion-reduce:transition-none"
         >
           <span>
-            記事の詳細
+            記事と分析の詳細
             <span className="sr-only">：{article.title}</span>
           </span>
           <ChevronDown
@@ -110,8 +110,7 @@ function CompactRelatedStocks({ stocks }: { stocks: NewsArticleStock[] }) {
         ))}
         {hiddenStockCount > 0 ? (
           <li className="rounded-full bg-muted px-2.5 py-1 font-medium text-muted-foreground text-xs tabular-nums">
-            <span aria-hidden="true">+{hiddenStockCount}</span>
-            <span className="sr-only">他{hiddenStockCount}銘柄</span>
+            他{hiddenStockCount}銘柄
           </li>
         ) : null}
       </ul>
@@ -136,7 +135,7 @@ function CompactAnalysis({ analyses }: { analyses: NewsAnalysis[] }) {
     <div className="rounded-md border border-border bg-muted/55 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <h3 className="font-medium text-muted-foreground text-xs">主なAI分析</h3>
+          <h3 className="font-medium text-muted-foreground text-xs">影響度が最も大きい分析</h3>
           <span className="font-semibold text-foreground text-sm">
             {primaryAnalysis.stock.symbol}
           </span>
