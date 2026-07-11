@@ -32,6 +32,20 @@ describe('MobileNavigationDrawer', () => {
     expect(actual).toBe(expected);
   });
 
+  it('モーション低減時も押下表現の transform だけが無効化されること', () => {
+    // Arrange & Act
+    render(
+      <MobileNavigationDrawer open={true} onOpenChange={vi.fn()}>
+        <a href="/dashboard">Dashboard</a>
+      </MobileNavigationDrawer>,
+    );
+    const actual = screen.getByRole('button', { name: 'メニューを閉じる' });
+
+    // Assert
+    expect(actual).toHaveClass('motion-reduce:active:translate-y-0');
+    expect(actual).not.toHaveClass('motion-reduce:transform-none');
+  });
+
   it('Escape キーを押した場合、ドロワーを閉じる要求を通知すること', async () => {
     // Arrange
     const onOpenChange = vi.fn();

@@ -56,7 +56,7 @@ function NewsArticleCard({ article }: { article: NewsArticle }) {
             href={article.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-md border border-border px-3 py-2 font-medium text-foreground text-sm transition-[background-color,border-color,color,transform] duration-motion-fast ease-standard hover:border-ring hover:bg-muted active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transform-none"
+            className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-md border border-border px-3 py-2 font-medium text-foreground text-sm transition-[background-color,border-color,color,transform] duration-motion-fast ease-standard hover:border-ring hover:bg-muted active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:active:translate-y-0"
           >
             元記事
             <ExternalLink aria-hidden="true" className="size-4" />

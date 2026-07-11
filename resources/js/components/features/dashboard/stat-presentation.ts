@@ -47,7 +47,7 @@ export function presentDashboardStat(stat: DashboardStatData): StatCardData {
         ...presentation,
         value: COUNT_FORMATTER.format(stat.value),
         change: '監視中',
-        changeDirection: 'neutral',
+        changeTone: 'neutral',
       };
     case 'positiveAnalysis':
       return {
@@ -56,7 +56,7 @@ export function presentDashboardStat(stat: DashboardStatData): StatCardData {
         subLabel: '対象',
         subValue: '直近7日',
         change: 'AI分析結果',
-        changeDirection: 'up',
+        changeTone: 'positive',
       };
     case 'negativeAnalysis':
       return {
@@ -65,14 +65,14 @@ export function presentDashboardStat(stat: DashboardStatData): StatCardData {
         subLabel: '対象',
         subValue: '直近7日',
         change: 'AI分析結果',
-        changeDirection: 'down',
+        changeTone: 'negative',
       };
     case 'unanalyzedNews':
       return {
         ...presentation,
         value: COUNT_FORMATTER.format(stat.value),
         change: 'ウォッチ銘柄関連',
-        changeDirection: stat.value > 0 ? 'neutral' : 'up',
+        changeTone: stat.value > 0 ? 'neutral' : 'positive',
       };
     case 'latestAnalysis': {
       if (stat.value === null) {
@@ -80,7 +80,7 @@ export function presentDashboardStat(stat: DashboardStatData): StatCardData {
           ...presentation,
           value: '未分析',
           change: '分析結果なし',
-          changeDirection: 'neutral',
+          changeTone: 'neutral',
         };
       }
 
@@ -91,7 +91,7 @@ export function presentDashboardStat(stat: DashboardStatData): StatCardData {
         value: date,
         ...(time === undefined ? {} : { subLabel: '時刻', subValue: time }),
         change: '最終更新',
-        changeDirection: 'neutral',
+        changeTone: 'neutral',
       };
     }
   }

@@ -58,6 +58,15 @@ describe('SideNav', () => {
     expect(actual).toHaveAttribute('aria-label', expected);
   });
 
+  it('画面高に収まらない場合、ナビゲーション自体を縦スクロールできること', () => {
+    // Arrange & Act
+    render(<SideNav />);
+    const actual = screen.getByRole('navigation', { name: 'メインナビゲーション' });
+
+    // Assert
+    expect(actual).toHaveClass('overflow-y-auto', 'overscroll-contain');
+  });
+
   it('詳細画面では親となる Stocks 項目が現在位置として示されること', () => {
     // Arrange & Act
     render(<SideNavView currentUrl="/stocks/AAPL?range=1m" />);

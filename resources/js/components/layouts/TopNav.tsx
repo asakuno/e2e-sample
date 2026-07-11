@@ -68,7 +68,7 @@ export function TopNavView({
             aria-expanded={navigationOpen}
             aria-controls="mobile-navigation"
             onClick={() => onNavigationOpenChange(!navigationOpen)}
-            className="flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-[background-color,color,transform] duration-motion-fast hover:bg-accent hover:text-accent-foreground active:translate-y-px motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring lg:hidden"
+            className="flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-[background-color,color,transform] duration-motion-fast hover:bg-accent hover:text-accent-foreground active:translate-y-px motion-reduce:active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring lg:hidden"
           >
             <Menu aria-hidden="true" className="size-5" />
           </button>
@@ -83,7 +83,7 @@ export function TopNavView({
             type="button"
             aria-label="ログアウト"
             onClick={onOpenLogout}
-            className="flex min-h-11 items-center gap-2 rounded-lg px-3 font-medium text-muted-foreground text-sm transition-[background-color,color,transform] duration-motion-fast hover:bg-accent hover:text-accent-foreground active:translate-y-px motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="flex min-h-11 items-center gap-2 rounded-lg px-3 font-medium text-muted-foreground text-sm transition-[background-color,color,transform] duration-motion-fast hover:bg-accent hover:text-accent-foreground active:translate-y-px motion-reduce:active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             <AppIcon name="logout" className="size-5" />
             <span className="hidden sm:inline">ログアウト</span>

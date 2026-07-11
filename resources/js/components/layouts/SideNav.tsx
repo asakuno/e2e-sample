@@ -38,7 +38,7 @@ export function SideNavView({ currentUrl, onNavigate }: SideNavViewProps) {
   return (
     <nav
       aria-label="メインナビゲーション"
-      className="flex h-full w-full flex-col border-sidebar-border border-r bg-sidebar text-sidebar-foreground"
+      className="flex h-full w-full flex-col overflow-y-auto overscroll-contain border-sidebar-border border-r bg-sidebar text-sidebar-foreground"
     >
       <div className="flex min-h-16 items-center px-6">
         <InertiaActionLink

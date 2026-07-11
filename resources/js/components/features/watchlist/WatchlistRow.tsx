@@ -64,7 +64,7 @@ export function WatchlistRow({ item, onEditMemo, removeAction }: WatchlistRowPro
           <InertiaActionLink
             href={stockShow.url(item.stock.id)}
             pendingClassName="opacity-70"
-            className="inline-flex min-h-11 items-center gap-1 rounded-md px-3 py-2 font-medium text-muted-foreground text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-muted hover:text-foreground active:translate-y-px focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 motion-reduce:transform-none"
+            className="inline-flex min-h-11 items-center gap-1 rounded-md px-3 py-2 font-medium text-muted-foreground text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-muted hover:text-foreground active:translate-y-px focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 motion-reduce:active:translate-y-0"
           >
             詳細
             <ArrowRight aria-hidden="true" className="size-4" />

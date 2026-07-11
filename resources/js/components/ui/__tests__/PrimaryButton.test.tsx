@@ -12,6 +12,20 @@ describe('PrimaryButton', () => {
     expect(screen.getByRole('button', { name: 'ログインする' })).toBeInTheDocument();
   });
 
+  it('キーボードフォーカスを実線のアウトラインで表示できること', () => {
+    // Arrange & Act
+    render(<PrimaryButton>ログインする</PrimaryButton>);
+    const actual = screen.getByRole('button', { name: 'ログインする' });
+
+    // Assert
+    expect(actual).toHaveClass(
+      'focus-visible:outline-2',
+      'focus-visible:outline-offset-2',
+      'focus-visible:outline-ring',
+      'focus-visible:outline-solid',
+    );
+  });
+
   it('processing 時に disabled になること', () => {
     render(<PrimaryButton processing>ログインする</PrimaryButton>);
     expect(screen.getByRole('button')).toBeDisabled();

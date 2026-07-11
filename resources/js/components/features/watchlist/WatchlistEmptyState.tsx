@@ -15,7 +15,7 @@ export function WatchlistEmptyState() {
       <InertiaActionLink
         href={stocksIndex.url()}
         pendingClassName="opacity-70"
-        className="mt-5 inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground text-sm transition-[background-color,transform] duration-motion-fast ease-standard hover:bg-primary/90 active:translate-y-px focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 motion-reduce:transform-none"
+        className="mt-5 inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground text-sm transition-[background-color,transform] duration-motion-fast ease-standard hover:bg-primary/90 active:translate-y-px focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 motion-reduce:active:translate-y-0"
       >
         銘柄を探す
       </InertiaActionLink>

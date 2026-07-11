@@ -135,7 +135,7 @@ export function MobileNavigationDrawer({
           type="button"
           aria-label="メニューを閉じる"
           onClick={() => onOpenChange(false)}
-          className="absolute top-2 right-2 flex size-11 items-center justify-center rounded-lg text-sidebar-foreground transition-[background-color,color,transform] duration-motion-fast hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:translate-y-px motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring"
+          className="absolute top-2 right-2 flex size-11 items-center justify-center rounded-lg text-sidebar-foreground transition-[background-color,color,transform] duration-motion-fast hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:translate-y-px motion-reduce:active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring"
         >
           <X aria-hidden="true" className="size-5" />
         </button>

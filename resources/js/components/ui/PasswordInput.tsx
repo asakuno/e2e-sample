@@ -68,7 +68,7 @@ export function PasswordInput({
           aria-label={isVisible ? 'パスワードを非表示' : 'パスワードを表示'}
           disabled={disabled}
           onClick={handleVisibleChange}
-          className="absolute top-1/2 right-0 flex size-11 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors duration-motion-fast hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/35 motion-reduce:transform-none"
+          className="absolute top-1/2 right-0 flex size-11 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors duration-motion-fast hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none"
         >
           {/* 目アイコン SVG */}
           <svg

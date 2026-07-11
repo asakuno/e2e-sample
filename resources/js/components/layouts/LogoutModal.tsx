@@ -45,7 +45,7 @@ export function LogoutModal({ open, onClose, action, processing }: LogoutModalPr
             type="button"
             onClick={onClose}
             disabled={isProcessing}
-            className="min-h-11 rounded-lg border border-border bg-background px-4 font-medium text-foreground text-sm transition-[background-color,color,transform] duration-motion-fast hover:bg-accent hover:text-accent-foreground active:translate-y-px motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
+            className="min-h-11 rounded-lg border border-border bg-background px-4 font-medium text-foreground text-sm transition-[background-color,color,transform] duration-motion-fast hover:bg-accent hover:text-accent-foreground active:translate-y-px motion-reduce:active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
           >
             キャンセル
           </button>
@@ -54,7 +54,7 @@ export function LogoutModal({ open, onClose, action, processing }: LogoutModalPr
             onClick={handleLogout}
             disabled={isProcessing}
             aria-busy={isProcessing || undefined}
-            className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-destructive px-4 font-medium text-destructive-foreground text-sm transition-[background-color,box-shadow,transform,opacity] duration-motion-fast hover:bg-destructive/90 hover:shadow-md active:translate-y-px motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
+            className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-destructive px-4 font-medium text-destructive-foreground text-sm transition-[background-color,box-shadow,transform,opacity] duration-motion-fast hover:bg-destructive/90 hover:shadow-md active:translate-y-px motion-reduce:active:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50"
           >
             {isProcessing ? (
               <>

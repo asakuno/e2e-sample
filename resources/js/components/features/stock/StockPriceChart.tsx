@@ -51,8 +51,8 @@ export function StockPriceChart({ prices, currency }: StockPriceChartProps) {
       >
         <defs>
           <linearGradient id="price-line" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0%" stopColor="var(--primary)" />
-            <stop offset="100%" stopColor="var(--positive)" />
+            <stop offset="0%" stopColor="var(--chart-1)" />
+            <stop offset="100%" stopColor="var(--chart-2)" />
           </linearGradient>
         </defs>
         {[0, 1, 2, 3].map((line) => {

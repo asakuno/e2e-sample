@@ -19,7 +19,7 @@ export function StockDetailContent({ stock, children }: StockDetailContentProps)
       <InertiaActionLink
         href={index.url()}
         pendingClassName="opacity-70"
-        className="inline-flex min-h-11 w-fit items-center gap-2 rounded-md px-3 py-2 font-medium text-muted-foreground text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-muted hover:text-foreground active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transform-none"
+        className="inline-flex min-h-11 w-fit items-center gap-2 rounded-md px-3 py-2 font-medium text-muted-foreground text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-muted hover:text-foreground active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:active:translate-y-0"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
         銘柄一覧

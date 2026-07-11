@@ -123,7 +123,7 @@ function StockTableRow({
           <InertiaActionLink
             href={show.url(stock.id)}
             pendingClassName="opacity-70"
-            className="inline-flex min-h-11 items-center gap-1 rounded-md px-3 py-2 font-medium text-foreground text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-muted active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transform-none"
+            className="inline-flex min-h-11 items-center gap-1 rounded-md px-3 py-2 font-medium text-foreground text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-muted active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:active:translate-y-0"
           >
             開く
             <ArrowRight aria-hidden="true" className="size-4" />

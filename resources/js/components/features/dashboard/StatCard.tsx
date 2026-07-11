@@ -12,16 +12,11 @@ export interface StatCardData {
   subLabel?: string;
   subValue?: string;
   change?: string;
-  changeDirection?: 'up' | 'down' | 'neutral';
+  changeTone?: 'positive' | 'negative' | 'neutral';
+  changeAccessibleLabel?: string;
   icon: AppIconName;
   iconColorClass: string;
 }
-
-const CHANGE_DIRECTION_LABEL: Record<NonNullable<StatCardData['changeDirection']>, string> = {
-  up: '上昇',
-  down: '下降',
-  neutral: '変化なし',
-};
 
 export function StatCard({
   label,
@@ -29,7 +24,8 @@ export function StatCard({
   subLabel,
   subValue,
   change,
-  changeDirection,
+  changeTone = 'neutral',
+  changeAccessibleLabel,
   icon,
   iconColorClass,
 }: StatCardData) {
@@ -47,14 +43,14 @@ export function StatCard({
         </div>
         <AppIcon name={icon} className={cn('size-7', iconColorClass)} />
       </div>
-      {change != null && changeDirection != null && (
+      {change != null && (
         <p
-          aria-label={`${CHANGE_DIRECTION_LABEL[changeDirection]}: ${change}`}
+          aria-label={changeAccessibleLabel}
           className={cn(
             'mt-3 font-medium text-sm tabular-nums',
-            changeDirection === 'up' && 'text-positive',
-            changeDirection === 'down' && 'text-negative',
-            changeDirection === 'neutral' && 'text-muted-foreground',
+            changeTone === 'positive' && 'text-positive',
+            changeTone === 'negative' && 'text-negative',
+            changeTone === 'neutral' && 'text-muted-foreground',
           )}
         >
           {change}
