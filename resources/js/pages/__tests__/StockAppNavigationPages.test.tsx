@@ -322,6 +322,28 @@ describe('Stock app navigation pages', () => {
     expect(screen.getByText('ニュースと分析結果が上向きです。')).toBeInTheDocument();
   });
 
+  it('StockDetail ページのインサイトデータが空の場合、それぞれの空状態を表示すること', () => {
+    // Arrange
+    const stock = {
+      ...stockDetail,
+      related_news: [],
+      analyses: [],
+      signals: [],
+    };
+    const expected = [
+      '関連ニュースはまだありません',
+      'AI分析結果はまだありません',
+      'シグナルはまだありません',
+    ];
+
+    // Act
+    render(<StockDetail {...stocksProps} stock={stock} />);
+    const actual = expected.map((message) => screen.getByText(message).textContent);
+
+    // Assert
+    expect(actual).toEqual(expected);
+  });
+
   it('Watchlist ページにウォッチリスト銘柄が表示されること', async () => {
     const user = userEvent.setup();
     routerDeleteMock.mockClear();

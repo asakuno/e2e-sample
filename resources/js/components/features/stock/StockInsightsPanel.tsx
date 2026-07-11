@@ -1,14 +1,11 @@
 import { Newspaper, RadioTower, Sparkles } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { NewsAnalysisList } from '@/components/features/news/NewsAnalysisList';
-import { RelatedNewsList } from '@/components/features/news/RelatedNewsList';
-import type { NewsAnalysis, NewsArticle } from '@/types/news';
 import type { StockSignal } from '@/types/stocks';
 import { StockSignalList } from './StockSignalList';
 
 interface StockInsightsPanelProps {
-  relatedNews: NewsArticle[];
-  analyses: NewsAnalysis[];
+  relatedNews: ReactNode;
+  analyses: ReactNode;
   signals: StockSignal[];
 }
 
@@ -20,7 +17,7 @@ export function StockInsightsPanel({ relatedNews, analyses, signals }: StockInsi
           icon={<Newspaper aria-hidden="true" className="size-5" />}
           title="関連ニュース"
         />
-        <RelatedNewsList articles={relatedNews} />
+        {relatedNews}
       </section>
 
       <div className="flex flex-col gap-4">
@@ -29,7 +26,7 @@ export function StockInsightsPanel({ relatedNews, analyses, signals }: StockInsi
             icon={<Sparkles aria-hidden="true" className="size-5" />}
             title="AI分析結果"
           />
-          <NewsAnalysisList analyses={analyses} />
+          {analyses}
         </section>
 
         <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">

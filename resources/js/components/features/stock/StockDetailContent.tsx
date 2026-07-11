@@ -1,18 +1,19 @@
 import { ArrowLeft, BarChart3 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
 import { index, show } from '@/routes/stocks';
 import type { StockDetail } from '@/types/stocks';
 import { StockCompanyInfo } from './StockCompanyInfo';
 import { StockDetailHeader } from './StockDetailHeader';
-import { StockInsightsPanel } from './StockInsightsPanel';
 import { StockPriceChart } from './StockPriceChart';
 import { StockPriceHistoryTable } from './StockPriceHistoryTable';
 
 type StockDetailContentProps = {
   stock: StockDetail;
+  children: ReactNode;
 };
 
-export function StockDetailContent({ stock }: StockDetailContentProps) {
+export function StockDetailContent({ stock, children }: StockDetailContentProps) {
   return (
     <div className="flex flex-col gap-6">
       <InertiaActionLink
@@ -64,11 +65,7 @@ export function StockDetailContent({ stock }: StockDetailContentProps) {
         <StockCompanyInfo stock={stock} />
       </div>
 
-      <StockInsightsPanel
-        relatedNews={stock.related_news}
-        analyses={stock.analyses}
-        signals={stock.signals}
-      />
+      {children}
 
       <section className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
         <div className="border-gray-200 border-b px-5 py-4">
