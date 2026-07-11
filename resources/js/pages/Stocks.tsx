@@ -12,7 +12,7 @@ export default function Stocks({
   marketOptions,
   watchlistedStockIds,
 }: StocksPageProps) {
-  const handleAddToWatchlist = (stock: StockListItem) => {
+  const handleAddToWatchlist = (stock: StockListItem): Promise<void> => {
     return runInertiaAction(
       (visitOptions) => {
         router.post(

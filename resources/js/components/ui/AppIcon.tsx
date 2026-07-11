@@ -1,7 +1,6 @@
 import {
   BarChart3,
   Bell,
-  Circle,
   Clock3,
   Eye,
   FileText,
@@ -16,7 +15,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const ICONS: Record<string, LucideIcon> = {
+const ICONS = {
   article: FileText,
   dashboard: LayoutDashboard,
   group: Users,
@@ -29,15 +28,17 @@ const ICONS: Record<string, LucideIcon> = {
   trending_down: TrendingDown,
   trending_up: TrendingUp,
   visibility: Eye,
-};
+} as const satisfies Record<string, LucideIcon>;
+
+export type AppIconName = keyof typeof ICONS;
 
 interface AppIconProps {
-  name: string;
+  name: AppIconName;
   className?: string;
 }
 
 export function AppIcon({ name, className }: AppIconProps) {
-  const Icon = ICONS[name] ?? Circle;
+  const Icon = ICONS[name];
 
   return <Icon aria-hidden="true" className={cn('size-5 shrink-0', className)} strokeWidth={2} />;
 }

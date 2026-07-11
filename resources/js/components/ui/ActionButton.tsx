@@ -2,7 +2,10 @@ import type React from 'react';
 import { useActionRunner, type ActionCallback } from '@/components/ui/ActionScope';
 import { Button } from '@/components/ui/button';
 
-type ActionButtonProps = Omit<React.ComponentProps<typeof Button>, 'onClick' | 'type'> & {
+type ActionButtonProps = Omit<
+  React.ComponentProps<typeof Button>,
+  'asChild' | 'onClick' | 'type'
+> & {
   action: ActionCallback;
   pendingLabel?: React.ReactNode;
   disableWhilePending?: boolean;

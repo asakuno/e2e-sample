@@ -1,23 +1,22 @@
 import { ArrowRight, Pencil, Trash2 } from 'lucide-react';
 import { ActionButton } from '@/components/ui/ActionButton';
-import { ActionLink } from '@/components/ui/ActionLink';
+import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
 import { Button } from '@/components/ui/button';
-import { visitAction } from '@/lib/inertia-actions';
 import { show as stockShow } from '@/routes/stocks';
 import type { WatchlistItem } from '@/types/watchlist';
 import { WatchlistPriorityBadge } from './WatchlistPriorityBadge';
 
 interface WatchlistRowProps {
   item: WatchlistItem;
-  editMemoAction?: ((item: WatchlistItem) => void | Promise<void>) | undefined;
-  removeAction?: ((item: WatchlistItem) => void | Promise<void>) | undefined;
+  onEditMemo?: ((item: WatchlistItem) => void) | undefined;
+  removeAction?: ((item: WatchlistItem) => Promise<void>) | undefined;
 }
 
-export function WatchlistRow({ item, editMemoAction, removeAction }: WatchlistRowProps) {
+export function WatchlistRow({ item, onEditMemo, removeAction }: WatchlistRowProps) {
   const handleEditMemo = () => {
-    if (editMemoAction == null) return;
+    if (onEditMemo == null) return;
 
-    void editMemoAction(item);
+    onEditMemo(item);
   };
 
   return (
@@ -41,7 +40,7 @@ export function WatchlistRow({ item, editMemoAction, removeAction }: WatchlistRo
       </td>
       <td className="whitespace-nowrap px-4 py-4 text-right">
         <div className="inline-flex items-center justify-end gap-1">
-          {editMemoAction != null && (
+          {onEditMemo != null && (
             <Button
               type="button"
               variant="ghost"
@@ -62,15 +61,14 @@ export function WatchlistRow({ item, editMemoAction, removeAction }: WatchlistRo
               <Trash2 aria-hidden="true" className="size-4" />
             </ActionButton>
           )}
-          <ActionLink
+          <InertiaActionLink
             href={stockShow.url(item.stock.id)}
-            action={visitAction(stockShow.url(item.stock.id))}
             pendingClassName="opacity-70"
             className="inline-flex min-h-8 items-center gap-1 rounded-md px-2 py-1 font-medium text-gray-700 text-sm transition-[background-color,color,transform] hover:bg-gray-100 hover:text-gray-950 active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
           >
             詳細
             <ArrowRight aria-hidden="true" className="size-4" />
-          </ActionLink>
+          </InertiaActionLink>
         </div>
       </td>
     </tr>

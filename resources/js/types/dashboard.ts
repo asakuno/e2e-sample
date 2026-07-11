@@ -3,17 +3,24 @@
  */
 import type { AppPageProps } from '@/types/index.d.ts';
 
-/** 統計カードデータ */
-export interface StatCardData {
-  label: string;
-  value: string;
-  subLabel?: string;
-  subValue?: string;
-  change?: string;
-  changeDirection?: 'up' | 'down' | 'neutral';
-  icon: string;
-  iconColorClass: string;
-}
+type DashboardCountStatKind =
+  | 'watchlist'
+  | 'positiveAnalysis'
+  | 'negativeAnalysis'
+  | 'unanalyzedNews';
+
+/** バックエンドから受け取る統計データ */
+export type DashboardStatData =
+  | {
+      kind: DashboardCountStatKind;
+      value: number;
+    }
+  | {
+      kind: 'latestAnalysis';
+      value: string | null;
+    };
+
+export type DashboardStatKind = DashboardStatData['kind'];
 
 /** トレンドデータポイント */
 export interface TrendDataPoint {
@@ -54,7 +61,7 @@ export interface TopStockData {
 
 /** ダッシュボードページProps */
 export interface DashboardPageProps extends AppPageProps {
-  stats: StatCardData[];
+  stats: DashboardStatData[];
   recentTrend: TrendData;
   topStocks: TopStockData[];
   importantNews: ActivityItemData[];

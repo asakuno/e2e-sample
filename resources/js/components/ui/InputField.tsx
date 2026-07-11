@@ -7,54 +7,42 @@
 import type React from 'react';
 import { cn } from '@/lib/utils';
 
-interface InputFieldProps {
+type InputFieldProps = Omit<React.ComponentPropsWithoutRef<'input'>, 'id'> & {
   id: string;
-  label: string;
-  type?: string;
-  value: string;
-  placeholder?: string;
+  label: React.ReactNode;
   error?: string | undefined;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onBlur?: () => void;
-  autoComplete?: string;
-  required?: boolean;
-}
+};
 
 export function InputField({
   id,
   label,
-  type = 'text',
-  value,
-  placeholder,
   error,
-  onChange,
-  onBlur,
-  autoComplete,
-  required,
+  className,
+  'aria-describedby': ariaDescribedBy,
+  'aria-invalid': ariaInvalid,
+  ...inputProps
 }: InputFieldProps) {
+  const errorId = `${id}-error`;
+  const describedBy = [ariaDescribedBy, error ? errorId : undefined].filter(Boolean).join(' ');
+
   return (
     <div>
       <label htmlFor={id} className="mb-2 block font-medium text-gray-700 text-sm">
         {label}
       </label>
       <input
+        {...inputProps}
         id={id}
-        type={type}
-        value={value}
-        placeholder={placeholder}
-        onChange={onChange}
-        onBlur={onBlur}
-        autoComplete={autoComplete}
-        required={required}
-        aria-invalid={error ? 'true' : undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
+        aria-invalid={error ? true : ariaInvalid}
+        aria-describedby={describedBy || undefined}
         className={cn(
           'w-full rounded border px-4 py-3 text-gray-600 placeholder-gray-400 shadow-sm focus:outline-none focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-[#2767cf]',
           error ? 'border-red-500' : 'border-gray-300',
+          className,
         )}
       />
       {error && (
-        <p id={`${id}-error`} role="alert" className="mt-1 text-red-600 text-sm">
+        <p id={errorId} role="alert" className="mt-1 text-red-600 text-sm">
           {error}
         </p>
       )}

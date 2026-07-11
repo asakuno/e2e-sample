@@ -1,21 +1,16 @@
 import { Link } from '@inertiajs/react';
 import { logout } from '@/actions/App/Http/Controllers/Web/AuthPageController';
-import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { ActionButton } from '@/components/ui/ActionButton';
+import type { ActionCallback } from '@/components/ui/ActionScope';
 import { GuestLayout } from '@/layouts/GuestLayout';
 
 type VerifyEmailContentProps = {
   status: string | undefined;
   cooldown: number;
-  processing: boolean;
-  onResend: () => void | Promise<void>;
+  onResend: ActionCallback;
 };
 
-export function VerifyEmailContent({
-  status,
-  cooldown,
-  processing,
-  onResend,
-}: VerifyEmailContentProps) {
+export function VerifyEmailContent({ status, cooldown, onResend }: VerifyEmailContentProps) {
   return (
     <GuestLayout title="メール認証">
       {/* メールアイコン */}
@@ -51,14 +46,14 @@ export function VerifyEmailContent({
         </div>
       )}
 
-      <PrimaryButton
+      <ActionButton
         action={onResend}
-        processing={processing}
         disabled={cooldown > 0}
-        processingLabel="送信中..."
+        pendingLabel="送信中..."
+        className="h-auto w-full cursor-pointer rounded bg-[#2767cf] px-4 py-3 font-bold text-base text-white shadow-md transition duration-200 hover:bg-blue-700"
       >
         {cooldown > 0 ? `再送可能まで ${cooldown}秒` : '認証メールを再送する'}
-      </PrimaryButton>
+      </ActionButton>
 
       <hr className="my-6 border-slate-200" />
 

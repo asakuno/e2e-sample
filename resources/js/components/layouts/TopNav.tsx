@@ -36,7 +36,7 @@ type TopNavViewProps = {
   logoutOpen: boolean;
   onOpenLogout: () => void;
   onCloseLogout: () => void;
-  onLogout: () => void | Promise<void>;
+  onLogout: () => Promise<void>;
 };
 
 export function TopNavView({

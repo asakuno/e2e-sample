@@ -3,7 +3,7 @@
  */
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
-import type { StatCardData } from '@/types/dashboard';
+import type { StatCardData } from '../StatCard';
 import { StatCard } from '../StatCard';
 
 describe('StatCard', () => {

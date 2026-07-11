@@ -4,8 +4,18 @@
  * ラベル、値、変化率、アイコンを表示する統計情報カード。
  */
 import { cn } from '@/lib/utils';
-import { AppIcon } from '@/components/ui/AppIcon';
-import type { StatCardData } from '@/types/dashboard';
+import { AppIcon, type AppIconName } from '@/components/ui/AppIcon';
+
+export interface StatCardData {
+  label: string;
+  value: string;
+  subLabel?: string;
+  subValue?: string;
+  change?: string;
+  changeDirection?: 'up' | 'down' | 'neutral';
+  icon: AppIconName;
+  iconColorClass: string;
+}
 
 export function StatCard({
   label,

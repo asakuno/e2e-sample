@@ -29,11 +29,7 @@ vi.mock('@inertiajs/react', () => ({
     })),
   })),
   Head: ({ title }: { title: string }) => <title>{title}</title>,
-  Link: ({ href, children, ...props }: Record<string, unknown>) => (
-    <a href={href as string} {...props}>
-      {children as React.ReactNode}
-    </a>
-  ),
+  router: { visit: vi.fn() },
 }));
 
 import Login from '../Login';

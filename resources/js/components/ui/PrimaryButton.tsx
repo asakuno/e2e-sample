@@ -4,18 +4,13 @@
  * フォーム送信用の青色ボタン。processing状態とdisabled状態に対応。
  */
 import type React from 'react';
-import { useActionRunner, type ActionCallback } from '@/components/ui/ActionScope';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-interface PrimaryButtonProps {
-  type?: 'button' | 'submit';
-  disabled?: boolean;
+type PrimaryButtonProps = Omit<React.ComponentProps<typeof Button>, 'asChild'> & {
   processing?: boolean;
-  processingLabel?: string;
-  children: React.ReactNode;
-  className?: string;
-  action?: ActionCallback;
-}
+  processingLabel?: React.ReactNode;
+};
 
 export function PrimaryButton({
   type = 'submit',
@@ -24,30 +19,24 @@ export function PrimaryButton({
   processingLabel = '処理中...',
   children,
   className,
-  action,
+  'aria-busy': ariaBusy,
+  ...props
 }: PrimaryButtonProps) {
-  const { isPending, runAction } = useActionRunner();
-  const isProcessing = Boolean(processing || (action != null && isPending));
-
-  const handleClick = () => {
-    if (!action) return;
-
-    runAction(action);
-  };
+  const isProcessing = Boolean(processing);
 
   return (
-    <button
-      type={action ? 'button' : type}
+    <Button
+      {...props}
+      type={type}
       disabled={disabled || isProcessing}
-      aria-busy={isProcessing || undefined}
-      onClick={handleClick}
+      aria-busy={ariaBusy ?? (isProcessing || undefined)}
       className={cn(
-        'w-full cursor-pointer rounded bg-[#2767cf] px-4 py-3 font-bold text-white shadow-md transition duration-200 hover:bg-blue-700',
+        'h-auto w-full cursor-pointer rounded bg-[#2767cf] px-4 py-3 font-bold text-base text-white shadow-md transition duration-200 hover:bg-blue-700',
         (disabled || isProcessing) && 'cursor-not-allowed opacity-50',
         className,
       )}
     >
       {isProcessing ? processingLabel : children}
-    </button>
+    </Button>
   );
 }

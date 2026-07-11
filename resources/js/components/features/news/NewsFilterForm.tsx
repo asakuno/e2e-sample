@@ -7,6 +7,7 @@ interface NewsFilterFormProps {
   filters: NewsFilters;
   stockOptions: NewsSelectOption[];
   sentimentOptions: NewsSelectOption[];
+  processing?: boolean;
   onFiltersChange: (filters: NewsFilters) => void;
   onSubmit: () => void;
   onReset: () => void;
@@ -16,6 +17,7 @@ export function NewsFilterForm({
   filters,
   stockOptions,
   sentimentOptions,
+  processing = false,
   onFiltersChange,
   onSubmit,
   onReset,
@@ -41,6 +43,7 @@ export function NewsFilterForm({
           <select
             id="news-filter-stock"
             value={filters.stock_id}
+            disabled={processing}
             onChange={(event) => onFiltersChange({ ...filters, stock_id: event.target.value })}
             className="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-gray-900 text-sm shadow-sm outline-none transition hover:border-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
           >
@@ -63,6 +66,7 @@ export function NewsFilterForm({
           <select
             id="news-filter-sentiment"
             value={filters.sentiment}
+            disabled={processing}
             onChange={(event) => onFiltersChange({ ...filters, sentiment: event.target.value })}
             className="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-gray-900 text-sm shadow-sm outline-none transition hover:border-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
           >
@@ -86,6 +90,7 @@ export function NewsFilterForm({
             id="news-filter-from"
             type="date"
             value={filters.from}
+            disabled={processing}
             onChange={(event) => onFiltersChange({ ...filters, from: event.target.value })}
             className="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-gray-900 text-sm shadow-sm outline-none transition hover:border-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
           />
@@ -99,20 +104,27 @@ export function NewsFilterForm({
             id="news-filter-to"
             type="date"
             value={filters.to}
+            disabled={processing}
             onChange={(event) => onFiltersChange({ ...filters, to: event.target.value })}
             className="h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-gray-900 text-sm shadow-sm outline-none transition hover:border-gray-400 focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
           />
         </div>
 
         <div className="flex gap-2">
-          <Button type="submit" className="h-11 flex-1 lg:flex-none">
+          <Button
+            type="submit"
+            className="h-11 flex-1 lg:flex-none"
+            disabled={processing}
+            aria-busy={processing || undefined}
+          >
             <Search />
-            検索
+            {processing ? '検索中...' : '検索'}
           </Button>
           <Button
             type="button"
             variant="outline"
             className="h-11 flex-1 lg:flex-none"
+            disabled={processing}
             onClick={onReset}
           >
             <X />

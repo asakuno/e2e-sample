@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 
-type VisitOptions = NonNullable<Parameters<typeof router.visit>[1]>;
+export type VisitOptions = NonNullable<Parameters<typeof router.visit>[1]>;
 type InertiaRequest = (options: VisitOptions) => void;
 
 /**

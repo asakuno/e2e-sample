@@ -10,7 +10,7 @@ import type { WatchlistItem, WatchlistPageProps } from '@/types/watchlist';
 export default function Watchlist({ watchlists }: WatchlistPageProps) {
   const [editingItem, setEditingItem] = useState<WatchlistItem | null>(null);
 
-  const handleRemove = (item: WatchlistItem) => {
+  const handleRemove = (item: WatchlistItem): Promise<void> => {
     return runInertiaAction(
       (visitOptions) => {
         router.delete(destroy.url(item.id), visitOptions);
@@ -36,7 +36,7 @@ export default function Watchlist({ watchlists }: WatchlistPageProps) {
 
           <WatchlistContent
             items={watchlists}
-            editMemoAction={setEditingItem}
+            onEditMemo={setEditingItem}
             removeAction={handleRemove}
           />
 

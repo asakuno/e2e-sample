@@ -1,5 +1,4 @@
 import type { AppPageProps } from '@/types/index.d.ts';
-import type { StockListItem } from '@/types/stocks';
 
 export interface NewsArticleStock {
   id: number;
@@ -10,9 +9,16 @@ export interface NewsArticleStock {
   matched_by: string | null;
 }
 
+export interface NewsAnalysisStock {
+  id: number;
+  symbol: string;
+  name: string;
+  market: string;
+}
+
 export interface NewsAnalysis {
   id: number;
-  stock: StockListItem;
+  stock: NewsAnalysisStock;
   summary: string;
   sentiment: number;
   sentiment_label: string;

@@ -4,11 +4,11 @@ import { WatchlistRow } from './WatchlistRow';
 
 interface WatchlistTableProps {
   items: WatchlistItem[];
-  editMemoAction?: ((item: WatchlistItem) => void | Promise<void>) | undefined;
-  removeAction?: ((item: WatchlistItem) => void | Promise<void>) | undefined;
+  onEditMemo?: ((item: WatchlistItem) => void) | undefined;
+  removeAction?: ((item: WatchlistItem) => Promise<void>) | undefined;
 }
 
-export function WatchlistTable({ items, editMemoAction, removeAction }: WatchlistTableProps) {
+export function WatchlistTable({ items, onEditMemo, removeAction }: WatchlistTableProps) {
   return (
     <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
@@ -28,7 +28,7 @@ export function WatchlistTable({ items, editMemoAction, removeAction }: Watchlis
               <WatchlistRow
                 key={item.id}
                 item={item}
-                editMemoAction={editMemoAction}
+                onEditMemo={onEditMemo}
                 removeAction={removeAction}
               />
             ))}
