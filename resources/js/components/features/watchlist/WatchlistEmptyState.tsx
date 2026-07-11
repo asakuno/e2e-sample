@@ -1,5 +1,6 @@
-import { Link } from '@inertiajs/react';
 import { Search } from 'lucide-react';
+import { ActionLink } from '@/components/ui/ActionLink';
+import { visitAction } from '@/lib/inertia-actions';
 import { index as stocksIndex } from '@/routes/stocks';
 
 export function WatchlistEmptyState() {
@@ -12,12 +13,14 @@ export function WatchlistEmptyState() {
       <p className="mt-2 text-gray-500 text-sm">
         銘柄一覧から気になる銘柄をウォッチリストに追加してください。
       </p>
-      <Link
+      <ActionLink
         href={stocksIndex.url()}
+        action={visitAction(stocksIndex.url())}
+        pendingClassName="opacity-70"
         className="mt-5 inline-flex min-h-11 items-center justify-center rounded-md bg-gray-900 px-4 py-2 font-medium text-sm text-white transition-[background-color,transform] hover:bg-gray-700 active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
       >
         銘柄を探す
-      </Link>
+      </ActionLink>
     </div>
   );
 }

@@ -10,22 +10,23 @@ const mockSetData = vi.fn();
 
 const mockSubmit = vi.fn();
 const mockValidate = vi.fn();
+let mockProcessing = false;
 
 vi.mock('@inertiajs/react', () => ({
   useForm: vi.fn(() => ({
     data: { email: '', password: '' },
     setData: mockSetData,
     post: mockPost,
-    processing: false,
+    processing: mockProcessing,
     errors: {},
-    withPrecognition: vi.fn().mockReturnValue({
+    withPrecognition: vi.fn().mockImplementation(() => ({
       data: { email: '', password: '' },
       setData: mockSetData,
       submit: mockSubmit,
-      processing: false,
+      processing: mockProcessing,
       errors: {},
       validate: mockValidate,
-    }),
+    })),
   })),
   Head: ({ title }: { title: string }) => <title>{title}</title>,
   Link: ({ href, children, ...props }: Record<string, unknown>) => (
@@ -40,6 +41,7 @@ import Login from '../Login';
 describe('Login', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockProcessing = false;
   });
 
   it('メールアドレス入力欄が表示されること', () => {
@@ -75,6 +77,19 @@ describe('Login', () => {
       fireEvent.submit(form);
     }
     expect(mockSubmit).toHaveBeenCalled();
+  });
+
+  it('processing=true の場合、ログイン送信ボタンが無効になること', () => {
+    // Arrange
+    mockProcessing = true;
+    const expected = true;
+
+    // Act
+    render(<Login />);
+    const actual = screen.getByRole('button', { name: '処理中...' }).hasAttribute('disabled');
+
+    // Assert
+    expect(actual).toBe(expected);
   });
 
   it('ページタイトルが設定されること', () => {

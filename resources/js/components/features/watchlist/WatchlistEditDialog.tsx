@@ -1,5 +1,4 @@
 import { useForm } from '@inertiajs/react';
-import { useTransition } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -46,18 +45,15 @@ export function WatchlistEditDialog({ item, open, onOpenChange }: WatchlistEditD
 
 function WatchlistEditDialogForm({ item, open, onOpenChange }: WatchlistEditDialogFormProps) {
   const action = update(item.id);
-  const [isPending, startTransition] = useTransition();
   const form = useForm<WatchlistUpdateFormData>({
     memo: item.memo ?? '',
     priority: item.priority,
   }).withPrecognition(action.method, action.url);
 
   const handleSubmit = () => {
-    startTransition(() => {
-      form.submit(action, {
-        preserveScroll: true,
-        onSuccess: () => onOpenChange(false),
-      });
+    form.submit(action, {
+      preserveScroll: true,
+      onSuccess: () => onOpenChange(false),
     });
   };
 
@@ -73,7 +69,7 @@ function WatchlistEditDialogForm({ item, open, onOpenChange }: WatchlistEditDial
           memo={form.data.memo}
           priority={form.data.priority}
           priorityOptions={priorityOptions}
-          processing={form.processing || isPending}
+          processing={form.processing}
           memoError={form.errors.memo}
           priorityError={form.errors.priority}
           onMemoChange={(memo) => form.setData('memo', memo)}

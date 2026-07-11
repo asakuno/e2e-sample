@@ -1,8 +1,8 @@
 import type React from 'react';
-import { Link } from '@inertiajs/react';
 import { ArrowRight, Check, Eye } from 'lucide-react';
-import { useTransition } from 'react';
-import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ui/ActionButton';
+import { ActionLink } from '@/components/ui/ActionLink';
+import { visitAction } from '@/lib/inertia-actions';
 import { show } from '@/routes/stocks';
 import type { StockListItem, StockMarketOption } from '@/types/stocks';
 
@@ -75,16 +75,6 @@ function StockTableRow({
   isInWatchlist: boolean;
   addToWatchlistAction?: ((stock: StockListItem) => void | Promise<void>) | undefined;
 }) {
-  const [isPending, startTransition] = useTransition();
-
-  const handleAddToWatchlist = () => {
-    if (addToWatchlistAction == null || isInWatchlist) return;
-
-    startTransition(async () => {
-      await addToWatchlistAction(stock);
-    });
-  };
-
   return (
     <tr className="transition hover:bg-gray-50">
       <td className="whitespace-nowrap px-4 py-4">
@@ -106,8 +96,7 @@ function StockTableRow({
       <td className="whitespace-nowrap px-4 py-4 text-right">
         <div className="inline-flex items-center justify-end gap-1">
           {addToWatchlistAction != null && (
-            <Button
-              type="button"
+            <ActionButton
               variant="outline"
               size="sm"
               aria-label={
@@ -115,9 +104,8 @@ function StockTableRow({
                   ? `${stock.symbol} はウォッチリストに追加済み`
                   : `${stock.symbol} をウォッチリストに追加`
               }
-              aria-busy={isPending || undefined}
-              disabled={isPending || isInWatchlist}
-              onClick={handleAddToWatchlist}
+              disabled={isInWatchlist}
+              action={() => addToWatchlistAction(stock)}
             >
               {isInWatchlist ? (
                 <Check aria-hidden="true" className="size-4" />
@@ -125,15 +113,17 @@ function StockTableRow({
                 <Eye aria-hidden="true" className="size-4" />
               )}
               {isInWatchlist ? '追加済み' : '追加'}
-            </Button>
+            </ActionButton>
           )}
-          <Link
+          <ActionLink
             href={show.url(stock.id)}
+            action={visitAction(show.url(stock.id))}
+            pendingClassName="opacity-70"
             className="inline-flex min-h-8 items-center gap-1 rounded-md px-2 py-1 font-medium text-gray-700 text-sm transition-[background-color,color,transform] hover:bg-gray-100 hover:text-gray-950 active:translate-y-px focus-visible:outline-2 focus-visible:outline-blue-600 focus-visible:outline-offset-2"
           >
             開く
             <ArrowRight aria-hidden="true" className="size-4" />
-          </Link>
+          </ActionLink>
         </div>
       </td>
     </tr>

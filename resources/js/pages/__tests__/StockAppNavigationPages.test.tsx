@@ -13,6 +13,7 @@ import type { WatchlistPageProps } from '@/types/watchlist';
 const routerGetMock = vi.hoisted(() => vi.fn());
 const routerPostMock = vi.hoisted(() => vi.fn());
 const routerDeleteMock = vi.hoisted(() => vi.fn());
+const routerVisitMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@inertiajs/react', () => ({
   Head: ({ title }: { title: string }) => <title>{title}</title>,
@@ -21,7 +22,12 @@ vi.mock('@inertiajs/react', () => ({
       {children as React.ReactNode}
     </a>
   ),
-  router: { get: routerGetMock, post: routerPostMock, delete: routerDeleteMock },
+  router: {
+    get: routerGetMock,
+    post: routerPostMock,
+    delete: routerDeleteMock,
+    visit: routerVisitMock,
+  },
   usePage: vi.fn(() => ({
     url: '/stocks',
     props: {

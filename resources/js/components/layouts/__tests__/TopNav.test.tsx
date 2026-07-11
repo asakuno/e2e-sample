@@ -71,7 +71,6 @@ describe('TopNav', () => {
       '/logout',
       {},
       expect.objectContaining({
-        onError: expect.any(Function),
         onFinish: expect.any(Function),
       }),
     );

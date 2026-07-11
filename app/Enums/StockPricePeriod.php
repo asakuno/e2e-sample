@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Enums;
 
 use App\Enums\Traits\HasSelectArray;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 
 enum StockPricePeriod: string
@@ -37,7 +38,7 @@ enum StockPricePeriod: string
         return $this->value;
     }
 
-    public function startDate(): Carbon
+    public function startDate(): CarbonInterface
     {
         return (match ($this) {
             self::ThreeMonths => now()->subMonthsNoOverflow(3),
