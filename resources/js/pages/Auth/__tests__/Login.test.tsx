@@ -86,9 +86,7 @@ describe('Login', () => {
 
     // Act
     render(<Login />);
-    const actual = screen
-      .getByRole('button', { name: '処理中...' })
-      .hasAttribute('disabled');
+    const actual = screen.getByRole('button', { name: '処理中...' }).hasAttribute('disabled');
 
     // Assert
     expect(actual).toBe(expected);
