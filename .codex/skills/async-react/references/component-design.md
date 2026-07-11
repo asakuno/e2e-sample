@@ -4,39 +4,62 @@
 
 ## 設計原則
 
-1. **トランジションはコンポーネント内部に閉じ込める** - 使う側は `action` propを渡すだけ
+1. **非緊急なアプリケーションactionのトランジションはコンポーネント内部に閉じ込める** - 使う側は `action` propを渡すだけ
 2. **ローディング表示はコンポーネントの責務** - `isPending` で自動制御
 3. **楽観的更新はコンポーネントが管理** - `useOptimistic` で即座の反映
 4. **Suspenseバウンダリはデータ消費コンポーネントの親に配置** - 宣言的な非同期UI
+5. **共通エラー通知はActionScopeに集約** - toast / Sentry / 共通ログは `onError`、個別エラーは action 内で処理
+6. **緊急なローカルUI更新は通常のイベントを使う** - controlled input、モーダル・メニュー・ポップオーバー、focus・selection、PrimitiveのDOMイベントは `onClick` / `onChange` で即時更新
 
 ## 1. 汎用Buttonコンポーネント（トランジション組み込み）
 
-ボタンを押した時の非同期処理を、自動的にトランジションにする。
+非緊急なアプリケーションactionを実行するボタンでは、非同期処理を自動的にトランジションにする。
 
 ```tsx
 import { useTransition } from "react";
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  action: () => Promise<void>;
+type ActionContext = {
+  transition: (callback: () => void) => void;
+};
+
+type ActionCallback = (context: ActionContext) => void | Promise<void>;
+
+type ButtonProps = Omit<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  "onClick" | "type"
+> & {
+  action: ActionCallback;
   children: React.ReactNode;
   variant?: string;
-}
+};
 
-function Button({ action, children, variant = "default", ...props }: ButtonProps) {
+function Button({
+  action,
+  children,
+  disabled,
+  className,
+  variant = "default",
+  ...props
+}: ButtonProps) {
   const [isPending, startTransition] = useTransition();
+  const transition: ActionContext["transition"] = (callback) => {
+    startTransition(callback);
+  };
 
   function handleClick() {
     startTransition(async () => {
-      await action();
+      await action({ transition });
     });
   }
 
   return (
     <button
-      onClick={handleClick}
-      disabled={isPending}
-      className={buttonVariants({ variant })}
       {...props}
+      type="button"
+      className={cn(buttonVariants({ variant }), className)}
+      disabled={disabled || isPending}
+      aria-busy={isPending || undefined}
+      onClick={handleClick}
     >
       {isPending ? <Spinner /> : children}
     </button>
@@ -63,6 +86,33 @@ function TodoItem({ id }: TodoItemProps) {
       <span>{todo.title}</span>
       <Button action={completeAction}>Complete</Button>
     </div>
+  );
+}
+```
+
+### await後のstate更新と共通エラー通知
+
+action内で `await` 後にstate更新する場合は、action context の `transition` helperで追加のトランジションに包む。操作横断のエラー通知は `ActionScope onError` に寄せる。
+
+```tsx
+function SavePanel() {
+  const [saved, setSaved] = useState(false);
+
+  return (
+    <ActionScope onError={(error) => reportActionError(error)}>
+      <Button
+        action={async ({ transition }) => {
+          await save();
+
+          transition(() => {
+            setSaved(true);
+          });
+        }}
+      >
+        Save
+      </Button>
+      {saved && <p>Saved</p>}
+    </ActionScope>
   );
 }
 ```
@@ -310,9 +360,9 @@ function LoginForm() {
         <input id="password" name="password" type="password" required />
       </div>
       {state.error && <p className="text-red-500">{state.error}</p>}
-      <Button action={() => {}} type="submit" disabled={isPending}>
+      <button type="submit" disabled={isPending}>
         {isPending ? "Logging in..." : "Login"}
-      </Button>
+      </button>
     </form>
   );
 }
@@ -452,11 +502,9 @@ function DataSection({ query }: DataSectionProps) {
 │  │  fallback={<SkeletonList />}     │ │
 │  │  ┌─ DataList ──────────────────┐ │ │
 │  │  │  use(getData(query))        │ │ │
-│  │  │  ┌─ ViewTransition ───────┐ │ │ │
-│  │  │  │  ListItem              │ │ │ │
-│  │  │  │  CompleteButton        │ │ │ │
-│  │  │  │  (useOptimistic)       │ │ │ │
-│  │  │  └────────────────────────┘ │ │ │
+│  │  │  ListItem                  │ │ │
+│  │  │  CompleteButton            │ │ │
+│  │  │  (useOptimistic)           │ │ │
 │  │  └─────────────────────────────┘ │ │
 │  └──────────────────────────────────┘ │
 └───────────────────────────────────────┘
@@ -467,4 +515,3 @@ function DataSection({ query }: DataSectionProps) {
 - **Suspense**: 初回のみフォールバック表示、トランジション中は既存UI維持
 - **DataList**: `use()` でデータ読み取り、Suspenseと連携
 - **CompleteButton**: 楽観的更新で即座にUI反映
-- **ViewTransition**: アニメーション統合

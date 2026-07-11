@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { WatchlistContent } from '@/components/features/watchlist/WatchlistContent';
 import { WatchlistEditDialog } from '@/components/features/watchlist/WatchlistEditDialog';
 import { AuthenticatedLayout } from '@/layouts/AuthenticatedLayout';
+import { runInertiaAction } from '@/lib/inertia-actions';
 import { destroy } from '@/routes/watchlist';
 import type { WatchlistItem, WatchlistPageProps } from '@/types/watchlist';
 
@@ -10,9 +11,12 @@ export default function Watchlist({ watchlists }: WatchlistPageProps) {
   const [editingItem, setEditingItem] = useState<WatchlistItem | null>(null);
 
   const handleRemove = (item: WatchlistItem) => {
-    router.delete(destroy.url(item.id), {
-      preserveScroll: true,
-    });
+    return runInertiaAction(
+      (visitOptions) => {
+        router.delete(destroy.url(item.id), visitOptions);
+      },
+      { preserveScroll: true },
+    );
   };
 
   return (

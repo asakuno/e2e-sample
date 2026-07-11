@@ -80,8 +80,8 @@ export function WatchlistMemoForm({
         <Button type="button" variant="outline" onClick={onCancel}>
           キャンセル
         </Button>
-        <Button type="submit" disabled={processing}>
-          保存
+        <Button type="submit" disabled={processing} aria-busy={processing || undefined}>
+          {processing ? '保存中...' : '保存'}
         </Button>
       </div>
     </form>

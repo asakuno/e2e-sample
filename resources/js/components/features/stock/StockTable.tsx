@@ -1,8 +1,8 @@
 import type React from 'react';
-import { Link } from '@inertiajs/react';
 import { ArrowRight, Eye } from 'lucide-react';
-import { useTransition } from 'react';
-import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ui/ActionButton';
+import { ActionLink } from '@/components/ui/ActionLink';
+import { visitAction } from '@/lib/inertia-actions';
 import { show } from '@/routes/stocks';
 import type { StockListItem, StockMarketOption } from '@/types/stocks';
 
@@ -62,16 +62,6 @@ function StockTableRow({
   marketOptions: StockMarketOption[];
   addToWatchlistAction?: ((stock: StockListItem) => void | Promise<void>) | undefined;
 }) {
-  const [isPending, startTransition] = useTransition();
-
-  const handleAddToWatchlist = () => {
-    if (addToWatchlistAction == null) return;
-
-    startTransition(async () => {
-      await addToWatchlistAction(stock);
-    });
-  };
-
   return (
     <tr className="transition hover:bg-gray-50">
       <td className="whitespace-nowrap px-4 py-4">
@@ -93,26 +83,25 @@ function StockTableRow({
       <td className="whitespace-nowrap px-4 py-4 text-right">
         <div className="inline-flex items-center justify-end gap-1">
           {addToWatchlistAction != null && (
-            <Button
-              type="button"
+            <ActionButton
               variant="outline"
               size="sm"
               aria-label={`${stock.symbol} をウォッチリストに追加`}
-              aria-busy={isPending || undefined}
-              disabled={isPending}
-              onClick={handleAddToWatchlist}
+              action={() => addToWatchlistAction(stock)}
             >
               <Eye aria-hidden="true" className="size-4" />
               追加
-            </Button>
+            </ActionButton>
           )}
-          <Link
+          <ActionLink
             href={show.url(stock.id)}
+            action={visitAction(show.url(stock.id))}
+            pendingClassName="opacity-70"
             className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium text-gray-700 text-sm transition hover:bg-gray-100 hover:text-gray-950"
           >
             開く
             <ArrowRight aria-hidden="true" className="size-4" />
-          </Link>
+          </ActionLink>
         </div>
       </td>
     </tr>

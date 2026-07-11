@@ -4,24 +4,22 @@
  * Glassmorphismデザインの確認モーダル。
  * shadcn/ui Dialog をベースにカスタムスタイルを適用。
  */
-import { useTransition } from 'react';
+import { useActionRunner, type ActionCallback } from '@/components/ui/ActionScope';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 
 type LogoutModalProps = {
   open: boolean;
   onClose: () => void;
-  action: () => void | Promise<void>;
+  action: ActionCallback;
   processing?: boolean;
 };
 
 export function LogoutModal({ open, onClose, action, processing }: LogoutModalProps) {
-  const [isPending, startTransition] = useTransition();
+  const { isPending, runAction } = useActionRunner();
   const isProcessing = Boolean(processing || isPending);
 
   const handleLogout = () => {
-    startTransition(async () => {
-      await action();
-    });
+    runAction(action);
   };
 
   return (

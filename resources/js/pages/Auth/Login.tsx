@@ -5,17 +5,18 @@
  * GuestLayout でラップし、メールアドレス・パスワード入力を提供する。
  */
 
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import type React from 'react';
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { login, showRegister } from '@/actions/App/Http/Controllers/Web/AuthPageController';
 import { InputField } from '@/components/ui/InputField';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { GuestLayout } from '@/layouts/GuestLayout';
+import { ActionLink } from '@/components/ui/ActionLink';
+import { visitAction } from '@/lib/inertia-actions';
 
 export default function Login() {
-  const [isPending, startTransition] = useTransition();
   const [passwordVisible, setPasswordVisible] = useState(false);
   const form = useForm({
     email: '',
@@ -26,9 +27,7 @@ export default function Login() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    startTransition(() => {
-      submit();
-    });
+    submit();
   };
 
   return (
@@ -70,17 +69,19 @@ export default function Login() {
           </div>
 
           {/* 送信ボタン */}
-          <PrimaryButton processing={processing || isPending}>ログインする</PrimaryButton>
+          <PrimaryButton processing={processing}>ログインする</PrimaryButton>
 
           {/* フッターリンク */}
           <div className="mt-6 flex items-center justify-between text-[13px] text-slate-600">
             <span className="cursor-default text-slate-400">パスワードをお忘れですか？</span>
-            <Link
+            <ActionLink
               href={showRegister.url()}
+              action={visitAction(showRegister.url())}
+              pendingClassName="opacity-70"
               className="transition hover:text-[#326CCB] hover:underline"
             >
               新規登録はこちら
-            </Link>
+            </ActionLink>
           </div>
         </form>
       </GuestLayout>

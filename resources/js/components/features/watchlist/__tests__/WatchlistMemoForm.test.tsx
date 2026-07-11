@@ -85,4 +85,27 @@ describe('WatchlistMemoForm', () => {
     // Assert
     expect(actual).toBe(expected);
   });
+
+  it('processing=true の場合、保存ボタンが処理中表示になること', () => {
+    // Arrange
+    const expected = '保存中...';
+
+    // Act
+    render(
+      <WatchlistMemoForm
+        memo=""
+        priority={2}
+        priorityOptions={priorityOptions}
+        processing
+        onMemoChange={vi.fn()}
+        onPriorityChange={vi.fn()}
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    const actual = screen.getByRole('button', { name: expected });
+
+    // Assert
+    expect(actual).toBeDisabled();
+  });
 });

@@ -5,17 +5,18 @@
  * GuestLayout でラップし、名前・メール・パスワード入力を提供する。
  */
 
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import type React from 'react';
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { register, showLogin } from '@/actions/App/Http/Controllers/Web/AuthPageController';
 import { InputField } from '@/components/ui/InputField';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { GuestLayout } from '@/layouts/GuestLayout';
+import { ActionLink } from '@/components/ui/ActionLink';
+import { visitAction } from '@/lib/inertia-actions';
 
 export default function Register() {
-  const [isPending, startTransition] = useTransition();
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [passwordConfirmationVisible, setPasswordConfirmationVisible] = useState(false);
   const form = useForm({
@@ -29,9 +30,7 @@ export default function Register() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    startTransition(() => {
-      submit();
-    });
+    submit();
   };
 
   return (
@@ -121,19 +120,21 @@ export default function Register() {
           </p>
 
           {/* 送信ボタン */}
-          <PrimaryButton processing={processing || isPending}>アカウントを作成する</PrimaryButton>
+          <PrimaryButton processing={processing}>アカウントを作成する</PrimaryButton>
 
           {/* 区切り線 */}
           <hr className="my-6 border-slate-200" />
 
           {/* フッターリンク */}
           <div className="text-center text-[13px] text-slate-600">
-            <Link
+            <ActionLink
               href={showLogin.url()}
+              action={visitAction(showLogin.url())}
+              pendingClassName="opacity-70"
               className="transition hover:text-[#326CCB] hover:underline"
             >
               既にアカウントをお持ちの方はこちら &rarr;
-            </Link>
+            </ActionLink>
           </div>
         </form>
       </GuestLayout>

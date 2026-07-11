@@ -6,6 +6,7 @@ import type { StockFilters, StockMarketOption } from '@/types/stocks';
 interface StockSearchFormProps {
   filters: StockFilters;
   marketOptions: StockMarketOption[];
+  processing?: boolean;
   onFiltersChange: (filters: StockFilters) => void;
   onSubmit: () => void;
   onReset: () => void;
@@ -14,6 +15,7 @@ interface StockSearchFormProps {
 export function StockSearchForm({
   filters,
   marketOptions,
+  processing = false,
   onFiltersChange,
   onSubmit,
   onReset,
@@ -72,14 +74,20 @@ export function StockSearchForm({
         </div>
 
         <div className="flex gap-2">
-          <Button type="submit" className="h-11 flex-1 lg:flex-none">
+          <Button
+            type="submit"
+            className="h-11 min-w-28 flex-1 lg:flex-none"
+            disabled={processing}
+            aria-busy={processing || undefined}
+          >
             <Search />
-            検索
+            {processing ? '検索中...' : '検索'}
           </Button>
           <Button
             type="button"
             variant="outline"
             className="h-11 flex-1 lg:flex-none"
+            disabled={processing}
             onClick={onReset}
           >
             <X />
