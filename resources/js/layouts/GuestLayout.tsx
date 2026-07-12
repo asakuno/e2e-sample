@@ -4,6 +4,7 @@
  * 未認証ユーザー向けのレイアウト。中央配置の認証用Surfaceを提供する。
  */
 import type React from 'react';
+import { SharedFlashMessages } from '@/components/ui/FlashMessages';
 import { Surface } from '@/components/ui/surface';
 
 interface GuestLayoutProps {
@@ -23,6 +24,7 @@ export function GuestLayout({ children, title = 'ログイン' }: GuestLayoutPro
             </p>
             <h1 className="font-semibold text-2xl text-foreground tracking-tight">{title}</h1>
           </header>
+          <SharedFlashMessages className="mb-6" />
           {children}
         </main>
       </Surface>

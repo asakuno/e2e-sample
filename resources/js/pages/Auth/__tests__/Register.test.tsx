@@ -26,6 +26,7 @@ vi.mock('@inertiajs/react', () => ({
     })),
   })),
   Head: ({ title }: { title: string }) => <title>{title}</title>,
+  usePage: vi.fn(() => ({ props: { flash: {} } })),
   router: { visit: vi.fn() },
 }));
 

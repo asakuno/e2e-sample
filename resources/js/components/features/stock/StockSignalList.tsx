@@ -20,7 +20,7 @@ export function StockSignalList({ signals }: StockSignalListProps) {
                 {signal.signal_date}
               </p>
               <p className="mt-1 text-muted-foreground text-xs tabular-nums">
-                generated {formatSignalDateTime(signal.generated_at)}
+                生成日時 {formatSignalDateTime(signal.generated_at)}
               </p>
             </div>
             <ScoreBadge score={signal.total_score} />
@@ -29,14 +29,14 @@ export function StockSignalList({ signals }: StockSignalListProps) {
             <p className="mt-3 text-foreground text-sm leading-6">{signal.reason}</p>
           )}
           <dl className="mt-3 grid grid-cols-3 gap-2 text-xs">
-            <InsightMetric label="news" value={formatScore(signal.news_score)} />
-            <InsightMetric label="disclosure" value={formatScore(signal.disclosure_score)} />
-            <InsightMetric label="macro" value={formatScore(signal.macro_score)} />
+            <InsightMetric label="ニュース" value={formatScore(signal.news_score)} />
+            <InsightMetric label="開示" value={formatScore(signal.disclosure_score)} />
+            <InsightMetric label="マクロ" value={formatScore(signal.macro_score)} />
           </dl>
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
-            <CountBadge label="positive" value={signal.positive_count} />
-            <CountBadge label="neutral" value={signal.neutral_count} />
-            <CountBadge label="negative" value={signal.negative_count} />
+            <CountBadge label="ポジティブ" value={signal.positive_count} />
+            <CountBadge label="中立" value={signal.neutral_count} />
+            <CountBadge label="ネガティブ" value={signal.negative_count} />
           </div>
         </article>
       ))}
@@ -58,7 +58,7 @@ function ScoreBadge({ score }: { score: number }) {
 
   return (
     <StatusBadge variant={variant} className="font-semibold tabular-nums">
-      total {formatScore(score)}
+      総合 {formatScore(score)}
     </StatusBadge>
   );
 }

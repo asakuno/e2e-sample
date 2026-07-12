@@ -34,7 +34,7 @@ function presentImportantNews(news: ActivityItemData): DashboardPriorityFeedItem
     ...IMPORTANT_NEWS_PRESENTATIONS[news.dotColor],
     title: news.title,
     description: news.description,
-    meta: news.timeAgo,
+    meta: presentImportantNewsMeta(news),
   };
 
   if (news.articleId === null) {
@@ -45,6 +45,14 @@ function presentImportantNews(news: ActivityItemData): DashboardPriorityFeedItem
     ...item,
     href: newsIndex.url({ query: { article_id: news.articleId } }),
   };
+}
+
+function presentImportantNewsMeta(news: ActivityItemData): string {
+  const source = news.source?.trim();
+
+  return [source === '' ? null : source, news.publishedAt, news.timeAgo]
+    .filter((value): value is string => value !== null && value !== undefined && value !== '')
+    .join(' · ');
 }
 
 function presentStockSignalVariant(totalScore: number): DashboardPriorityFeedItem['variant'] {

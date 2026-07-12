@@ -12,14 +12,15 @@ use App\Models\StockPrice;
 use App\Models\StockSignal;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 final class StockRepository implements StockRepositoryInterface
 {
     /**
-     * @return Collection<int, Stock>
+     * @return LengthAwarePaginator<int, Stock>
      */
-    public function search(StockSearchData $filters): Collection
+    public function search(StockSearchData $filters): LengthAwarePaginator
     {
         return Stock::query()
             ->active()
@@ -37,7 +38,8 @@ final class StockRepository implements StockRepositoryInterface
             )
             ->orderBy('market')
             ->orderBy('symbol')
-            ->get();
+            ->paginate(25)
+            ->withQueryString();
     }
 
     /**
@@ -95,6 +97,7 @@ final class StockRepository implements StockRepositoryInterface
                 'stocks',
                 'analysisResults' => fn ($query) => $query
                     ->where('stock_id', $stockId)
+                    ->where('analysis_results.prompt_version', $this->currentPromptVersion())
                     ->with('stock')
                     ->orderByDesc('analyzed_at')
                     ->orderByDesc('id'),
@@ -117,6 +120,7 @@ final class StockRepository implements StockRepositoryInterface
         return AnalysisResult::query()
             ->with('stock')
             ->where('stock_id', $stockId)
+            ->where('prompt_version', $this->currentPromptVersion())
             ->orderByDesc('analyzed_at')
             ->orderByDesc('id')
             ->limit($limit)
@@ -134,5 +138,10 @@ final class StockRepository implements StockRepositoryInterface
             ->orderByDesc('id')
             ->limit($limit)
             ->get();
+    }
+
+    private function currentPromptVersion(): string
+    {
+        return (string) config('services.openai.prompt_version', 'v1');
     }
 }

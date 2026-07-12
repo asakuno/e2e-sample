@@ -11,9 +11,10 @@ import { StockPriceHistoryTable } from './StockPriceHistoryTable';
 type StockDetailContentProps = {
   stock: StockDetail;
   children: ReactNode;
+  watchlistControl?: ReactNode;
 };
 
-export function StockDetailContent({ stock, children }: StockDetailContentProps) {
+export function StockDetailContent({ stock, children, watchlistControl }: StockDetailContentProps) {
   return (
     <div className="flex flex-col gap-6">
       <InertiaActionLink
@@ -25,14 +26,16 @@ export function StockDetailContent({ stock, children }: StockDetailContentProps)
         銘柄一覧
       </InertiaActionLink>
 
-      <StockDetailHeader stock={stock} />
+      <StockDetailHeader stock={stock} watchlistControl={watchlistControl} />
+
+      {children}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
               <BarChart3 aria-hidden="true" className="size-5 text-muted-foreground" />
-              <h2 className="font-semibold text-card-foreground text-lg">価格履歴</h2>
+              <h2 className="font-semibold text-card-foreground text-lg">価格・出来高推移</h2>
             </div>
             <div className="inline-flex w-fit overflow-hidden rounded-md border border-border bg-muted p-1">
               {stock.period_options.map((option) => {
@@ -64,8 +67,6 @@ export function StockDetailContent({ stock, children }: StockDetailContentProps)
 
         <StockCompanyInfo stock={stock} />
       </div>
-
-      {children}
 
       <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
         <div className="border-border border-b px-5 py-4">

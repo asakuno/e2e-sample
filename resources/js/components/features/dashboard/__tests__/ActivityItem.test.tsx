@@ -14,6 +14,8 @@ describe('ActivityItem', () => {
     description: '新規プロジェクト「テスト」を作成しました',
     timeAgo: '5分前',
     dotColor: 'blue',
+    source: null,
+    publishedAt: null,
   };
 
   it('タイトルが表示されること', () => {

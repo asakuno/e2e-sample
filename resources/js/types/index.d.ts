@@ -25,10 +25,8 @@ export interface Auth {
  * フラッシュメッセージ
  */
 export interface Flash {
-  success?: string;
-  error?: string;
-  warning?: string;
-  info?: string;
+  success?: string | null;
+  error?: string | null;
 }
 
 /**

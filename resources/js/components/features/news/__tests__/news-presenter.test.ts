@@ -19,6 +19,12 @@ const createAnalysis = (id: number, impactScore: number): NewsAnalysis => ({
   sentiment_label: '中立',
   impact_score: impactScore,
   confidence_score: 80,
+  time_horizon: 0,
+  time_horizon_label: '不明',
+  positive_factors: [],
+  negative_factors: [],
+  risk_points: [],
+  reason: `判断理由${id}`,
   analyzed_at: '2026-07-12T10:30:00+09:00',
 });
 

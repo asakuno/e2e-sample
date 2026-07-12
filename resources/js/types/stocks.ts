@@ -1,7 +1,7 @@
 /**
  * 銘柄画面の型定義
  */
-import type { AppPageProps } from '@/types/index.d.ts';
+import type { AppPageProps, PaginatedData } from '@/types/index.d.ts';
 import type { NewsAnalysis, NewsArticle } from '@/types/news';
 
 export interface StockListItem {
@@ -32,8 +32,15 @@ export interface StockPeriodOption {
   label: string;
 }
 
+export interface StockWatchlist {
+  id: number;
+  memo: string | null;
+  priority: number;
+}
+
 export interface StockDetail extends StockListItem {
   description: string | null;
+  watchlist: StockWatchlist | null;
   latest_price: StockPricePoint | null;
   price_history: StockPricePoint[];
   related_news: NewsArticle[];
@@ -68,10 +75,9 @@ export interface StockMarketOption {
 }
 
 export interface StocksPageProps extends AppPageProps {
-  stocks: StockListItem[];
+  stocks: PaginatedData<StockListItem>;
   filters: StockFilters;
   marketOptions: StockMarketOption[];
-  watchlistedStockIds: number[];
 }
 
 export interface StockDetailPageProps extends AppPageProps {

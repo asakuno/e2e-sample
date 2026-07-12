@@ -91,6 +91,7 @@ deptrac:
       - Service
       - Repository
       - Model
+      - Data
       - Enum
 
     # Repository can depend on: Model

@@ -35,6 +35,7 @@ final class StockDetailData extends Data
         public readonly ?string $sector,
         public readonly ?string $industry,
         public readonly ?string $description,
+        public readonly ?StockWatchlistData $watchlist,
         public readonly ?StockPriceData $latestPrice,
         public readonly array $priceHistory,
         public readonly array $relatedNews,
@@ -53,6 +54,7 @@ final class StockDetailData extends Data
      */
     public static function fromModel(
         Stock $stock,
+        ?StockWatchlistData $watchlist,
         ?StockPriceData $latestPrice,
         array $priceHistory,
         array $relatedNews,
@@ -72,6 +74,7 @@ final class StockDetailData extends Data
             sector: $stock->sector,
             industry: $stock->industry,
             description: $stock->description,
+            watchlist: $watchlist,
             latestPrice: $latestPrice,
             priceHistory: $priceHistory,
             relatedNews: $relatedNews,

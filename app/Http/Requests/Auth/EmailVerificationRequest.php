@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Auth;
 
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -16,9 +17,22 @@ final class EmailVerificationRequest extends FormRequest
      */
     public function authorize(): bool
     {
+        $user = $this->user();
+
+        if (! $user instanceof MustVerifyEmail) {
+            return false;
+        }
+
         if (! hash_equals(
-            (string) $this->user()->getKey(),
+            (string) $user->getKey(),
             (string) $this->route('id')
+        )) {
+            return false;
+        }
+
+        if (! hash_equals(
+            sha1($user->getEmailForVerification()),
+            (string) $this->route('hash'),
         )) {
             return false;
         }

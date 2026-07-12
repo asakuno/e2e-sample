@@ -15,6 +15,8 @@ const createNews = (
   description: `説明${id}`,
   timeAgo: `${id}分前`,
   dotColor,
+  source: 'Reuters',
+  publishedAt: '2026-07-11 10:00',
 });
 
 const createStock = (id: number, reason: string | null = `注目理由${id}`): TopStockData => ({
@@ -23,10 +25,15 @@ const createStock = (id: number, reason: string | null = `注目理由${id}`): T
   name: `銘柄${id}`,
   market: 'us',
   totalScore: 8 + id / 10,
+  latestPrice: 120,
+  changePercent: 2.5,
+  sentiment: 1,
+  sentimentLabel: 'ポジティブ',
   positiveCount: id + 2,
   negativeCount: id,
   reason,
   signalDate: '2026-07-11',
+  updatedAt: '2026-07-11 12:00',
 });
 
 describe('presentDashboardPriorityFeed', () => {
@@ -96,7 +103,7 @@ describe('presentDashboardPriorityFeed', () => {
         variant: expectedVariant,
         title: 'ニュース8',
         description: '説明8',
-        meta: '8分前',
+        meta: 'Reuters · 2026-07-11 10:00 · 8分前',
         href: '/news?article_id=8',
       });
     },

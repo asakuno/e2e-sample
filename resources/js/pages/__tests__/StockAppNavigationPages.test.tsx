@@ -79,8 +79,24 @@ const stocksProps: StocksPageProps = {
   errors: {},
   filters: { q: '', market: '' },
   marketOptions,
-  stocks: [appleStock, toyotaStock],
-  watchlistedStockIds: [],
+  stocks: {
+    data: [appleStock, toyotaStock],
+    links: {
+      first: '/stocks?page=1',
+      last: '/stocks?page=1',
+      prev: null,
+      next: null,
+    },
+    meta: {
+      current_page: 1,
+      from: 1,
+      last_page: 1,
+      path: '/stocks',
+      per_page: 25,
+      to: 2,
+      total: 2,
+    },
+  },
 };
 
 const watchlistProps: WatchlistPageProps = {
@@ -88,15 +104,32 @@ const watchlistProps: WatchlistPageProps = {
   auth: stocksProps.auth,
   flash: {},
   errors: {},
-  watchlists: [
-    {
-      id: 1,
-      memo: '決算前に確認',
-      priority: 3,
-      is_active: true,
-      stock: appleStock,
+  watchlists: {
+    data: [
+      {
+        id: 1,
+        memo: '決算前に確認',
+        priority: 3,
+        is_active: true,
+        stock: appleStock,
+      },
+    ],
+    links: {
+      first: '/watchlists?page=1',
+      last: '/watchlists?page=1',
+      prev: null,
+      next: null,
     },
-  ],
+    meta: {
+      current_page: 1,
+      from: 1,
+      last_page: 1,
+      path: '/watchlists',
+      per_page: 20,
+      to: 1,
+      total: 1,
+    },
+  },
 };
 
 const newsProps: NewsPageProps = {
@@ -118,40 +151,63 @@ const newsProps: NewsPageProps = {
     { value: 0, label: '中立' },
     { value: -1, label: 'ネガティブ' },
   ],
-  news: [
-    {
-      id: 1,
-      title: 'Apple announces new product',
-      summary: 'Apple product summary',
-      url: 'https://example.com/apple-news',
-      source: 'Reuters',
-      provider: 'rss',
-      language: 'en',
-      published_at: '2026-06-15 10:00:00',
-      stocks: [
-        {
-          id: 1,
-          symbol: 'AAPL',
-          name: 'Apple Inc.',
-          market: 'us',
-          relevance_score: 95,
-          matched_by: 'symbol',
-        },
-      ],
-      analyses: [
-        {
-          id: 1,
-          stock: appleStock,
-          summary: '売上成長にポジティブ',
-          sentiment: 1,
-          sentiment_label: 'ポジティブ',
-          impact_score: 8,
-          confidence_score: 90,
-          analyzed_at: '2026-06-15 11:00:00',
-        },
-      ],
+  news: {
+    data: [
+      {
+        id: 1,
+        title: 'Apple announces new product',
+        summary: 'Apple product summary',
+        url: 'https://example.com/apple-news',
+        source: 'Reuters',
+        provider: 'rss',
+        language: 'en',
+        published_at: '2026-06-15 10:00:00',
+        stocks: [
+          {
+            id: 1,
+            symbol: 'AAPL',
+            name: 'Apple Inc.',
+            market: 'us',
+            relevance_score: 95,
+            matched_by: 'symbol',
+          },
+        ],
+        analyses: [
+          {
+            id: 1,
+            stock: appleStock,
+            summary: '売上成長にポジティブ',
+            sentiment: 1,
+            sentiment_label: 'ポジティブ',
+            impact_score: 8,
+            confidence_score: 90,
+            time_horizon: 2,
+            time_horizon_label: '中期',
+            positive_factors: ['売上成長'],
+            negative_factors: ['開発費増加'],
+            risk_points: ['需要変動'],
+            reason: '新製品需要が既存予測を上回っています。',
+            analyzed_at: '2026-06-15 11:00:00',
+          },
+        ],
+      },
+    ],
+    links: {
+      first: '/news?page=1',
+      last: '/news?page=1',
+      prev: null,
+      next: null,
     },
-  ],
+    meta: {
+      current_page: 1,
+      from: 1,
+      last_page: 1,
+      path: '/news',
+      per_page: 20,
+      to: 1,
+      total: 1,
+    },
+  },
 };
 
 const stockDetail: StockDetailType = {
@@ -165,6 +221,7 @@ const stockDetail: StockDetailType = {
   sector: 'Technology',
   industry: 'Consumer Electronics',
   description: 'Consumer technology company.',
+  watchlist: null,
   latest_price: {
     price_date: '2026-05-30',
     open: 180,
@@ -226,6 +283,12 @@ const stockDetail: StockDetailType = {
       sentiment_label: 'ポジティブ',
       impact_score: 8,
       confidence_score: 92,
+      time_horizon: 2,
+      time_horizon_label: '中期',
+      positive_factors: ['需要回復'],
+      negative_factors: ['部材価格上昇'],
+      risk_points: ['為替変動'],
+      reason: '需要指標が改善しています。',
       analyzed_at: '2026-06-15 11:00:00',
     },
   ],
@@ -264,6 +327,26 @@ describe('Stock app navigation pages', () => {
     expect(screen.getAllByRole('button', { name: /ウォッチリストに追加/ })).toHaveLength(2);
   });
 
+  it('Stocks ページに総件数と次ページ導線を表示すること', () => {
+    // Arrange
+    const stocks = {
+      ...stocksProps.stocks,
+      links: { ...stocksProps.stocks.links, next: '/stocks?page=2' },
+      meta: { ...stocksProps.stocks.meta, last_page: 2, total: 30 },
+    };
+    const expected = { total: '30', nextHref: '/stocks?page=2' };
+
+    // Act
+    render(<Stocks {...stocksProps} stocks={stocks} />);
+    const actual = {
+      total: screen.getByText(expected.total).textContent,
+      nextHref: screen.getByRole('link', { name: '次のページ' }).getAttribute('href'),
+    };
+
+    // Assert
+    expect(actual).toEqual(expected);
+  });
+
   it('Stocks ページでウォッチリスト追加ボタンを押した場合、追加リクエストが送信されること', async () => {
     const user = userEvent.setup();
     routerPostMock.mockClear();
@@ -272,17 +355,21 @@ describe('Stock app navigation pages', () => {
     await user.click(screen.getByRole('button', { name: 'AAPL をウォッチリストに追加' }));
 
     expect(routerPostMock).toHaveBeenCalledWith(
-      '/watchlist',
+      '/watchlists',
       { stock_id: 1, memo: '', priority: 2 },
       expect.objectContaining({ preserveScroll: true }),
     );
   });
 
-  it('Stocks ページで watchlistedStockIds に含まれる銘柄の追加ボタンが無効化されること', async () => {
+  it('Stocks ページで登録済み銘柄の追加ボタンが無効化されること', async () => {
     const user = userEvent.setup();
     routerPostMock.mockClear();
+    const stocks = {
+      ...stocksProps.stocks,
+      data: [{ ...appleStock, is_in_watchlist: true }, toyotaStock],
+    };
 
-    render(<Stocks {...stocksProps} watchlistedStockIds={[appleStock.id]} />);
+    render(<Stocks {...stocksProps} stocks={stocks} />);
     const actual = screen.getByRole('button', {
       name: 'AAPL はウォッチリストに追加済み',
     });
@@ -323,10 +410,27 @@ describe('Stock app navigation pages', () => {
     expect(screen.getByText('価格履歴一覧')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '関連ニュース' })).toBeInTheDocument();
     expect(screen.getByText('Apple supplier raises guidance')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'AI分析結果' })).toBeInTheDocument();
-    expect(screen.getByText('AI要約: 需要回復にポジティブ')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'AI分析サマリー・材料' })).toBeInTheDocument();
+    expect(screen.getByText('需要回復にポジティブ')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'シグナル' })).toBeInTheDocument();
     expect(screen.getByText('ニュースと分析結果が上向きです。')).toBeInTheDocument();
+  });
+
+  it('StockDetail ページで未登録銘柄をウォッチリストに追加できること', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    routerPostMock.mockClear();
+    render(<StockDetail {...stocksProps} stock={stockDetail} />);
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'AAPL をウォッチリストに追加' }));
+
+    // Assert
+    expect(routerPostMock).toHaveBeenCalledWith(
+      '/watchlists',
+      { stock_id: 1, memo: '', priority: 2 },
+      expect.objectContaining({ preserveScroll: true }),
+    );
   });
 
   it('StockDetail ページのインサイトデータが空の場合、それぞれの空状態を表示すること', () => {
@@ -363,7 +467,7 @@ describe('Stock app navigation pages', () => {
 
     await user.click(screen.getByRole('button', { name: 'AAPL をウォッチリストから削除' }));
     expect(routerDeleteMock).toHaveBeenCalledWith(
-      '/watchlist/1',
+      '/watchlists/1',
       expect.objectContaining({ preserveScroll: true }),
     );
   });
@@ -381,6 +485,26 @@ describe('Stock app navigation pages', () => {
     expect(screen.getByText('AI要約: 売上成長にポジティブ')).toBeVisible();
     expect(detailsButton).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('link', { name: /元記事を読む/ })).not.toBeInTheDocument();
+  });
+
+  it('News ページに該当総数と次ページ導線を表示すること', () => {
+    // Arrange
+    const news = {
+      ...newsProps.news,
+      links: { ...newsProps.news.links, next: '/news?page=2' },
+      meta: { ...newsProps.news.meta, last_page: 2, total: 26 },
+    };
+    const expected = { total: '26', nextHref: '/news?page=2' };
+
+    // Act
+    render(<News {...newsProps} news={news} />);
+    const actual = {
+      total: screen.getByText(expected.total).textContent,
+      nextHref: screen.getByRole('link', { name: '次のページ' }).getAttribute('href'),
+    };
+
+    // Assert
+    expect(actual).toEqual(expected);
   });
 
   it('News ページのフィルタフォームがクエリパラメータ付きで再取得すること', async () => {
@@ -463,7 +587,7 @@ describe('Stock app navigation pages', () => {
 
   it('News ページで別の記事が選択された場合、新しい記事だけを初期展開すること', () => {
     // Arrange
-    const firstArticle = newsProps.news[0];
+    const firstArticle = newsProps.news.data[0];
 
     if (firstArticle === undefined) {
       throw new Error('Newsページのテスト記事がありません');
@@ -483,7 +607,7 @@ describe('Stock app navigation pages', () => {
     rerender(
       <News
         {...newsProps}
-        news={[secondArticle]}
+        news={{ ...newsProps.news, data: [secondArticle] }}
         filters={{ ...newsProps.filters, article_id: '2' }}
       />,
     );

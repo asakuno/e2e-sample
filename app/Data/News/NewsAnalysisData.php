@@ -6,6 +6,7 @@ namespace App\Data\News;
 
 use App\Data\Stock\StockListItemData;
 use App\Enums\AnalysisSentiment;
+use App\Enums\AnalysisTimeHorizon;
 use App\Models\AnalysisResult;
 use Illuminate\Support\Carbon;
 use Spatie\LaravelData\Attributes\MapName;
@@ -25,6 +26,15 @@ final class NewsAnalysisData extends Data
         public readonly string $sentimentLabel,
         public readonly int $impactScore,
         public readonly int $confidenceScore,
+        public readonly int $timeHorizon,
+        public readonly string $timeHorizonLabel,
+        /** @var list<string> */
+        public readonly array $positiveFactors,
+        /** @var list<string> */
+        public readonly array $negativeFactors,
+        /** @var list<string> */
+        public readonly array $riskPoints,
+        public readonly string $reason,
         public readonly ?string $analyzedAt,
     ) {}
 
@@ -33,6 +43,11 @@ final class NewsAnalysisData extends Data
         $sentiment = $analysisResult->getAttribute('sentiment');
         if (! $sentiment instanceof AnalysisSentiment) {
             $sentiment = AnalysisSentiment::from((int) $sentiment);
+        }
+
+        $timeHorizon = $analysisResult->getAttribute('time_horizon');
+        if (! $timeHorizon instanceof AnalysisTimeHorizon) {
+            $timeHorizon = AnalysisTimeHorizon::from((int) $timeHorizon);
         }
 
         $analyzedAt = $analysisResult->getAttribute('analyzed_at');
@@ -45,9 +60,27 @@ final class NewsAnalysisData extends Data
             sentimentLabel: $sentiment->label(),
             impactScore: $analysisResult->impact_score,
             confidenceScore: $analysisResult->confidence_score,
+            timeHorizon: $timeHorizon->value,
+            timeHorizonLabel: $timeHorizon->label(),
+            positiveFactors: self::stringListAttribute($analysisResult->getAttribute('positive_factors')),
+            negativeFactors: self::stringListAttribute($analysisResult->getAttribute('negative_factors')),
+            riskPoints: self::stringListAttribute($analysisResult->getAttribute('risk_points')),
+            reason: $analysisResult->reason,
             analyzedAt: $analyzedAt === null
                 ? null
                 : Carbon::parse($analyzedAt)->toDateTimeString(),
         );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function stringListAttribute(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_filter($value, is_string(...)));
     }
 }

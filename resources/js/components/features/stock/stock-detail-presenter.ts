@@ -19,3 +19,31 @@ export function calculatePeriodChange(
     percent: first === 0 ? 0 : ((last - first) / first) * 100,
   };
 }
+
+export function calculatePreviousDayChange(
+  latestPrice: StockPricePoint | null,
+  prices: StockPricePoint[],
+): { amount: number; percent: number } | null {
+  if (latestPrice === null || latestPrice.close === null) {
+    return null;
+  }
+
+  const previousPrice = prices
+    .filter(
+      (price): price is StockPricePoint & { close: number } =>
+        price.close !== null && price.price_date < latestPrice.price_date,
+    )
+    .sort((left, right) => right.price_date.localeCompare(left.price_date))[0];
+
+  if (previousPrice === undefined) {
+    return null;
+  }
+
+  return {
+    amount: latestPrice.close - previousPrice.close,
+    percent:
+      previousPrice.close === 0
+        ? 0
+        : ((latestPrice.close - previousPrice.close) / previousPrice.close) * 100,
+  };
+}

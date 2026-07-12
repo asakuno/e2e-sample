@@ -6,6 +6,7 @@ namespace Tests\Feature\Http\Controllers\Web;
 
 use App\Data\News\NewsSearchData;
 use App\Enums\AnalysisSentiment;
+use App\Enums\AnalysisTimeHorizon;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
 use App\Models\Stock;
@@ -37,6 +38,7 @@ final class NewsPageControllerTest extends TestCase
             'country' => 'US',
             'currency' => 'USD',
         ]);
+        Watchlist::factory()->for($user)->for($stock)->create(['is_active' => true]);
         $article = NewsArticle::factory()->create([
             'title' => 'Apple announces new product',
             'summary' => 'Apple product summary',
@@ -58,6 +60,11 @@ final class NewsPageControllerTest extends TestCase
             'sentiment' => AnalysisSentiment::Positive->value,
             'impact_score' => 8,
             'confidence_score' => 90,
+            'time_horizon' => AnalysisTimeHorizon::ShortTerm->value,
+            'positive_factors' => ['新製品需要'],
+            'negative_factors' => ['供給制約'],
+            'risk_points' => ['市場変動'],
+            'reason' => '新製品需要が業績を押し上げる可能性があります。',
             'analyzed_at' => '2026-06-15 11:00:00',
         ]);
 
@@ -68,16 +75,22 @@ final class NewsPageControllerTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page
             ->component('News')
-            ->has('news', 1)
-            ->where('news.0.title', 'Apple announces new product')
-            ->where('news.0.source', 'Reuters')
-            ->where('news.0.published_at', '2026-06-15 10:00:00')
-            ->where('news.0.stocks.0.symbol', 'AAPL')
-            ->where('news.0.stocks.0.relevance_score', 95)
-            ->where('news.0.analyses.0.summary', '売上成長にポジティブ')
-            ->where('news.0.analyses.0.sentiment', 1)
-            ->where('news.0.analyses.0.sentiment_label', 'ポジティブ')
-            ->where('news.0.analyses.0.impact_score', 8)
+            ->has('news.data', 1)
+            ->where('news.data.0.title', 'Apple announces new product')
+            ->where('news.data.0.source', 'Reuters')
+            ->where('news.data.0.published_at', '2026-06-15 10:00:00')
+            ->where('news.data.0.stocks.0.symbol', 'AAPL')
+            ->where('news.data.0.stocks.0.relevance_score', 95)
+            ->where('news.data.0.analyses.0.summary', '売上成長にポジティブ')
+            ->where('news.data.0.analyses.0.sentiment', 1)
+            ->where('news.data.0.analyses.0.sentiment_label', 'ポジティブ')
+            ->where('news.data.0.analyses.0.impact_score', 8)
+            ->where('news.data.0.analyses.0.time_horizon', AnalysisTimeHorizon::ShortTerm->value)
+            ->where('news.data.0.analyses.0.time_horizon_label', '短期')
+            ->where('news.data.0.analyses.0.positive_factors', ['新製品需要'])
+            ->where('news.data.0.analyses.0.negative_factors', ['供給制約'])
+            ->where('news.data.0.analyses.0.risk_points', ['市場変動'])
+            ->where('news.data.0.analyses.0.reason', '新製品需要が業績を押し上げる可能性があります。')
             ->where('filters.article_id', '')
             ->where('filters.stock_id', '')
             ->where('filters.sentiment', '')
@@ -87,12 +100,47 @@ final class NewsPageControllerTest extends TestCase
         );
     }
 
+    public function test_ニュース一覧と銘柄選択肢は認証ユーザーのアクティブなウォッチ銘柄に限定される(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $watchedStock = Stock::factory()->create(['symbol' => 'AAPL']);
+        $inactiveStock = Stock::factory()->create(['symbol' => 'MSFT']);
+        $otherUsersStock = Stock::factory()->create(['symbol' => 'TSLA']);
+        Watchlist::factory()->for($user)->for($watchedStock)->create(['is_active' => true]);
+        Watchlist::factory()->for($user)->for($inactiveStock)->create(['is_active' => false]);
+        Watchlist::factory()->for($otherUser)->for($otherUsersStock)->create(['is_active' => true]);
+
+        $watchedArticle = NewsArticle::factory()->create(['title' => 'Watched stock news']);
+        $inactiveArticle = NewsArticle::factory()->create(['title' => 'Inactive stock news']);
+        $otherUsersArticle = NewsArticle::factory()->create(['title' => 'Other user stock news']);
+        $watchedArticle->stocks()->attach($watchedStock->id, ['created_at' => now(), 'updated_at' => now()]);
+        $inactiveArticle->stocks()->attach($inactiveStock->id, ['created_at' => now(), 'updated_at' => now()]);
+        $otherUsersArticle->stocks()->attach($otherUsersStock->id, ['created_at' => now(), 'updated_at' => now()]);
+
+        // Act
+        $response = $this->actingAs($user)->get(route('news.index'));
+
+        // Assert
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('News')
+            ->has('news.data', 1)
+            ->where('news.data.0.id', $watchedArticle->id)
+            ->has('stockOptions', 1)
+            ->where('stockOptions.0.value', $watchedStock->id)
+        );
+    }
+
     public function test_銘柄でニュースを絞り込める(): void
     {
         // Arrange
         $user = User::factory()->create();
         $apple = Stock::factory()->create(['symbol' => 'AAPL']);
         $tesla = Stock::factory()->create(['symbol' => 'TSLA']);
+        Watchlist::factory()->for($user)->for($apple)->create(['is_active' => true]);
+        Watchlist::factory()->for($user)->for($tesla)->create(['is_active' => true]);
         $appleNews = NewsArticle::factory()->create(['title' => 'Apple news']);
         $teslaNews = NewsArticle::factory()->create(['title' => 'Tesla news']);
         $appleNews->stocks()->attach($apple->id, ['created_at' => now(), 'updated_at' => now()]);
@@ -105,8 +153,8 @@ final class NewsPageControllerTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page
             ->component('News')
-            ->has('news', 1)
-            ->where('news.0.title', 'Apple news')
+            ->has('news.data', 1)
+            ->where('news.data.0.title', 'Apple news')
             ->where('filters.stock_id', (string) $apple->id)
         );
     }
@@ -115,8 +163,12 @@ final class NewsPageControllerTest extends TestCase
     {
         // Arrange
         $user = User::factory()->create();
+        $stock = Stock::factory()->create();
+        Watchlist::factory()->for($user)->for($stock)->create(['is_active' => true]);
         $targetArticle = NewsArticle::factory()->create(['title' => 'Target news']);
-        NewsArticle::factory()->create(['title' => 'Other news']);
+        $otherArticle = NewsArticle::factory()->create(['title' => 'Other news']);
+        $targetArticle->stocks()->attach($stock->id, ['created_at' => now(), 'updated_at' => now()]);
+        $otherArticle->stocks()->attach($stock->id, ['created_at' => now(), 'updated_at' => now()]);
 
         // Act
         $response = $this->actingAs($user)->get(route('news.index', [
@@ -127,9 +179,9 @@ final class NewsPageControllerTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page
             ->component('News')
-            ->has('news', 1)
-            ->where('news.0.id', $targetArticle->id)
-            ->where('news.0.title', 'Target news')
+            ->has('news.data', 1)
+            ->where('news.data.0.id', $targetArticle->id)
+            ->where('news.data.0.title', 'Target news')
             ->where('filters.article_id', (string) $targetArticle->id)
         );
     }
@@ -197,10 +249,47 @@ final class NewsPageControllerTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page
             ->component('News')
-            ->has('news', 1)
-            ->where('news.0.id', $targetArticle->id)
-            ->where('news.0.title', 'Active watchlist unanalyzed news')
+            ->has('news.data', 1)
+            ->where('news.data.0.id', $targetArticle->id)
+            ->where('news.data.0.title', 'Active watchlist unanalyzed news')
             ->where('filters.analysis_status', NewsSearchData::ANALYSIS_STATUS_UNANALYZED)
+        );
+    }
+
+    public function test_未分析判定は記事単位ではなく銘柄単位で行われる(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $analyzedStock = Stock::factory()->create(['symbol' => 'AAPL']);
+        $unanalyzedStock = Stock::factory()->create(['symbol' => 'MSFT']);
+        Watchlist::factory()->for($user)->for($analyzedStock)->create(['is_active' => true]);
+        Watchlist::factory()->for($user)->for($unanalyzedStock)->create(['is_active' => true]);
+
+        $article = NewsArticle::factory()->create(['title' => 'Shared article']);
+        $article->stocks()->attach($analyzedStock->id, ['created_at' => now(), 'updated_at' => now()]);
+        $article->stocks()->attach($unanalyzedStock->id, ['created_at' => now(), 'updated_at' => now()]);
+        AnalysisResult::factory()->for($analyzedStock)->create([
+            'analysable_type' => NewsArticle::class,
+            'analysable_id' => $article->id,
+        ]);
+
+        // Act
+        $analyzedResponse = $this->actingAs($user)->get(route('news.index', [
+            'stock_id' => $analyzedStock->id,
+            'analysis_status' => NewsSearchData::ANALYSIS_STATUS_UNANALYZED,
+        ]));
+        $unanalyzedResponse = $this->actingAs($user)->get(route('news.index', [
+            'stock_id' => $unanalyzedStock->id,
+            'analysis_status' => NewsSearchData::ANALYSIS_STATUS_UNANALYZED,
+        ]));
+
+        // Assert
+        $analyzedResponse->assertOk();
+        $analyzedResponse->assertInertia(fn (AssertableInertia $page) => $page->has('news.data', 0));
+        $unanalyzedResponse->assertOk();
+        $unanalyzedResponse->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('news.data', 1)
+            ->where('news.data.0.id', $article->id)
         );
     }
 
@@ -237,8 +326,8 @@ final class NewsPageControllerTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page
             ->component('News')
-            ->has('news', 1)
-            ->where('news.0.id', $article->id)
+            ->has('news.data', 1)
+            ->where('news.data.0.id', $article->id)
             ->where('filters.analysis_status', NewsSearchData::ANALYSIS_STATUS_UNANALYZED)
             ->where('filters.sentiment', '')
         );
@@ -249,8 +338,11 @@ final class NewsPageControllerTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $stock = Stock::factory()->create();
+        Watchlist::factory()->for($user)->for($stock)->create(['is_active' => true]);
         $positiveNews = NewsArticle::factory()->create(['title' => 'Positive news']);
         $negativeNews = NewsArticle::factory()->create(['title' => 'Negative news']);
+        $positiveNews->stocks()->attach($stock->id, ['created_at' => now(), 'updated_at' => now()]);
+        $negativeNews->stocks()->attach($stock->id, ['created_at' => now(), 'updated_at' => now()]);
         AnalysisResult::factory()->for($stock)->create([
             'analysable_type' => NewsArticle::class,
             'analysable_id' => $positiveNews->id,
@@ -271,8 +363,8 @@ final class NewsPageControllerTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page
             ->component('News')
-            ->has('news', 1)
-            ->where('news.0.title', 'Positive news')
+            ->has('news.data', 1)
+            ->where('news.data.0.title', 'Positive news')
             ->where('filters.sentiment', (string) AnalysisSentiment::Positive->value)
         );
     }
@@ -281,14 +373,18 @@ final class NewsPageControllerTest extends TestCase
     {
         // Arrange
         $user = User::factory()->create();
-        NewsArticle::factory()->create([
+        $stock = Stock::factory()->create();
+        Watchlist::factory()->for($user)->for($stock)->create(['is_active' => true]);
+        $newArticle = NewsArticle::factory()->create([
             'title' => 'New news',
             'published_at' => '2026-06-15 10:00:00',
         ]);
-        NewsArticle::factory()->create([
+        $oldArticle = NewsArticle::factory()->create([
             'title' => 'Old news',
             'published_at' => '2026-05-01 10:00:00',
         ]);
+        $newArticle->stocks()->attach($stock->id, ['created_at' => now(), 'updated_at' => now()]);
+        $oldArticle->stocks()->attach($stock->id, ['created_at' => now(), 'updated_at' => now()]);
 
         // Act
         $response = $this->actingAs($user)->get(route('news.index', [
@@ -300,8 +396,8 @@ final class NewsPageControllerTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page
             ->component('News')
-            ->has('news', 1)
-            ->where('news.0.title', 'New news')
+            ->has('news.data', 1)
+            ->where('news.data.0.title', 'New news')
             ->where('filters.from', '2026-06-01')
             ->where('filters.to', '2026-06-30')
         );
@@ -314,5 +410,34 @@ final class NewsPageControllerTest extends TestCase
 
         // Assert
         $response->assertRedirect(route('login'));
+    }
+
+    public function test_ニュース一覧は20件単位でページネーションされ検索条件を維持する(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $stock = Stock::factory()->create();
+        Watchlist::factory()->for($user)->for($stock)->create(['is_active' => true]);
+        NewsArticle::factory()->count(21)->create()->each(
+            fn (NewsArticle $article) => $article->stocks()->attach($stock->id, [
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]),
+        );
+
+        // Act
+        $response = $this->actingAs($user)->get(route('news.index', [
+            'stock_id' => $stock->id,
+            'page' => 2,
+        ]));
+
+        // Assert
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('news.data', 1)
+            ->where('news.meta.current_page', 2)
+            ->where('news.meta.per_page', 20)
+            ->where('news.meta.total', 21)
+            ->where('news.links.prev', fn (string $url): bool => str_contains($url, 'stock_id='.$stock->id))
+        );
     }
 }

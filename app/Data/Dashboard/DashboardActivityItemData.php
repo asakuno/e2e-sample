@@ -17,5 +17,7 @@ final class DashboardActivityItemData extends Data
         public readonly string $description,
         public readonly string $timeAgo,
         public readonly string $dotColor,
+        public readonly ?string $source,
+        public readonly ?string $publishedAt,
     ) {}
 }

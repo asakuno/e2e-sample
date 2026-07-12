@@ -32,7 +32,7 @@ describe('StockPriceChart', () => {
     // Assert
     expect(
       screen.getByRole('img', {
-        name: '2026-06-01から2026-06-02までの終値チャート',
+        name: '2026-06-01から2026-06-02までの終値と出来高チャート',
       }),
     ).toBeInTheDocument();
 
@@ -40,5 +40,17 @@ describe('StockPriceChart', () => {
     expect(gradientStops).toHaveLength(2);
     expect(gradientStops[0]).toHaveAttribute('stop-color', 'var(--chart-1)');
     expect(gradientStops[1]).toHaveAttribute('stop-color', 'var(--chart-2)');
+  });
+
+  it('価格データごとの出来高バーを表示すること', () => {
+    // Arrange
+    const expected = prices.length;
+
+    // Act
+    const { container } = render(<StockPriceChart prices={prices} currency="USD" />);
+    const actual = container.querySelectorAll('[data-volume-bar="true"]').length;
+
+    // Assert
+    expect(actual).toBe(expected);
   });
 });

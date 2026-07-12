@@ -8,13 +8,19 @@
 import { Head, useForm } from '@inertiajs/react';
 import type React from 'react';
 import { login, showRegister } from '@/actions/App/Http/Controllers/Web/AuthPageController';
+import { showForgotPassword } from '@/actions/App/Http/Controllers/Web/PasswordResetPageController';
 import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
+import { FeedbackMessage } from '@/components/ui/FlashMessages';
 import { InputField } from '@/components/ui/InputField';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { GuestLayout } from '@/layouts/GuestLayout';
 
-export default function Login() {
+interface LoginProps {
+  status?: string | null;
+}
+
+export default function Login({ status }: LoginProps) {
   const form = useForm({
     email: '',
     password: '',
@@ -31,6 +37,8 @@ export default function Login() {
     <>
       <Head title="ログイン" />
       <GuestLayout>
+        <FeedbackMessage message={status} tone="success" className="mb-6" />
+
         <form onSubmit={handleSubmit}>
           {/* メールアドレス */}
           <div className="mb-6">
@@ -49,7 +57,7 @@ export default function Login() {
           </div>
 
           {/* パスワード */}
-          <div className="mb-8">
+          <div className="mb-3">
             <PasswordInput
               id="password"
               label="パスワード"
@@ -61,6 +69,16 @@ export default function Login() {
               autoComplete="current-password"
               required
             />
+          </div>
+
+          <div className="mb-6 flex justify-end text-[13px] text-muted-foreground">
+            <InertiaActionLink
+              href={showForgotPassword.url()}
+              pendingClassName="opacity-70"
+              className="inline-flex min-h-11 items-center rounded-md px-3 py-2 transition-colors duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              パスワードをお忘れですか？
+            </InertiaActionLink>
           </div>
 
           {/* 送信ボタン */}

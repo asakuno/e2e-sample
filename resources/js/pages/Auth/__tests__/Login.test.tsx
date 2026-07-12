@@ -1,33 +1,29 @@
-/**
- * ログインページテスト
- */
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
-// Inertia.js モック
-const mockPost = vi.fn();
-const mockSetData = vi.fn();
+const formMocks = vi.hoisted(() => ({
+  setData: vi.fn(),
+  submit: vi.fn(),
+  validate: vi.fn(),
+}));
 
-const mockSubmit = vi.fn();
-const mockValidate = vi.fn();
-let mockProcessing = false;
+const formState = vi.hoisted(() => ({
+  processing: false,
+  errors: {} as Record<string, string>,
+}));
 
 vi.mock('@inertiajs/react', () => ({
   useForm: vi.fn(() => ({
-    data: { email: '', password: '' },
-    setData: mockSetData,
-    post: mockPost,
-    processing: mockProcessing,
-    errors: {},
-    withPrecognition: vi.fn().mockImplementation(() => ({
+    withPrecognition: vi.fn(() => ({
       data: { email: '', password: '' },
-      setData: mockSetData,
-      submit: mockSubmit,
-      processing: mockProcessing,
-      errors: {},
-      validate: mockValidate,
+      setData: formMocks.setData,
+      submit: formMocks.submit,
+      processing: formState.processing,
+      errors: formState.errors,
+      validate: formMocks.validate,
     })),
   })),
+  usePage: vi.fn(() => ({ props: { flash: {} } })),
   Head: ({ title }: { title: string }) => <title>{title}</title>,
   router: { visit: vi.fn() },
 }));
@@ -37,47 +33,104 @@ import Login from '../Login';
 describe('Login', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockProcessing = false;
+    formState.processing = false;
+    formState.errors = {};
   });
 
-  it('メールアドレス入力欄が表示されること', () => {
+  it('ログインに必要な入力欄が表示されること', () => {
+    // Arrange
+    const expected = {
+      email: 'email',
+      password: 'password',
+    };
+
+    // Act
     render(<Login />);
-    expect(screen.getByLabelText('メールアドレス')).toBeInTheDocument();
+    const actual = {
+      email: screen.getByLabelText('メールアドレス').getAttribute('type'),
+      password: screen.getByLabelText('パスワード').getAttribute('type'),
+    };
+
+    // Assert
+    expect(actual).toEqual(expected);
   });
 
-  it('パスワード入力欄が表示されること', () => {
+  it('パスワードを忘れた場合、再設定申請画面へのリンクが表示されること', () => {
+    // Arrange
+    const expected = '/forgot-password';
+
+    // Act
     render(<Login />);
-    expect(screen.getByLabelText('パスワード')).toBeInTheDocument();
+    const actual = screen
+      .getByRole('link', { name: 'パスワードをお忘れですか？' })
+      .getAttribute('href');
+
+    // Assert
+    expect(actual).toBe(expected);
   });
 
-  it('ログインボタンが表示されること', () => {
+  it('アカウントがない場合、新規登録画面へのリンクが表示されること', () => {
+    // Arrange
+    const expected = '/register';
+
+    // Act
     render(<Login />);
-    expect(screen.getByRole('button', { name: 'ログインする' })).toBeInTheDocument();
+    const actual = screen.getByRole('link', { name: '新規登録はこちら' }).getAttribute('href');
+
+    // Assert
+    expect(actual).toBe(expected);
   });
 
-  it('未実装のパスワード再設定導線を表示しないこと', () => {
+  it('パスワード再設定後のstatusが渡された場合、完了メッセージが表示されること', () => {
+    // Arrange
+    const expected = 'パスワードを再設定しました。';
+
+    // Act
+    render(<Login status={expected} />);
+    const actual = screen.getByRole('status').textContent;
+
+    // Assert
+    expect(actual).toBe(expected);
+  });
+
+  it('statusがない場合、ページ固有の完了メッセージを表示しないこと', () => {
+    // Arrange & Act
     render(<Login />);
-    expect(screen.queryByText('パスワードをお忘れですか？')).not.toBeInTheDocument();
+    const actual = screen.queryByRole('status');
+
+    // Assert
+    expect(actual).not.toBeInTheDocument();
   });
 
-  it('「新規登録はこちら」リンクが表示されること', () => {
-    render(<Login />);
-    expect(screen.getByText('新規登録はこちら')).toBeInTheDocument();
-  });
-
-  it('フォーム送信で post が呼ばれること', () => {
+  it('ログインフォームを送信した場合、認証リクエストが実行されること', () => {
+    // Arrange
     render(<Login />);
     const form = screen.getByRole('button', { name: 'ログインする' }).closest('form');
-    expect(form).not.toBeNull();
-    if (form) {
-      fireEvent.submit(form);
-    }
-    expect(mockSubmit).toHaveBeenCalled();
+
+    // Act
+    fireEvent.submit(form as HTMLFormElement);
+    const actual = formMocks.submit.mock.calls.length;
+
+    // Assert
+    expect(actual).toBe(1);
   });
 
-  it('processing=true の場合、ログイン送信ボタンが無効になること', () => {
+  it('メールアドレス入力欄からフォーカスが外れた場合、入力内容が検証されること', () => {
     // Arrange
-    mockProcessing = true;
+    const expected = 'email';
+    render(<Login />);
+
+    // Act
+    fireEvent.blur(screen.getByLabelText('メールアドレス'));
+    const actual = formMocks.validate.mock.calls[0]?.[0];
+
+    // Assert
+    expect(actual).toBe(expected);
+  });
+
+  it('ログイン処理中の場合、送信ボタンが無効になること', () => {
+    // Arrange
+    formState.processing = true;
     const expected = true;
 
     // Act
@@ -88,8 +141,28 @@ describe('Login', () => {
     expect(actual).toBe(expected);
   });
 
-  it('ページタイトルが設定されること', () => {
+  it('メールアドレスに検証エラーがある場合、エラーメッセージが表示されること', () => {
+    // Arrange
+    const expected = 'メールアドレスの形式が正しくありません。';
+    formState.errors = { email: expected };
+
+    // Act
     render(<Login />);
-    expect(document.querySelector('title')).toHaveTextContent('ログイン');
+    const actual = screen.getByRole('alert').textContent;
+
+    // Assert
+    expect(actual).toBe(expected);
+  });
+
+  it('ページタイトルがログインであること', () => {
+    // Arrange
+    const expected = 'ログイン';
+
+    // Act
+    render(<Login />);
+    const actual = document.querySelector('title')?.textContent;
+
+    // Assert
+    expect(actual).toBe(expected);
   });
 });

@@ -8,6 +8,7 @@ use App\Enums\AnalysisSentiment;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
 use App\Models\Stock;
+use App\Models\StockPrice;
 use App\Models\StockSignal;
 use App\Models\User;
 use App\Models\Watchlist;
@@ -49,6 +50,7 @@ final class DashboardPageControllerTest extends TestCase
 
         $positiveNews = NewsArticle::factory()->create([
             'title' => 'Apple product news',
+            'source' => 'Reuters',
             'published_at' => '2026-06-15 10:00:00',
         ]);
         $positiveNews->stocks()->attach($stock->id, [
@@ -83,6 +85,16 @@ final class DashboardPageControllerTest extends TestCase
             'reason' => 'ポジティブ材料が増加',
             'generated_at' => '2026-06-15 12:00:00',
         ]);
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2026-06-14',
+            'close' => 100,
+            'adjusted_close' => 100,
+        ]);
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2026-06-15',
+            'close' => 119,
+            'adjusted_close' => 120,
+        ]);
 
         // Act
         $response = $this->actingAs($user)->get(route('dashboard'));
@@ -100,10 +112,17 @@ final class DashboardPageControllerTest extends TestCase
             ->where('recentTrend.total', 1)
             ->where('topStocks.0.symbol', 'AAPL')
             ->where('topStocks.0.totalScore', 8.25)
+            ->where('topStocks.0.latestPrice', 120)
+            ->where('topStocks.0.changePercent', 20)
+            ->where('topStocks.0.sentiment', AnalysisSentiment::Positive->value)
+            ->where('topStocks.0.sentimentLabel', 'ポジティブ')
+            ->where('topStocks.0.updatedAt', '2026-06-15 12:00')
             ->where('attentionStocks.0.symbol', 'AAPL')
             ->where('attentionStocks.0.totalScore', 8.25)
             ->where('importantNews.0.articleId', $positiveNews->id)
             ->where('importantNews.0.title', 'Apple product news')
+            ->where('importantNews.0.source', 'Reuters')
+            ->where('importantNews.0.publishedAt', '2026-06-15 10:00')
             ->where('latestAnalysisAt', '2026-06-15 11:00')
         );
     }

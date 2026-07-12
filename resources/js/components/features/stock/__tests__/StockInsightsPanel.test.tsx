@@ -20,4 +20,22 @@ describe('StockInsightsPanel', () => {
     // Assert
     expect(actual).toEqual(expected);
   });
+
+  it('シグナル、AI分析、関連ニュースの優先順で表示すること', () => {
+    // Arrange
+    const expected = ['シグナル', 'AI分析サマリー・材料', '関連ニュース'];
+
+    // Act
+    render(
+      <StockInsightsPanel
+        relatedNews={<p>関連ニュースの内容</p>}
+        analyses={<p>AI分析の内容</p>}
+        signals={[]}
+      />,
+    );
+    const actual = screen.getAllByRole('heading').map((heading) => heading.textContent);
+
+    // Assert
+    expect(actual).toEqual(expected);
+  });
 });

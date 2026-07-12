@@ -119,3 +119,56 @@ jobs:
 
       - name: NPM Audit
         run: npm audit || true
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, sqlite3, pdo_sqlite
+
+      - name: Install dependencies
+        run: |
+          composer install --no-interaction --prefer-dist --optimize-autoloader
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Setup isolated E2E database
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          touch database/e2e.sqlite
+          echo "APP_ENV=testing" >> .env
+          echo "APP_DEBUG=false" >> .env
+          echo "DB_CONNECTION=sqlite" >> .env
+          echo "DB_DATABASE=${GITHUB_WORKSPACE}/database/e2e.sqlite" >> .env
+          echo "CACHE_STORE=array" >> .env
+          echo "QUEUE_CONNECTION=sync" >> .env
+          php artisan migrate:fresh --seed --force
+
+      - name: Build frontend
+        run: npm run build:all
+
+      - name: Playwright E2E
+        run: npm run test:e2e
+
+      - name: Upload E2E failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e-artifacts
+          path: |
+            test-results
+            blob-report
+          if-no-files-found: ignore

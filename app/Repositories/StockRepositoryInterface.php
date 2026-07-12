@@ -11,14 +11,15 @@ use App\Models\Stock;
 use App\Models\StockPrice;
 use App\Models\StockSignal;
 use Carbon\CarbonInterface;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 interface StockRepositoryInterface
 {
     /**
-     * @return Collection<int, Stock>
+     * @return LengthAwarePaginator<int, Stock>
      */
-    public function search(StockSearchData $filters): Collection;
+    public function search(StockSearchData $filters): LengthAwarePaginator;
 
     /**
      * @return array<int, string>
