@@ -34,7 +34,7 @@ describe('StockPriceChart', () => {
     // Assert
     expect(
       screen.getByRole('img', {
-        name: '2026-06-01から2026-06-02までの終値と出来高チャート',
+        name: '2026-06-01から2026-06-02までの調整後終値（未取得時は終値）と出来高チャート',
       }),
     ).toBeInTheDocument();
 

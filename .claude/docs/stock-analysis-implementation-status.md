@@ -98,7 +98,9 @@
 - 元記事URLはHTTP / HTTPSだけを受け付け、全件不正feedは決定的なデータ不正として無駄に再取得しない
 - Alpha Vantage の分単位・日単位の共有レート制限を設定可能
 
-`ALPHA_VANTAGE_PRICE_FUNCTION` の初期値は `TIME_SERIES_DAILY`、`ALPHA_VANTAGE_PRICE_OUTPUT_SIZE` は `compact` である。この設定では `adjusted_close` は `null` になり、画面は通常の終値へフォールバックする。調整後終値が必要な環境では `TIME_SERIES_DAILY_ADJUSTED` に切り替える。期間選択はAPI設定値ではなく、実際にDBへ保存された最古・最新日で判定する。
+`ALPHA_VANTAGE_PRICE_FUNCTION` の初期値は `TIME_SERIES_DAILY`、`ALPHA_VANTAGE_PRICE_OUTPUT_SIZE` は `compact` である。この設定では `adjusted_close` は `null` になり、画面は通常の終値へフォールバックする。調整後終値が必要な環境では `TIME_SERIES_DAILY_ADJUSTED` に切り替える。期間選択はAPI設定値ではなく、実際にDBへ保存された最古・最新日で判定する。表示する価格系列は `MARKET_DATA_DISPLAY_SOURCE` で1つに限定し、実データとデモデータの同日価格を混在させない。
+
+標準の `DatabaseSeeder` は銘柄マスタだけを投入する。画面確認用の株価・ニュース・AI分析・シグナル・ウォッチリストは `StockAnalysisDemoSeeder` を明示実行し、その環境では `MARKET_DATA_DISPLAY_SOURCE=demo` を設定する。これにより、実APIパイプラインの受け入れ確認へデモ分析を混入させない。
 
 ### AI分析・シグナル
 
@@ -110,6 +112,7 @@
 - 分析とシグナル用の専用キュー・レート制限
 - 分析結果と生成シグナルの両方をprompt versionごとに保存でき、表示・集計・シグナル生成では現行versionだけを使用
 - シグナルは記事の `published_at` を基準に直近168時間を集計し、分析実行時刻による期間ずれを防止
+- `generated_at` と分析対象期間はUTCで扱い、`signal_date` は `Asia/Tokyo` の業務日付として保存
 
 ### Dashboard / Stocks / Watchlist / News
 
@@ -144,6 +147,7 @@
   - 銘柄情報、最新価格、前日比、価格取得日、出来高
   - シグナル → AI分析・材料・リスク → 関連ニュース → チャート・履歴の優先順
   - 調整後終値優先の日足と出来高、データ範囲に応じた期間切替・履歴不足表示
+  - 履歴表は通常終値と調整後終値を別列で表示し、チャート・最新基準価格は調整後終値優先であることを明示
   - ウォッチリスト追加、メモ編集、関連ニュース・元記事への導線
 - Watchlist
   - priority / memo の表示・編集、削除、ページネーション

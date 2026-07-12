@@ -288,6 +288,13 @@ final class StocksPageControllerTest extends TestCase
             'adjusted_close' => 91.25,
             'volume' => 30_000,
         ]);
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2026-05-30',
+            'close' => 999.00,
+            'adjusted_close' => 999.00,
+            'volume' => 99_000,
+            'source' => 'demo',
+        ]);
 
         // Act
         $response = $this->actingAs($user)->get(route('stocks.show', [

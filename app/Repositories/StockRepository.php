@@ -67,6 +67,7 @@ final class StockRepository implements StockRepositoryInterface
     {
         return StockPrice::query()
             ->where('stock_id', $stockId)
+            ->where('source', $this->displayPriceSource())
             ->where(
                 fn (Builder $query): Builder => $query
                     ->whereNotNull('adjusted_close')
@@ -81,6 +82,7 @@ final class StockRepository implements StockRepositoryInterface
     {
         return StockPrice::query()
             ->where('stock_id', $stockId)
+            ->where('source', $this->displayPriceSource())
             ->where(
                 fn (Builder $query): Builder => $query
                     ->whereNotNull('adjusted_close')
@@ -98,6 +100,7 @@ final class StockRepository implements StockRepositoryInterface
     {
         return StockPrice::query()
             ->where('stock_id', $stockId)
+            ->where('source', $this->displayPriceSource())
             ->whereDate('price_date', '>=', $since->toDateString())
             ->where(
                 fn (Builder $query): Builder => $query
@@ -166,5 +169,10 @@ final class StockRepository implements StockRepositoryInterface
     private function currentPromptVersion(): string
     {
         return (string) config('services.openai.prompt_version', 'v1');
+    }
+
+    private function displayPriceSource(): string
+    {
+        return (string) config('services.stock_analysis.price_display_source', 'alpha_vantage');
     }
 }

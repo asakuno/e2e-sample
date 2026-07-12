@@ -51,6 +51,10 @@ return [
         'schedule_timezone' => env('MARKET_DATA_SCHEDULE_TIMEZONE', 'Asia/Tokyo'),
     ],
 
+    'stock_analysis' => [
+        'price_display_source' => env('MARKET_DATA_DISPLAY_SOURCE', 'alpha_vantage'),
+    ],
+
     'openai' => [
         'api_key' => env('OPENAI_API_KEY'),
         'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),

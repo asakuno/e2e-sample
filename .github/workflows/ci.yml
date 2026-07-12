@@ -155,7 +155,9 @@ jobs:
           echo "DB_DATABASE=${GITHUB_WORKSPACE}/database/e2e.sqlite" >> .env
           echo "CACHE_STORE=array" >> .env
           echo "QUEUE_CONNECTION=sync" >> .env
-          php artisan migrate:fresh --seed --force
+          echo "MARKET_DATA_DISPLAY_SOURCE=demo" >> .env
+          php artisan migrate:fresh --force
+          php artisan db:seed --class=StockAnalysisDemoSeeder --force
 
       - name: Build frontend
         run: npm run build:all

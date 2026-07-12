@@ -13,11 +13,47 @@ use App\UseCases\Signal\GenerateStockSignalUseCase;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 final class GenerateStockSignalUseCaseTest extends TestCase
 {
+    #[DataProvider('jstBusinessDateProvider')]
+    #[Test]
+    public function ut_c時刻から_js_tのシグナル日付を導出する(string $asOf, string $expectedDate): void
+    {
+        // Arrange
+        $repository = $this->createMock(SignalGenerationRepositoryInterface::class);
+        $repository->method('findNewsAnalysesBetween')->willReturn(new Collection);
+        $repository->expects($this->once())
+            ->method('upsertSignal')
+            ->with(
+                1,
+                $this->callback(fn ($date): bool => $date->toDateString() === $expectedDate),
+                'v1',
+                $this->anything(),
+            );
+        $useCase = new GenerateStockSignalUseCase($repository, new StockSignalService);
+
+        // Act
+        $useCase->execute(1, CarbonImmutable::parse($asOf), 'v1');
+
+        // Assert
+        $this->addToAssertionCount(1);
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function jstBusinessDateProvider(): array
+    {
+        return [
+            'JST日付境界直前' => ['2026-07-12T14:59:59Z', '2026-07-12'],
+            'JST日付境界' => ['2026-07-12T15:00:00Z', '2026-07-13'],
+        ];
+    }
+
     #[Test]
     public function 直近分析から当日シグナルを保存する(): void
     {

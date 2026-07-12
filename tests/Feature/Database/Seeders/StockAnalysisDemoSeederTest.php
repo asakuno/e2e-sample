@@ -12,6 +12,7 @@ use App\Models\StockSignal;
 use App\Models\User;
 use App\Models\Watchlist;
 use Carbon\CarbonImmutable;
+use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\StockAnalysisDemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -19,6 +20,18 @@ use Tests\TestCase;
 final class StockAnalysisDemoSeederTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_標準_seederはデモデータを投入しない(): void
+    {
+        // Act
+        $this->seed(DatabaseSeeder::class);
+
+        // Assert
+        $this->assertDatabaseCount('stocks', 10);
+        $this->assertDatabaseCount('users', 0);
+        $this->assertDatabaseCount('stock_prices', 0);
+        $this->assertDatabaseCount('analysis_results', 0);
+    }
 
     public function test_画面確認に必要な株式分析データを投入できる(): void
     {

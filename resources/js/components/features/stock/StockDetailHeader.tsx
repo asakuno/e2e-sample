@@ -27,7 +27,7 @@ export function StockDetailHeader({ stock, watchlistControl }: StockDetailHeader
           {watchlistControl !== undefined && <div className="mt-4">{watchlistControl}</div>}
         </div>
         <dl className="grid grid-cols-2 gap-3 lg:min-w-[32rem] lg:grid-cols-4">
-          <Metric label="最新価格" value={formatPrice(latestClose, stock.currency)} />
+          <Metric label="基準価格（調整後優先）" value={formatPrice(latestClose, stock.currency)} />
           <Metric
             label="前日比"
             value={formatCurrencyChange(previousDayChange?.amount ?? null, stock.currency)}

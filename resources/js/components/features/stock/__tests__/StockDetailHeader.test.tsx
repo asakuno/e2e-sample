@@ -64,6 +64,7 @@ describe('StockDetailHeader', () => {
       percent: '+5.00%',
       acquiredDate: '2026-07-10',
       control: 'ウォッチリスト操作',
+      priceLabel: '基準価格（調整後優先）',
     };
 
     // Act
@@ -76,6 +77,7 @@ describe('StockDetailHeader', () => {
       percent: screen.getByText(expected.percent).textContent,
       acquiredDate: screen.getByText(expected.acquiredDate).textContent,
       control: screen.getByRole('button', { name: expected.control }).textContent,
+      priceLabel: screen.getByText(expected.priceLabel).textContent,
     };
 
     // Assert

@@ -23,6 +23,7 @@ export function StockPriceHistoryTable({ prices, currency }: StockPriceHistoryTa
           <TableHeader align="right">高値</TableHeader>
           <TableHeader align="right">安値</TableHeader>
           <TableHeader align="right">終値</TableHeader>
+          <TableHeader align="right">調整後終値</TableHeader>
           <TableHeader align="right">出来高</TableHeader>
         </tr>
       </thead>
@@ -35,7 +36,8 @@ export function StockPriceHistoryTable({ prices, currency }: StockPriceHistoryTa
             <TableCell>{formatPrice(price.open, currency)}</TableCell>
             <TableCell>{formatPrice(price.high, currency)}</TableCell>
             <TableCell>{formatPrice(price.low, currency)}</TableCell>
-            <TableCell strong>{formatPrice(price.effective_close, currency)}</TableCell>
+            <TableCell>{formatPrice(price.close, currency)}</TableCell>
+            <TableCell strong>{formatPrice(price.adjusted_close, currency)}</TableCell>
             <TableCell>{formatVolume(price.volume)}</TableCell>
           </tr>
         ))}

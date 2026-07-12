@@ -220,6 +220,7 @@ final class DashboardRepository implements DashboardRepositoryInterface
     private function constrainDashboardPrices(HasMany $query): HasMany
     {
         return $query
+            ->where('source', $this->displayPriceSource())
             ->where(
                 fn ($query) => $query
                     ->whereNotNull('adjusted_close')
@@ -228,6 +229,11 @@ final class DashboardRepository implements DashboardRepositoryInterface
             ->orderByDesc('price_date')
             ->orderByDesc('id')
             ->limit(2);
+    }
+
+    private function displayPriceSource(): string
+    {
+        return (string) config('services.stock_analysis.price_display_source', 'alpha_vantage');
     }
 
     /**

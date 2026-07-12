@@ -25,8 +25,9 @@ final class GenerateStockSignalUseCase
         ?string $promptVersion = null,
     ): void {
         $generatedAt = $asOf === null
-            ? CarbonImmutable::now()
-            : CarbonImmutable::instance($asOf);
+            ? CarbonImmutable::now('UTC')
+            : CarbonImmutable::instance($asOf)->utc();
+        $signalDate = $generatedAt->setTimezone('Asia/Tokyo');
         $effectivePromptVersion = trim(
             $promptVersion ?? (string) config('services.openai.prompt_version', 'v1'),
         );
@@ -45,7 +46,7 @@ final class GenerateStockSignalUseCase
 
         $this->signalGenerationRepository->upsertSignal(
             stockId: $stockId,
-            signalDate: $generatedAt,
+            signalDate: $signalDate,
             promptVersion: $effectivePromptVersion,
             data: $signal,
         );

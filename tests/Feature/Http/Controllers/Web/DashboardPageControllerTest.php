@@ -95,6 +95,12 @@ final class DashboardPageControllerTest extends TestCase
             'close' => 119,
             'adjusted_close' => 120,
         ]);
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2026-06-15',
+            'close' => 999,
+            'adjusted_close' => 999,
+            'source' => 'demo',
+        ]);
 
         // Act
         $response = $this->actingAs($user)->get(route('dashboard'));

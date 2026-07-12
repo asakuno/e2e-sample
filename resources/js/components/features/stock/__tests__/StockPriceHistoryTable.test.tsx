@@ -4,7 +4,7 @@ import type { StockPricePoint } from '@/types/stocks';
 import { StockPriceHistoryTable } from '../StockPriceHistoryTable';
 
 describe('StockPriceHistoryTable', () => {
-  it('調整後終値がある場合は価格履歴の終値に使用すること', () => {
+  it('通常終値と調整後終値を別の列に表示すること', () => {
     // Arrange
     const prices: StockPricePoint[] = [
       {
@@ -18,13 +18,19 @@ describe('StockPriceHistoryTable', () => {
         volume: 2000,
       },
     ];
-    const expected = '$105.00';
+    const expected = {
+      close: '$210.00',
+      adjustedClose: '$105.00',
+    };
 
     // Act
     render(<StockPriceHistoryTable prices={prices} currency="USD" />);
-    const actual = screen.getByText(expected).textContent;
+    const actual = {
+      close: screen.getByText(expected.close).textContent,
+      adjustedClose: screen.getByText(expected.adjustedClose).textContent,
+    };
 
     // Assert
-    expect(actual).toBe(expected);
+    expect(actual).toEqual(expected);
   });
 });

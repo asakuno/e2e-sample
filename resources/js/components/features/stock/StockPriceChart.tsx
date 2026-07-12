@@ -52,11 +52,11 @@ export function StockPriceChart({ prices, currency }: StockPriceChartProps) {
       <svg
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label={`${first.price_date}から${last.price_date}までの終値と出来高チャート`}
+        aria-label={`${first.price_date}から${last.price_date}までの調整後終値（未取得時は終値）と出来高チャート`}
         className="h-80 w-full"
       >
         <title>
-          {first.price_date}から{last.price_date}までの終値と出来高
+          {first.price_date}から{last.price_date}までの調整後終値（未取得時は終値）と出来高
         </title>
         <defs>
           <linearGradient id="price-line" x1="0" x2="1" y1="0" y2="0">
