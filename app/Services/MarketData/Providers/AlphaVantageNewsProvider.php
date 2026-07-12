@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Services\MarketData\Providers;
 
 use App\Data\MarketData\NewsArticleData;
-use App\Models\Stock;
+use App\Enums\MarketDataProvider;
 use App\Services\MarketData\Contracts\NewsProviderInterface;
+use App\Services\MarketData\Exceptions\UnusableNewsFeedException;
 use Carbon\CarbonImmutable;
 use DateTimeImmutable;
 use DateTimeZone;
@@ -14,6 +15,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -82,9 +84,9 @@ final class AlphaVantageNewsProvider implements NewsProviderInterface
     /**
      * @return Collection<int, NewsArticleData>
      */
-    public function fetchNewsForStock(Stock $stock): Collection
+    public function fetchNewsForStock(string $providerSymbol): Collection
     {
-        $symbol = $this->stockSymbol($stock);
+        $symbol = $this->providerSymbol($providerSymbol);
         $response = $this->request([
             'function' => $this->function,
             'tickers' => $symbol,
@@ -108,17 +110,36 @@ final class AlphaVantageNewsProvider implements NewsProviderInterface
         $articles = [];
 
         foreach ($feed as $index => $item) {
-            if (! is_array($item)) {
-                throw new RuntimeException(sprintf(
-                    'Alpha Vantage news article at index %s has an invalid shape.',
-                    (string) $index,
-                ));
-            }
+            try {
+                if (! is_array($item)) {
+                    throw new RuntimeException(sprintf(
+                        'Alpha Vantage news article at index %s has an invalid shape.',
+                        (string) $index,
+                    ));
+                }
 
-            $articles[] = $this->normalizeArticle($symbol, $item, (string) $index);
+                $articles[] = $this->normalizeArticle($symbol, $item, (string) $index);
+            } catch (RuntimeException $exception) {
+                Log::warning('Skipping invalid Alpha Vantage news article.', [
+                    'provider_symbol' => $symbol,
+                    'feed_index' => (string) $index,
+                    'reason' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        if ($feed !== [] && $articles === []) {
+            throw new UnusableNewsFeedException(
+                'Alpha Vantage news feed contained no valid articles.',
+            );
         }
 
         return new Collection($articles);
+    }
+
+    public function provider(): MarketDataProvider
+    {
+        return MarketDataProvider::AlphaVantage;
     }
 
     /**
@@ -174,7 +195,7 @@ final class AlphaVantageNewsProvider implements NewsProviderInterface
             $context,
         );
 
-        if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+        if (! $this->isSafeArticleUrl($url)) {
             throw new RuntimeException(sprintf('Alpha Vantage returned an invalid URL for %s.', $context));
         }
 
@@ -195,15 +216,27 @@ final class AlphaVantageNewsProvider implements NewsProviderInterface
         );
     }
 
-    private function stockSymbol(Stock $stock): string
+    private function providerSymbol(string $providerSymbol): string
     {
-        $symbol = $stock->getAttribute('symbol');
+        $symbol = trim($providerSymbol);
 
-        if (! is_string($symbol) || trim($symbol) === '') {
-            throw new RuntimeException('Stock symbol is missing.');
+        if ($symbol === '') {
+            throw new InvalidArgumentException('Alpha Vantage provider symbol must not be empty.');
         }
 
-        return trim($symbol);
+        return $symbol;
+    }
+
+    private function isSafeArticleUrl(string $url): bool
+    {
+        if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+            return false;
+        }
+
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+
+        return is_string($scheme)
+            && in_array(strtolower($scheme), ['http', 'https'], true);
     }
 
     /**

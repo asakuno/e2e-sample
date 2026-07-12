@@ -143,7 +143,10 @@ final class GetDashboardSummaryUseCaseTest extends TestCase
             ['kind' => DashboardStatKind::PositiveAnalysis, 'value' => 2],
             ['kind' => DashboardStatKind::NegativeAnalysis, 'value' => 1],
             ['kind' => DashboardStatKind::UnanalyzedNews, 'value' => 3],
-            ['kind' => DashboardStatKind::LatestAnalysis, 'value' => '2026-06-15 11:00'],
+            [
+                'kind' => DashboardStatKind::LatestAnalysis,
+                'value' => '2026-06-15T11:00:00+00:00',
+            ],
         ];
         $actualStats = array_map(
             fn (DashboardStatData $stat): array => ['kind' => $stat->kind, 'value' => $stat->value],
@@ -157,13 +160,13 @@ final class GetDashboardSummaryUseCaseTest extends TestCase
         $this->assertSame(20.0, $result->topStocks[0]->changePercent);
         $this->assertSame(AnalysisSentiment::Positive->value, $result->topStocks[0]->sentiment);
         $this->assertSame('ポジティブ', $result->topStocks[0]->sentimentLabel);
-        $this->assertSame('2026-06-15 12:00', $result->topStocks[0]->updatedAt);
+        $this->assertSame('2026-06-15T12:00:00+00:00', $result->topStocks[0]->updatedAt);
         $this->assertSame('AAPL', $result->attentionStocks[0]->symbol);
         $this->assertSame(30, $result->importantNews[0]->articleId);
         $this->assertSame('Apple product news', $result->importantNews[0]->title);
         $this->assertSame('Reuters', $result->importantNews[0]->source);
-        $this->assertSame('2026-06-15 10:00', $result->importantNews[0]->publishedAt);
-        $this->assertSame('2026-06-15 11:00', $result->latestAnalysisAt);
+        $this->assertSame('2026-06-15T10:00:00+00:00', $result->importantNews[0]->publishedAt);
+        $this->assertSame('2026-06-15T11:00:00+00:00', $result->latestAnalysisAt);
 
         Carbon::setTestNow();
     }

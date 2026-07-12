@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Enums\MarketDataProvider;
 use App\Models\Stock;
+use App\Models\StockProviderSymbol;
 use Illuminate\Database\Seeder;
 
 class MajorStockSeeder extends Seeder
@@ -24,6 +26,7 @@ class MajorStockSeeder extends Seeder
                 'currency' => 'USD',
                 'sector' => 'Technology',
                 'industry' => 'Consumer Electronics',
+                'alpha_vantage_symbol' => 'AAPL',
             ],
             [
                 'symbol' => 'MSFT',
@@ -34,6 +37,7 @@ class MajorStockSeeder extends Seeder
                 'currency' => 'USD',
                 'sector' => 'Technology',
                 'industry' => 'Software',
+                'alpha_vantage_symbol' => 'MSFT',
             ],
             [
                 'symbol' => 'NVDA',
@@ -44,6 +48,7 @@ class MajorStockSeeder extends Seeder
                 'currency' => 'USD',
                 'sector' => 'Technology',
                 'industry' => 'Semiconductors',
+                'alpha_vantage_symbol' => 'NVDA',
             ],
             [
                 'symbol' => 'GOOGL',
@@ -54,6 +59,7 @@ class MajorStockSeeder extends Seeder
                 'currency' => 'USD',
                 'sector' => 'Communication Services',
                 'industry' => 'Internet Content & Information',
+                'alpha_vantage_symbol' => 'GOOGL',
             ],
             [
                 'symbol' => 'AMZN',
@@ -64,6 +70,7 @@ class MajorStockSeeder extends Seeder
                 'currency' => 'USD',
                 'sector' => 'Consumer Discretionary',
                 'industry' => 'Internet Retail',
+                'alpha_vantage_symbol' => 'AMZN',
             ],
             [
                 'symbol' => 'TSLA',
@@ -74,6 +81,7 @@ class MajorStockSeeder extends Seeder
                 'currency' => 'USD',
                 'sector' => 'Consumer Discretionary',
                 'industry' => 'Auto Manufacturers',
+                'alpha_vantage_symbol' => 'TSLA',
             ],
             [
                 'symbol' => '7203',
@@ -118,7 +126,10 @@ class MajorStockSeeder extends Seeder
         ];
 
         foreach ($stocks as $stock) {
-            Stock::query()->updateOrCreate(
+            $providerSymbol = $stock['alpha_vantage_symbol'] ?? null;
+            unset($stock['alpha_vantage_symbol']);
+
+            $savedStock = Stock::query()->updateOrCreate(
                 [
                     'market' => $stock['market'],
                     'symbol' => $stock['symbol'],
@@ -128,6 +139,16 @@ class MajorStockSeeder extends Seeder
                     'is_active' => true,
                 ]
             );
+
+            if (is_string($providerSymbol)) {
+                StockProviderSymbol::query()->updateOrCreate(
+                    [
+                        'stock_id' => $savedStock->id,
+                        'provider' => MarketDataProvider::AlphaVantage->value,
+                    ],
+                    ['provider_symbol' => $providerSymbol],
+                );
+            }
         }
     }
 }

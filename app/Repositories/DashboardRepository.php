@@ -12,6 +12,7 @@ use App\Models\StockPrice;
 use App\Models\StockSignal;
 use App\Models\Watchlist;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -37,7 +38,7 @@ final class DashboardRepository implements DashboardRepositoryInterface
             ->whereIn('stock_id', $this->activeStockIdsQuery($userId))
             ->where('prompt_version', $this->currentPromptVersion())
             ->where('sentiment', $sentiment->value)
-            ->where('analyzed_at', '>=', $since)
+            ->where('analyzed_at', '>=', CarbonImmutable::instance($since)->utc())
             ->count();
     }
 
@@ -135,14 +136,24 @@ final class DashboardRepository implements DashboardRepositoryInterface
      */
     public function countAnalysesByDate(int $userId, CarbonInterface $from, CarbonInterface $to): array
     {
+        $localFrom = CarbonImmutable::instance($from);
+        $timezone = $localFrom->getTimezone();
+        $fromUtc = $localFrom->startOfDay()->utc();
+        $toExclusiveUtc = CarbonImmutable::instance($to)->addDay()->startOfDay()->utc();
+
         /** @var array<string, int> $counts */
         $counts = AnalysisResult::query()
-            ->selectRaw('DATE(analyzed_at) as analyzed_date, COUNT(*) as aggregate')
             ->whereIn('stock_id', $this->activeStockIdsQuery($userId))
             ->where('prompt_version', $this->currentPromptVersion())
-            ->whereBetween('analyzed_at', [$from->startOfDay(), $to->endOfDay()])
-            ->groupByRaw('DATE(analyzed_at)')
-            ->pluck('aggregate', 'analyzed_date')
+            ->where('analyzed_at', '>=', $fromUtc)
+            ->where('analyzed_at', '<', $toExclusiveUtc)
+            ->pluck('analyzed_at')
+            ->map(
+                fn ($analyzedAt): string => CarbonImmutable::parse((string) $analyzedAt, 'UTC')
+                    ->setTimezone($timezone)
+                    ->toDateString(),
+            )
+            ->countBy()
             ->map(fn ($count): int => (int) $count)
             ->all();
 
@@ -174,6 +185,7 @@ final class DashboardRepository implements DashboardRepositoryInterface
                 ) AS latest_rank
                 SQL)
             ->whereIn('stock_id', $this->activeStockIdsQuery($userId))
+            ->where('prompt_version', $this->currentPromptVersion())
             ->toBase();
 
         return StockSignal::query()

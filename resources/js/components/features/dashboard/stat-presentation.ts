@@ -1,4 +1,5 @@
 import type { AppIconName } from '@/components/ui/AppIcon';
+import { formatJstDateTime } from '@/lib/formatters';
 import type { DashboardStatData, DashboardStatKind } from '@/types/dashboard';
 import type { StatCardData } from './StatCard';
 
@@ -84,7 +85,8 @@ export function presentDashboardStat(stat: DashboardStatData): StatCardData {
         };
       }
 
-      const [date = stat.value, time] = stat.value.split(' ', 2);
+      const formattedDateTime = formatJstDateTime(stat.value);
+      const [date = formattedDateTime, time] = formattedDateTime.split(' ', 2);
 
       return {
         ...presentation,

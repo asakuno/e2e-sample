@@ -229,6 +229,7 @@ const stockDetail: StockDetailType = {
     low: 178,
     close: 182.5,
     adjusted_close: 182.5,
+    effective_close: 182.5,
     volume: 30000,
   },
   price_history: [
@@ -239,6 +240,7 @@ const stockDetail: StockDetailType = {
       low: 168,
       close: 172,
       adjusted_close: 172,
+      effective_close: 172,
       volume: 20000,
     },
     {
@@ -248,6 +250,7 @@ const stockDetail: StockDetailType = {
       low: 178,
       close: 182.5,
       adjusted_close: 182.5,
+      effective_close: 182.5,
       volume: 30000,
     },
   ],
@@ -309,11 +312,12 @@ const stockDetail: StockDetailType = {
   ],
   selected_period: '1M',
   period_options: [
-    { value: '1M', label: '1M' },
-    { value: '3M', label: '3M' },
-    { value: '6M', label: '6M' },
-    { value: '1Y', label: '1Y' },
+    { value: '1M', label: '1M', available: true },
+    { value: '3M', label: '3M', available: true },
+    { value: '6M', label: '6M', available: true },
+    { value: '1Y', label: '1Y', available: true },
   ],
+  price_history_notice: null,
 };
 
 describe('Stock app navigation pages', () => {
@@ -414,6 +418,49 @@ describe('Stock app navigation pages', () => {
     expect(screen.getByText('需要回復にポジティブ')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'シグナル' })).toBeInTheDocument();
     expect(screen.getByText('ニュースと分析結果が上向きです。')).toBeInTheDocument();
+  });
+
+  it('StockDetail ページで履歴が不足する期間を無効化して注意を表示すること', () => {
+    // Arrange
+    const notice = '指定期間の価格履歴が不足しているため、1Mを表示しています。';
+    const stock = {
+      ...stockDetail,
+      period_options: stockDetail.period_options.map((option) => ({
+        ...option,
+        available: option.value === '1M',
+      })),
+      price_history_notice: notice,
+    };
+
+    // Act
+    render(<StockDetail {...stocksProps} stock={stock} />);
+    const unavailablePeriod = screen.getByRole('button', { name: '1Y（価格履歴不足）' });
+
+    // Assert
+    expect(unavailablePeriod).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent(notice);
+  });
+
+  it('StockDetail ページで1か月未満の履歴だけの場合も選択中期間を無効状態で示すこと', () => {
+    // Arrange
+    const notice = '価格履歴が1か月分に満たないため、取得済みの範囲のみ表示しています。';
+    const stock = {
+      ...stockDetail,
+      period_options: stockDetail.period_options.map((option) => ({
+        ...option,
+        available: false,
+      })),
+      price_history_notice: notice,
+    };
+
+    // Act
+    render(<StockDetail {...stocksProps} stock={stock} />);
+    const selectedPeriod = screen.getByRole('button', { name: '1M（価格履歴不足）' });
+
+    // Assert
+    expect(selectedPeriod).toBeDisabled();
+    expect(selectedPeriod).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('status')).toHaveTextContent(notice);
   });
 
   it('StockDetail ページで未登録銘柄をウォッチリストに追加できること', async () => {

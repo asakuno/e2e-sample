@@ -151,18 +151,48 @@ final class NewsRepositoryTest extends TestCase
         $this->assertCount(0, $loadedArticle->analysisResults);
     }
 
+    #[Test]
+    public function 公開日の検索は日本標準時の日付境界を協定世界時の半開区間へ変換する(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $stock = Stock::factory()->create();
+        Watchlist::factory()->for($user)->for($stock)->create();
+
+        $before = NewsArticle::factory()->create(['published_at' => '2026-07-11 14:59:59']);
+        $atStart = NewsArticle::factory()->create(['published_at' => '2026-07-11 15:00:00']);
+        $beforeEnd = NewsArticle::factory()->create(['published_at' => '2026-07-12 14:59:59']);
+        $atEnd = NewsArticle::factory()->create(['published_at' => '2026-07-12 15:00:00']);
+
+        foreach ([$before, $atStart, $beforeEnd, $atEnd] as $article) {
+            $article->stocks()->attach($stock->id);
+        }
+
+        // Act
+        $news = $this->repository->search($this->searchFilters(
+            userId: $user->id,
+            from: '2026-07-12',
+            to: '2026-07-12',
+        ));
+
+        // Assert
+        $this->assertSame([$beforeEnd->id, $atStart->id], $news->getCollection()->pluck('id')->all());
+    }
+
     private function searchFilters(
         int $userId,
         ?AnalysisSentiment $sentiment = null,
         ?string $analysisStatus = null,
+        ?string $from = null,
+        ?string $to = null,
     ): NewsSearchData {
         return new NewsSearchData(
             articleId: null,
             stockId: null,
             sentiment: $sentiment,
             analysisStatus: $analysisStatus,
-            from: null,
-            to: null,
+            from: $from,
+            to: $to,
             userId: $userId,
         );
     }

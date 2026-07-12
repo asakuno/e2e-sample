@@ -47,6 +47,7 @@ final class StockDetailResource extends JsonResource
             'signals' => StockSignalResource::collection($stock->signals)->resolve($request),
             'selected_period' => $stock->selectedPeriod->value,
             'period_options' => $stock->periodOptions,
+            'price_history_notice' => $stock->priceHistoryNotice,
         ];
     }
 }

@@ -116,14 +116,15 @@ final class DashboardPageControllerTest extends TestCase
             ->where('topStocks.0.changePercent', 20)
             ->where('topStocks.0.sentiment', AnalysisSentiment::Positive->value)
             ->where('topStocks.0.sentimentLabel', 'ポジティブ')
-            ->where('topStocks.0.updatedAt', '2026-06-15 12:00')
+            ->where('topStocks.0.updatedAt', '2026-06-15T12:00:00+00:00')
             ->where('attentionStocks.0.symbol', 'AAPL')
             ->where('attentionStocks.0.totalScore', 8.25)
             ->where('importantNews.0.articleId', $positiveNews->id)
             ->where('importantNews.0.title', 'Apple product news')
             ->where('importantNews.0.source', 'Reuters')
-            ->where('importantNews.0.publishedAt', '2026-06-15 10:00')
-            ->where('latestAnalysisAt', '2026-06-15 11:00')
+            ->where('importantNews.0.timeAgo', '2026-06-15T11:00:00+00:00')
+            ->where('importantNews.0.publishedAt', '2026-06-15T10:00:00+00:00')
+            ->where('latestAnalysisAt', '2026-06-15T11:00:00+00:00')
         );
     }
 

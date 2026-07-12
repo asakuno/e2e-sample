@@ -6,7 +6,7 @@ namespace Tests\Unit\UseCases\MarketData;
 
 use App\Data\MarketData\NewsArticleData;
 use App\Data\MarketData\StockPriceData;
-use App\Models\Stock;
+use App\Enums\MarketDataProvider;
 use App\Repositories\MarketIngestionRepositoryInterface;
 use App\Services\MarketData\Contracts\NewsProviderInterface;
 use App\Services\MarketData\Contracts\StockPriceProviderInterface;
@@ -16,7 +16,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 final class FetchMarketDataUseCasesTest extends TestCase
 {
@@ -24,13 +23,21 @@ final class FetchMarketDataUseCasesTest extends TestCase
     public function 取得した日足株価をすべてrepositoryへ保存する(): void
     {
         // Arrange
-        $stock = $this->stock();
-        $price = $this->priceData($stock->symbol);
+        $price = $this->priceData('AAPL');
         $repository = $this->createMock(MarketIngestionRepositoryInterface::class);
-        $repository->expects($this->once())->method('findActiveStockById')->with(1)->willReturn($stock);
+        $repository->expects($this->once())
+            ->method('findProviderSymbolForActiveStock')
+            ->with(1, MarketDataProvider::AlphaVantage)
+            ->willReturn('AAPL');
         $repository->expects($this->once())->method('upsertStockPrice')->with(1, $price);
         $provider = $this->createMock(StockPriceProviderInterface::class);
-        $provider->expects($this->once())->method('fetchDailyPrices')->with($stock)->willReturn(new Collection([$price]));
+        $provider->expects($this->once())
+            ->method('provider')
+            ->willReturn(MarketDataProvider::AlphaVantage);
+        $provider->expects($this->once())
+            ->method('fetchDailyPrices')
+            ->with('AAPL')
+            ->willReturn(new Collection([$price]));
         $useCase = new FetchDailyStockPriceUseCase($repository, $provider);
 
         // Act
@@ -41,33 +48,48 @@ final class FetchMarketDataUseCasesTest extends TestCase
     }
 
     #[Test]
-    public function 存在しない銘柄の株価取得は失敗する(): void
+    public function provider_symbol未登録銘柄の株価取得はapiを呼ばず正常終了する(): void
     {
         // Arrange
         $repository = $this->createMock(MarketIngestionRepositoryInterface::class);
-        $repository->expects($this->once())->method('findActiveStockById')->with(999)->willReturn(null);
+        $repository->expects($this->once())
+            ->method('findProviderSymbolForActiveStock')
+            ->with(999, MarketDataProvider::AlphaVantage)
+            ->willReturn(null);
+        $repository->expects($this->never())->method('upsertStockPrice');
         $provider = $this->createMock(StockPriceProviderInterface::class);
+        $provider->expects($this->once())
+            ->method('provider')
+            ->willReturn(MarketDataProvider::AlphaVantage);
         $provider->expects($this->never())->method('fetchDailyPrices');
         $useCase = new FetchDailyStockPriceUseCase($repository, $provider);
 
-        // Assert
-        $this->expectException(RuntimeException::class);
-
         // Act
-        $useCase->execute(999);
+        $count = $useCase->execute(999);
+
+        // Assert
+        $this->assertSame(0, $count);
     }
 
     #[Test]
     public function 取得したニュースをすべてrepositoryへ保存する(): void
     {
         // Arrange
-        $stock = $this->stock();
-        $article = $this->newsData($stock->symbol);
+        $article = $this->newsData('AAPL');
         $repository = $this->createMock(MarketIngestionRepositoryInterface::class);
-        $repository->expects($this->once())->method('findActiveStockById')->with(1)->willReturn($stock);
+        $repository->expects($this->once())
+            ->method('findProviderSymbolForActiveStock')
+            ->with(1, MarketDataProvider::AlphaVantage)
+            ->willReturn('AAPL');
         $repository->expects($this->once())->method('upsertNewsArticle')->with(1, $article);
         $provider = $this->createMock(NewsProviderInterface::class);
-        $provider->expects($this->once())->method('fetchNewsForStock')->with($stock)->willReturn(new Collection([$article]));
+        $provider->expects($this->once())
+            ->method('provider')
+            ->willReturn(MarketDataProvider::AlphaVantage);
+        $provider->expects($this->once())
+            ->method('fetchNewsForStock')
+            ->with('AAPL')
+            ->willReturn(new Collection([$article]));
         $useCase = new FetchStockNewsUseCase($repository, $provider);
 
         // Act
@@ -77,19 +99,28 @@ final class FetchMarketDataUseCasesTest extends TestCase
         $this->assertSame(1, $count);
     }
 
-    private function stock(): Stock
+    #[Test]
+    public function provider_symbol未登録銘柄のニュース取得はapiを呼ばず正常終了する(): void
     {
-        $stock = new Stock([
-            'symbol' => 'AAPL',
-            'name' => 'Apple Inc.',
-            'market' => 'US',
-            'country' => 'US',
-            'currency' => 'USD',
-            'is_active' => true,
-        ]);
-        $stock->id = 1;
+        // Arrange
+        $repository = $this->createMock(MarketIngestionRepositoryInterface::class);
+        $repository->expects($this->once())
+            ->method('findProviderSymbolForActiveStock')
+            ->with(999, MarketDataProvider::AlphaVantage)
+            ->willReturn(null);
+        $repository->expects($this->never())->method('upsertNewsArticle');
+        $provider = $this->createMock(NewsProviderInterface::class);
+        $provider->expects($this->once())
+            ->method('provider')
+            ->willReturn(MarketDataProvider::AlphaVantage);
+        $provider->expects($this->never())->method('fetchNewsForStock');
+        $useCase = new FetchStockNewsUseCase($repository, $provider);
 
-        return $stock;
+        // Act
+        $count = $useCase->execute(999);
+
+        // Assert
+        $this->assertSame(0, $count);
     }
 
     private function priceData(string $symbol): StockPriceData

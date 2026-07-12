@@ -14,6 +14,8 @@ final class GetDashboardSummaryUseCase
 {
     private const RECENT_DAYS = 7;
 
+    private const DISPLAY_TIMEZONE = 'Asia/Tokyo';
+
     public function __construct(
         private DashboardRepositoryInterface $dashboardRepository,
         private DashboardSummaryAssembler $dashboardSummaryAssembler,
@@ -21,7 +23,7 @@ final class GetDashboardSummaryUseCase
 
     public function execute(int $userId): DashboardSummaryData
     {
-        $today = CarbonImmutable::today();
+        $today = CarbonImmutable::today(self::DISPLAY_TIMEZONE);
         $recentFrom = $today->subDays(self::RECENT_DAYS - 1)->startOfDay();
         $previousFrom = $recentFrom->subDays(self::RECENT_DAYS);
         $previousTo = $recentFrom->subDay()->endOfDay();

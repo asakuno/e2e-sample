@@ -28,7 +28,8 @@ const stock: StockDetail = {
   analyses: [],
   signals: [],
   selected_period: '1M',
-  period_options: [{ value: '1M', label: '1M' }],
+  period_options: [{ value: '1M', label: '1M', available: false }],
+  price_history_notice: '価格履歴がないため、期間を選択できません。',
 };
 
 describe('StockWatchlistControl', () => {

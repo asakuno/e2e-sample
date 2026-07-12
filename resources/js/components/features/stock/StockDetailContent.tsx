@@ -40,17 +40,33 @@ export function StockDetailContent({ stock, children, watchlistControl }: StockD
             <div className="inline-flex w-fit overflow-hidden rounded-md border border-border bg-muted p-1">
               {stock.period_options.map((option) => {
                 const isActive = option.value === stock.selected_period;
+                const className = `inline-flex min-h-11 items-center rounded px-3 py-2 font-medium text-sm tabular-nums transition-[background-color,color,box-shadow] duration-motion-fast ease-standard ${
+                  isActive
+                    ? 'bg-card text-card-foreground shadow-sm'
+                    : 'text-muted-foreground hover:bg-card/80 hover:text-foreground'
+                }`;
+
+                if (!option.available) {
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`${className} cursor-not-allowed opacity-45`}
+                      aria-label={`${option.label}（価格履歴不足）`}
+                      aria-current={isActive ? 'page' : undefined}
+                      disabled
+                    >
+                      {option.label}
+                    </button>
+                  );
+                }
 
                 return (
                   <InertiaActionLink
                     key={option.value}
                     href={show.url(stock.id, { query: { period: option.value } })}
                     pendingClassName="opacity-70"
-                    className={`inline-flex min-h-11 items-center rounded px-3 py-2 font-medium text-sm tabular-nums transition-[background-color,color,box-shadow] duration-motion-fast ease-standard ${
-                      isActive
-                        ? 'bg-card text-card-foreground shadow-sm'
-                        : 'text-muted-foreground hover:bg-card/80 hover:text-foreground'
-                    }`}
+                    className={className}
                     aria-current={isActive ? 'page' : undefined}
                   >
                     {option.label}
@@ -59,6 +75,15 @@ export function StockDetailContent({ stock, children, watchlistControl }: StockD
               })}
             </div>
           </div>
+
+          {stock.price_history_notice !== null && (
+            <p
+              role="status"
+              className="mt-4 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-foreground text-sm"
+            >
+              {stock.price_history_notice}
+            </p>
+          )}
 
           <div className="mt-5">
             <StockPriceChart prices={stock.price_history} currency={stock.currency} />

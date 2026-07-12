@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Enums;
 
 use App\Enums\Traits\HasSelectArray;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 
 enum StockPricePeriod: string
@@ -37,13 +38,22 @@ enum StockPricePeriod: string
         return $this->value;
     }
 
-    public function startDate(): CarbonInterface
+    public function startDate(?CarbonInterface $referenceDate = null): CarbonImmutable
     {
+        $reference = $referenceDate === null
+            ? CarbonImmutable::now()
+            : CarbonImmutable::instance($referenceDate);
+
         return (match ($this) {
-            self::ThreeMonths => now()->subMonthsNoOverflow(3),
-            self::SixMonths => now()->subMonthsNoOverflow(6),
-            self::OneYear => now()->subYearNoOverflow(),
-            self::OneMonth => now()->subMonthNoOverflow(),
+            self::ThreeMonths => $reference->subMonthsNoOverflow(3),
+            self::SixMonths => $reference->subMonthsNoOverflow(6),
+            self::OneYear => $reference->subYearNoOverflow(),
+            self::OneMonth => $reference->subMonthNoOverflow(),
         })->startOfDay();
+    }
+
+    public function isCoveredBy(CarbonInterface $oldestDate, CarbonInterface $latestDate): bool
+    {
+        return $oldestDate->lessThanOrEqualTo($this->startDate($latestDate));
     }
 }

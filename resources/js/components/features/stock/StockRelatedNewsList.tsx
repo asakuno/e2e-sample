@@ -106,7 +106,7 @@ function PublishedAt({ publishedAt }: { publishedAt: string | null }) {
   }
 
   return (
-    <time dateTime={publishedAt.replace(' ', 'T')} className="tabular-nums">
+    <time dateTime={publishedAt} className="tabular-nums">
       {formatNewsDateTime(publishedAt)}
     </time>
   );

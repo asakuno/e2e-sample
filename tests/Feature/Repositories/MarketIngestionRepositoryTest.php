@@ -6,7 +6,9 @@ namespace Tests\Feature\Repositories;
 
 use App\Data\MarketData\NewsArticleData;
 use App\Data\MarketData\StockPriceData;
+use App\Enums\MarketDataProvider;
 use App\Models\Stock;
+use App\Models\StockProviderSymbol;
 use App\Models\User;
 use App\Models\Watchlist;
 use App\Repositories\MarketIngestionRepositoryInterface;
@@ -33,10 +35,16 @@ final class MarketIngestionRepositoryTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $tracked = Stock::factory()->create(['is_active' => true]);
+        $unmappedStock = Stock::factory()->create(['is_active' => true]);
         $inactiveStock = Stock::factory()->create(['is_active' => false]);
         $inactiveWatchlistStock = Stock::factory()->create(['is_active' => true]);
+        StockProviderSymbol::factory()->for($tracked)->create([
+            'provider' => MarketDataProvider::AlphaVantage,
+            'provider_symbol' => 'TRACKED',
+        ]);
         Watchlist::factory()->create(['user_id' => $user->id, 'stock_id' => $tracked->id]);
         Watchlist::factory()->create(['stock_id' => $tracked->id]);
+        Watchlist::factory()->create(['user_id' => $user->id, 'stock_id' => $unmappedStock->id]);
         Watchlist::factory()->create(['user_id' => $user->id, 'stock_id' => $inactiveStock->id]);
         Watchlist::factory()->create([
             'user_id' => $user->id,
@@ -45,10 +53,69 @@ final class MarketIngestionRepositoryTest extends TestCase
         ]);
 
         // Act
-        $stockIds = $this->repository->findTrackedStockIds();
+        $stockIds = $this->repository->findTrackedStockIds(MarketDataProvider::AlphaVantage);
 
         // Assert
         $this->assertSame([$tracked->id], $stockIds);
+    }
+
+    #[Test]
+    public function 同じ内部symbolでも市場別の明示provider_symbolを区別できる(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $usStock = Stock::factory()->create(['market' => 'us', 'symbol' => 'SAME']);
+        $jpStock = Stock::factory()->create(['market' => 'jp', 'symbol' => 'SAME']);
+        StockProviderSymbol::factory()->for($usStock)->create([
+            'provider' => MarketDataProvider::AlphaVantage,
+            'provider_symbol' => 'SAME-US',
+        ]);
+        StockProviderSymbol::factory()->for($jpStock)->create([
+            'provider' => MarketDataProvider::AlphaVantage,
+            'provider_symbol' => 'SAME-JP',
+        ]);
+        Watchlist::factory()->for($user)->for($usStock)->create();
+        Watchlist::factory()->for($user)->for($jpStock)->create();
+
+        // Act
+        $stockIds = $this->repository->findTrackedStockIds(MarketDataProvider::AlphaVantage);
+        $usProviderSymbol = $this->repository->findProviderSymbolForActiveStock(
+            $usStock->id,
+            MarketDataProvider::AlphaVantage,
+        );
+        $jpProviderSymbol = $this->repository->findProviderSymbolForActiveStock(
+            $jpStock->id,
+            MarketDataProvider::AlphaVantage,
+        );
+
+        // Assert
+        $this->assertSame([$usStock->id, $jpStock->id], $stockIds);
+        $this->assertSame('SAME-US', $usProviderSymbol);
+        $this->assertSame('SAME-JP', $jpProviderSymbol);
+    }
+
+    #[Test]
+    public function 空白だけのprovider_symbolは取得対象にしない(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $stock = Stock::factory()->create(['is_active' => true]);
+        StockProviderSymbol::factory()->for($stock)->create([
+            'provider' => MarketDataProvider::AlphaVantage,
+            'provider_symbol' => '   ',
+        ]);
+        Watchlist::factory()->for($user)->for($stock)->create();
+
+        // Act
+        $stockIds = $this->repository->findTrackedStockIds(MarketDataProvider::AlphaVantage);
+        $providerSymbol = $this->repository->findProviderSymbolForActiveStock(
+            $stock->id,
+            MarketDataProvider::AlphaVantage,
+        );
+
+        // Assert
+        $this->assertSame([], $stockIds);
+        $this->assertNull($providerSymbol);
     }
 
     #[Test]

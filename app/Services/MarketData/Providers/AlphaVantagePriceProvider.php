@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Services\MarketData\Providers;
 
 use App\Data\MarketData\StockPriceData;
-use App\Models\Stock;
+use App\Enums\MarketDataProvider;
 use App\Services\MarketData\Contracts\StockPriceProviderInterface;
 use Carbon\CarbonImmutable;
 use DateTimeImmutable;
@@ -79,9 +79,9 @@ final class AlphaVantagePriceProvider implements StockPriceProviderInterface
     /**
      * @return Collection<int, StockPriceData>
      */
-    public function fetchDailyPrices(Stock $stock): Collection
+    public function fetchDailyPrices(string $providerSymbol): Collection
     {
-        $symbol = $this->stockSymbol($stock);
+        $symbol = $this->providerSymbol($providerSymbol);
         $response = $this->request([
             'function' => $this->function,
             'symbol' => $symbol,
@@ -117,6 +117,11 @@ final class AlphaVantagePriceProvider implements StockPriceProviderInterface
         }
 
         return new Collection($prices);
+    }
+
+    public function provider(): MarketDataProvider
+    {
+        return MarketDataProvider::AlphaVantage;
     }
 
     /**
@@ -189,15 +194,15 @@ final class AlphaVantagePriceProvider implements StockPriceProviderInterface
         );
     }
 
-    private function stockSymbol(Stock $stock): string
+    private function providerSymbol(string $providerSymbol): string
     {
-        $symbol = $stock->getAttribute('symbol');
+        $symbol = trim($providerSymbol);
 
-        if (! is_string($symbol) || trim($symbol) === '') {
-            throw new RuntimeException('Stock symbol is missing.');
+        if ($symbol === '') {
+            throw new InvalidArgumentException('Alpha Vantage provider symbol must not be empty.');
         }
 
-        return trim($symbol);
+        return $symbol;
     }
 
     private function parsePriceDate(string $value): CarbonImmutable

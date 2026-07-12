@@ -1,5 +1,6 @@
 import { index as newsIndex } from '@/routes/news';
 import { show as stockShow } from '@/routes/stocks';
+import { formatJstDateTime } from '@/lib/formatters';
 import type { ActivityItemData, DashboardStatData, TopStockData } from '@/types/dashboard';
 
 export type DashboardPriorityFeedItemKind = 'importantNews' | 'topStock' | 'unanalyzedNews';
@@ -50,7 +51,11 @@ function presentImportantNews(news: ActivityItemData): DashboardPriorityFeedItem
 function presentImportantNewsMeta(news: ActivityItemData): string {
   const source = news.source?.trim();
 
-  return [source === '' ? null : source, news.publishedAt, news.timeAgo]
+  return [
+    source === '' ? null : source,
+    news.publishedAt === null ? null : formatJstDateTime(news.publishedAt),
+    formatJstDateTime(news.timeAgo),
+  ]
     .filter((value): value is string => value !== null && value !== undefined && value !== '')
     .join(' · ');
 }

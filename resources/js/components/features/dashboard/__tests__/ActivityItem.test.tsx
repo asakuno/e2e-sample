@@ -12,7 +12,7 @@ describe('ActivityItem', () => {
     articleId: null,
     title: 'プロジェクト作成',
     description: '新規プロジェクト「テスト」を作成しました',
-    timeAgo: '5分前',
+    timeAgo: '2026-07-11T14:30:00+00:00',
     dotColor: 'blue',
     source: null,
     publishedAt: null,
@@ -30,6 +30,9 @@ describe('ActivityItem', () => {
 
   it('時間が表示されること', () => {
     render(<ActivityItem {...defaultProps} />);
-    expect(screen.getByText('5分前')).toBeInTheDocument();
+    expect(screen.getByText('2026/07/11 23:30')).toHaveAttribute(
+      'datetime',
+      '2026-07-11T14:30:00+00:00',
+    );
   });
 });

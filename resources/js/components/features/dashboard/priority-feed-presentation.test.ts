@@ -13,10 +13,10 @@ const createNews = (
   articleId: id,
   title: `ニュース${id}`,
   description: `説明${id}`,
-  timeAgo: `${id}分前`,
+  timeAgo: '2026-07-11T11:00:00+00:00',
   dotColor,
   source: 'Reuters',
-  publishedAt: '2026-07-11 10:00',
+  publishedAt: '2026-07-11T10:00:00+00:00',
 });
 
 const createStock = (id: number, reason: string | null = `注目理由${id}`): TopStockData => ({
@@ -103,7 +103,7 @@ describe('presentDashboardPriorityFeed', () => {
         variant: expectedVariant,
         title: 'ニュース8',
         description: '説明8',
-        meta: 'Reuters · 2026-07-11 10:00 · 8分前',
+        meta: 'Reuters · 2026/07/11 19:00 · 2026/07/11 20:00',
         href: '/news?article_id=8',
       });
     },

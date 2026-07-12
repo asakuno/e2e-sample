@@ -47,7 +47,7 @@ const stats: DashboardStatData[] = [
   },
   {
     kind: 'latestAnalysis',
-    value: '2026-06-15 11:00',
+    value: '2026-06-15T11:00:00+00:00',
   },
 ];
 
@@ -85,7 +85,7 @@ const topStocks: TopStockData[] = [
     negativeCount: 1,
     reason: 'ポジティブ材料が増加',
     signalDate: '2026-06-15',
-    updatedAt: '2026-06-15 12:00',
+    updatedAt: '2026-06-15T12:00:00+00:00',
   },
 ];
 
@@ -104,7 +104,7 @@ const attentionStocks: TopStockData[] = [
     negativeCount: 5,
     reason: '強いネガティブシグナルを検出',
     signalDate: '2026-06-15',
-    updatedAt: '2026-06-15 12:30',
+    updatedAt: '2026-06-15T12:30:00+00:00',
   },
 ];
 
@@ -114,10 +114,10 @@ const importantNews: ActivityItemData[] = [
     articleId: 1,
     title: 'Apple announces new product',
     description: 'AAPL / impact 8: 売上成長にポジティブ',
-    timeAgo: '30分前',
+    timeAgo: '2026-06-15T11:00:00+00:00',
     dotColor: 'green',
     source: 'Reuters',
-    publishedAt: '2026-06-15 10:00',
+    publishedAt: '2026-06-15T10:00:00+00:00',
   },
 ];
 
@@ -131,7 +131,7 @@ const defaultProps = {
   topStocks,
   attentionStocks,
   importantNews,
-  latestAnalysisAt: '2026-06-15 11:00',
+  latestAnalysisAt: '2026-06-15T11:00:00+00:00',
 };
 
 describe('Dashboard', () => {
@@ -160,7 +160,7 @@ describe('Dashboard', () => {
       'href',
       '/news?article_id=1',
     );
-    expect(screen.getByText('Reuters · 2026-06-15 10:00 · 30分前')).toBeVisible();
+    expect(screen.getByText('Reuters · 2026/06/15 19:00 · 2026/06/15 20:00')).toBeVisible();
     expect(screen.getByRole('link', { name: /TSLA Tesla Inc\./ })).toHaveAttribute(
       'href',
       '/stocks/2',
@@ -181,7 +181,7 @@ describe('Dashboard', () => {
     expect(screen.getByText('直近ネガティブ材料')).toBeInTheDocument();
     expect(screen.getByText('未分析ニュース')).toBeInTheDocument();
     expect(document.body.textContent?.match(/最新分析日時/g) ?? []).toHaveLength(1);
-    expect(screen.getByText('2026-06-15 11:00')).toBeInTheDocument();
+    expect(screen.getByText('2026/06/15 20:00')).toBeInTheDocument();
   });
 
   it('TrendChart が表示されること', () => {

@@ -51,6 +51,7 @@ final class GenerateStockSignalUseCaseTest extends TestCase
             ->with(
                 1,
                 $this->callback(fn ($date): bool => $date->toDateString() === '2026-07-11'),
+                'v2',
                 $this->callback(fn ($signal): bool => $signal->totalScore === 8.0),
             );
         $useCase = new GenerateStockSignalUseCase($repository, new StockSignalService);
@@ -78,6 +79,7 @@ final class GenerateStockSignalUseCaseTest extends TestCase
             ->with(
                 1,
                 $this->anything(),
+                'v3',
                 $this->callback(fn ($signal): bool => $signal->totalScore === 0.0),
             );
         $useCase = new GenerateStockSignalUseCase($repository, new StockSignalService);

@@ -20,6 +20,9 @@ final class NewsRepository implements NewsRepositoryInterface
      */
     public function search(NewsSearchData $filters): LengthAwarePaginator
     {
+        $fromUtc = $filters->fromUtc();
+        $toExclusiveUtc = $filters->toExclusiveUtc();
+
         return NewsArticle::query()
             ->with([
                 'stocks',
@@ -46,12 +49,12 @@ final class NewsRepository implements NewsRepositoryInterface
                 fn (Builder $query): Builder => $query->whereKey($filters->articleId)
             )
             ->when(
-                $filters->from !== null,
-                fn (Builder $query): Builder => $query->whereDate('published_at', '>=', $filters->from)
+                $fromUtc !== null,
+                fn (Builder $query): Builder => $query->where('published_at', '>=', $fromUtc)
             )
             ->when(
-                $filters->to !== null,
-                fn (Builder $query): Builder => $query->whereDate('published_at', '<=', $filters->to)
+                $toExclusiveUtc !== null,
+                fn (Builder $query): Builder => $query->where('published_at', '<', $toExclusiveUtc)
             )
             ->orderByDesc('published_at')
             ->orderByDesc('id')

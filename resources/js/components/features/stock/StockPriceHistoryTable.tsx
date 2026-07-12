@@ -35,7 +35,7 @@ export function StockPriceHistoryTable({ prices, currency }: StockPriceHistoryTa
             <TableCell>{formatPrice(price.open, currency)}</TableCell>
             <TableCell>{formatPrice(price.high, currency)}</TableCell>
             <TableCell>{formatPrice(price.low, currency)}</TableCell>
-            <TableCell strong>{formatPrice(price.close, currency)}</TableCell>
+            <TableCell strong>{formatPrice(price.effective_close, currency)}</TableCell>
             <TableCell>{formatVolume(price.volume)}</TableCell>
           </tr>
         ))}

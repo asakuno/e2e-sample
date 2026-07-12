@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Data\News;
 
 use App\Data\Stock\StockListItemData;
+use App\Data\Support\UtcDateTimeSerializer;
 use App\Enums\AnalysisSentiment;
 use App\Enums\AnalysisTimeHorizon;
 use App\Models\AnalysisResult;
-use Illuminate\Support\Carbon;
 use Spatie\LaravelData\Attributes\MapName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
@@ -66,9 +66,7 @@ final class NewsAnalysisData extends Data
             negativeFactors: self::stringListAttribute($analysisResult->getAttribute('negative_factors')),
             riskPoints: self::stringListAttribute($analysisResult->getAttribute('risk_points')),
             reason: $analysisResult->reason,
-            analyzedAt: $analyzedAt === null
-                ? null
-                : Carbon::parse($analyzedAt)->toDateTimeString(),
+            analyzedAt: UtcDateTimeSerializer::serialize($analyzedAt),
         );
     }
 

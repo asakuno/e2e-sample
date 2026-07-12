@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Tests\Unit\Services\MarketData;
 
 use App\Data\MarketData\NewsArticleData;
-use App\Models\Stock;
+use App\Services\MarketData\Exceptions\UnusableNewsFeedException;
 use App\Services\MarketData\Providers\AlphaVantageNewsProvider;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
@@ -41,7 +42,7 @@ final class AlphaVantageNewsProviderTest extends TestCase
         $provider = $this->provider();
 
         // Act
-        $articles = $provider->fetchNewsForStock($this->stock('AAPL'));
+        $articles = $provider->fetchNewsForStock('AAPL');
 
         // Assert
         $this->assertCount(1, $articles);
@@ -69,6 +70,75 @@ final class AlphaVantageNewsProviderTest extends TestCase
         ]));
     }
 
+    public function test_不正記事を警告付きでskipして正常記事を返す(): void
+    {
+        // Arrange
+        $invalidArticle = $this->validArticle();
+        unset($invalidArticle['title']);
+        $secondValidArticle = [
+            ...$this->validArticle(),
+            'title' => 'Apple launches another infrastructure project',
+            'url' => 'https://example.com/apple-infrastructure',
+        ];
+        Log::spy();
+        Http::fake([
+            self::BASE_URL.'*' => Http::response([
+                'feed' => [$this->validArticle(), $invalidArticle, $secondValidArticle],
+            ]),
+        ]);
+
+        // Act
+        $articles = $this->provider()->fetchNewsForStock('AAPL');
+
+        // Assert
+        $this->assertSame(
+            ['Apple expands AI investment', 'Apple launches another infrastructure project'],
+            $articles->pluck('title')->all(),
+        );
+        Log::shouldHaveReceived('warning')
+            ->once()
+            ->with(
+                'Skipping invalid Alpha Vantage news article.',
+                \Mockery::on(fn (array $context): bool => $context['provider_symbol'] === 'AAPL'
+                    && $context['feed_index'] === '1'
+                    && str_contains($context['reason'], 'field "title"')),
+            );
+    }
+
+    public function test_非空feedが全件不正なら明示的な例外になる(): void
+    {
+        // Arrange
+        $invalidArticle = $this->validArticle();
+        unset($invalidArticle['url']);
+        Http::fake([
+            self::BASE_URL.'*' => Http::response([
+                'feed' => [$invalidArticle, 'invalid-shape'],
+            ]),
+        ]);
+        $provider = $this->provider();
+
+        // Assert
+        $this->expectException(UnusableNewsFeedException::class);
+        $this->expectExceptionMessage('news feed contained no valid articles');
+
+        // Act
+        $provider->fetchNewsForStock('AAPL');
+    }
+
+    public function test_空feedは正常な空結果を返す(): void
+    {
+        // Arrange
+        Log::spy();
+        Http::fake([self::BASE_URL.'*' => Http::response(['feed' => []])]);
+
+        // Act
+        $articles = $this->provider()->fetchNewsForStock('AAPL');
+
+        // Assert
+        $this->assertCount(0, $articles);
+        Log::shouldNotHaveReceived('warning');
+    }
+
     /**
      * @param  array<string, string>  $payload
      */
@@ -84,7 +154,7 @@ final class AlphaVantageNewsProviderTest extends TestCase
         $this->expectExceptionMessage('Alpha Vantage API error:');
 
         // Act
-        $provider->fetchNewsForStock($this->stock('AAPL'));
+        $provider->fetchNewsForStock('AAPL');
     }
 
     /**
@@ -110,7 +180,7 @@ final class AlphaVantageNewsProviderTest extends TestCase
         $this->expectExceptionMessage('missing "feed"');
 
         // Act
-        $provider->fetchNewsForStock($this->stock('AAPL'));
+        $provider->fetchNewsForStock('AAPL');
     }
 
     #[DataProvider('欠落した記事キー')]
@@ -126,7 +196,7 @@ final class AlphaVantageNewsProviderTest extends TestCase
         $this->expectException(RuntimeException::class);
 
         // Act
-        $provider->fetchNewsForStock($this->stock('AAPL'));
+        $provider->fetchNewsForStock('AAPL');
     }
 
     /**
@@ -143,6 +213,33 @@ final class AlphaVantageNewsProviderTest extends TestCase
         ];
     }
 
+    #[DataProvider('安全でない記事URL')]
+    public function test_http以外の記事urlは不正記事として拒否する(string $url): void
+    {
+        // Arrange
+        $article = [...$this->validArticle(), 'url' => $url];
+        Http::fake([self::BASE_URL.'*' => Http::response(['feed' => [$article]])]);
+        $provider = $this->provider();
+
+        // Assert
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('news feed contained no valid articles');
+
+        // Act
+        $provider->fetchNewsForStock('AAPL');
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function 安全でない記事URL(): array
+    {
+        return [
+            'javascript scheme' => ['javascript://example.com/%0Aalert(1)'],
+            'ftp scheme' => ['ftp://example.com/article'],
+        ];
+    }
+
     public function test_不正な公開日時でruntime例外になる(): void
     {
         // Arrange
@@ -152,10 +249,10 @@ final class AlphaVantageNewsProviderTest extends TestCase
 
         // Assert
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('invalid publication time');
+        $this->expectExceptionMessage('news feed contained no valid articles');
 
         // Act
-        $provider->fetchNewsForStock($this->stock('AAPL'));
+        $provider->fetchNewsForStock('AAPL');
     }
 
     #[DataProvider('不正な関連度')]
@@ -169,10 +266,10 @@ final class AlphaVantageNewsProviderTest extends TestCase
 
         // Assert
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('relevance score is invalid');
+        $this->expectExceptionMessage('news feed contained no valid articles');
 
         // Act
-        $provider->fetchNewsForStock($this->stock('AAPL'));
+        $provider->fetchNewsForStock('AAPL');
     }
 
     /**
@@ -197,10 +294,10 @@ final class AlphaVantageNewsProviderTest extends TestCase
 
         // Assert
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('ticker sentiment for AAPL is missing');
+        $this->expectExceptionMessage('news feed contained no valid articles');
 
         // Act
-        $provider->fetchNewsForStock($this->stock('AAPL'));
+        $provider->fetchNewsForStock('AAPL');
     }
 
     public function test_httpエラーをruntime例外へ変換する(): void
@@ -214,7 +311,7 @@ final class AlphaVantageNewsProviderTest extends TestCase
         $this->expectExceptionMessage('HTTP status 429');
 
         // Act
-        $provider->fetchNewsForStock($this->stock('AAPL'));
+        $provider->fetchNewsForStock('AAPL');
     }
 
     private function provider(): AlphaVantageNewsProvider
@@ -224,11 +321,6 @@ final class AlphaVantageNewsProviderTest extends TestCase
             apiKey: 'test-key',
             baseUrl: self::BASE_URL,
         );
-    }
-
-    private function stock(string $symbol): Stock
-    {
-        return new Stock(['symbol' => $symbol]);
     }
 
     /**

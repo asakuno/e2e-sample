@@ -95,6 +95,14 @@ class Stock extends Model
     }
 
     /**
+     * @return HasMany<StockProviderSymbol, $this>
+     */
+    public function providerSymbols(): HasMany
+    {
+        return $this->hasMany(StockProviderSymbol::class);
+    }
+
+    /**
      * @return HasMany<Alert, $this>
      */
     public function alerts(): HasMany

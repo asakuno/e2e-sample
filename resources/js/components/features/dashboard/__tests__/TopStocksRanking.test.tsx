@@ -23,7 +23,7 @@ describe('TopStocksRanking', () => {
       negativeCount: 1,
       reason: 'ポジティブ材料が増加',
       signalDate: '2026-06-15',
-      updatedAt: '2026-06-15 12:00',
+      updatedAt: '2026-06-15T12:00:00+00:00',
     },
   ];
 
@@ -39,7 +39,7 @@ describe('TopStocksRanking', () => {
       change: '+2.35%',
       signal: '+8.25',
       sentiment: 'ポジティブ',
-      updatedAt: '更新 2026-06-15 12:00',
+      updatedAt: '更新 2026/06/15 21:00',
     };
 
     // Assert

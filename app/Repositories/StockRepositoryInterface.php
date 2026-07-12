@@ -30,6 +30,8 @@ interface StockRepositoryInterface
 
     public function findLatestPriceByStockId(int $stockId): ?StockPrice;
 
+    public function findOldestPriceByStockId(int $stockId): ?StockPrice;
+
     /**
      * @return Collection<int, StockPrice>
      */

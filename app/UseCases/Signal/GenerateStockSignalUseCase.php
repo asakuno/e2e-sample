@@ -46,6 +46,7 @@ final class GenerateStockSignalUseCase
         $this->signalGenerationRepository->upsertSignal(
             stockId: $stockId,
             signalDate: $generatedAt,
+            promptVersion: $effectivePromptVersion,
             data: $signal,
         );
     }

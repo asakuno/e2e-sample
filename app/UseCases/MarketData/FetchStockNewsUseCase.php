@@ -6,7 +6,6 @@ namespace App\UseCases\MarketData;
 
 use App\Repositories\MarketIngestionRepositoryInterface;
 use App\Services\MarketData\Contracts\NewsProviderInterface;
-use RuntimeException;
 
 final class FetchStockNewsUseCase
 {
@@ -17,16 +16,19 @@ final class FetchStockNewsUseCase
 
     public function execute(int $stockId): int
     {
-        $stock = $this->marketIngestionRepository->findActiveStockById($stockId);
+        $providerSymbol = $this->marketIngestionRepository->findProviderSymbolForActiveStock(
+            $stockId,
+            $this->newsProvider->provider(),
+        );
 
-        if ($stock === null) {
-            throw new RuntimeException("Active stock {$stockId} was not found.");
+        if ($providerSymbol === null) {
+            return 0;
         }
 
         $savedCount = 0;
 
-        foreach ($this->newsProvider->fetchNewsForStock($stock) as $article) {
-            $this->marketIngestionRepository->upsertNewsArticle($stock->id, $article);
+        foreach ($this->newsProvider->fetchNewsForStock($providerSymbol) as $article) {
+            $this->marketIngestionRepository->upsertNewsArticle($stockId, $article);
             $savedCount++;
         }
 

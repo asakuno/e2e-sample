@@ -142,12 +142,30 @@ final class SignalGenerationRepositoryTest extends TestCase
         $updated = $this->signalData(6.75);
 
         // Act
-        $this->repository->upsertSignal($stock->id, $date, $first);
-        $saved = $this->repository->upsertSignal($stock->id, $date, $updated);
+        $this->repository->upsertSignal($stock->id, $date, 'v2', $first);
+        $saved = $this->repository->upsertSignal($stock->id, $date, 'v2', $updated);
 
         // Assert
         $this->assertDatabaseCount('stock_signals', 1);
         $this->assertSame('6.75', $saved->total_score);
+        $this->assertSame('v2', $saved->prompt_version);
+    }
+
+    #[Test]
+    public function 同一銘柄同一日でもprompt_version別にシグナルを保持できる(): void
+    {
+        // Arrange
+        $stock = Stock::factory()->create();
+        $date = CarbonImmutable::parse('2026-07-11');
+
+        // Act
+        $legacy = $this->repository->upsertSignal($stock->id, $date, 'v1', $this->signalData(2.5));
+        $current = $this->repository->upsertSignal($stock->id, $date, 'v2', $this->signalData(6.75));
+
+        // Assert
+        $this->assertDatabaseCount('stock_signals', 2);
+        $this->assertNotSame($legacy->id, $current->id);
+        $this->assertSame(['v1', 'v2'], $stock->signals()->orderBy('prompt_version')->pluck('prompt_version')->all());
     }
 
     #[Test]

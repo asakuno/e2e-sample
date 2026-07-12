@@ -6,7 +6,6 @@ namespace App\UseCases\MarketData;
 
 use App\Repositories\MarketIngestionRepositoryInterface;
 use App\Services\MarketData\Contracts\StockPriceProviderInterface;
-use RuntimeException;
 
 final class FetchDailyStockPriceUseCase
 {
@@ -17,16 +16,19 @@ final class FetchDailyStockPriceUseCase
 
     public function execute(int $stockId): int
     {
-        $stock = $this->marketIngestionRepository->findActiveStockById($stockId);
+        $providerSymbol = $this->marketIngestionRepository->findProviderSymbolForActiveStock(
+            $stockId,
+            $this->stockPriceProvider->provider(),
+        );
 
-        if ($stock === null) {
-            throw new RuntimeException("Active stock {$stockId} was not found.");
+        if ($providerSymbol === null) {
+            return 0;
         }
 
         $savedCount = 0;
 
-        foreach ($this->stockPriceProvider->fetchDailyPrices($stock) as $price) {
-            $this->marketIngestionRepository->upsertStockPrice($stock->id, $price);
+        foreach ($this->stockPriceProvider->fetchDailyPrices($providerSymbol) as $price) {
+            $this->marketIngestionRepository->upsertStockPrice($stockId, $price);
             $savedCount++;
         }
 

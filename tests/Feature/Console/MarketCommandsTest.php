@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Console;
 
+use App\Enums\MarketDataProvider;
 use App\Jobs\AnalyzeNewsArticleJob;
 use App\Jobs\FetchDailyStockPriceJob;
 use App\Jobs\FetchStockNewsJob;
 use App\Jobs\GenerateStockSignalJob;
 use App\Models\NewsArticle;
 use App\Models\Stock;
+use App\Models\StockProviderSymbol;
 use App\Models\User;
 use App\Models\Watchlist;
+use Database\Seeders\MajorStockSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\Test;
@@ -55,6 +58,41 @@ final class MarketCommandsTest extends TestCase
             fn (FetchStockNewsJob $job): bool => $job->stockId === $tracked->id,
         );
         Queue::assertPushed(FetchStockNewsJob::class, 1);
+    }
+
+    #[Test]
+    public function alpha_vantage未対応の日本株は取込jobへ登録しない(): void
+    {
+        // Arrange
+        Queue::fake();
+        $this->seed(MajorStockSeeder::class);
+        $user = User::factory()->create();
+        $usStock = Stock::query()->where('market', 'us')->where('symbol', 'AAPL')->firstOrFail();
+        $jpStock = Stock::query()->where('market', 'jp')->where('symbol', '7203')->firstOrFail();
+        Watchlist::factory()->for($user)->for($usStock)->create();
+        Watchlist::factory()->for($user)->for($jpStock)->create();
+
+        // Act
+        $this->artisan('market:fetch-prices')->assertSuccessful();
+        $this->artisan('market:fetch-news')->assertSuccessful();
+
+        // Assert
+        Queue::assertPushed(
+            FetchDailyStockPriceJob::class,
+            fn (FetchDailyStockPriceJob $job): bool => $job->stockId === $usStock->id,
+        );
+        Queue::assertNotPushed(
+            FetchDailyStockPriceJob::class,
+            fn (FetchDailyStockPriceJob $job): bool => $job->stockId === $jpStock->id,
+        );
+        Queue::assertPushed(
+            FetchStockNewsJob::class,
+            fn (FetchStockNewsJob $job): bool => $job->stockId === $usStock->id,
+        );
+        Queue::assertNotPushed(
+            FetchStockNewsJob::class,
+            fn (FetchStockNewsJob $job): bool => $job->stockId === $jpStock->id,
+        );
     }
 
     #[Test]
@@ -104,6 +142,10 @@ final class MarketCommandsTest extends TestCase
         $user = User::factory()->create();
         $tracked = Stock::factory()->create(['is_active' => true]);
         $ignored = Stock::factory()->create(['is_active' => true]);
+        StockProviderSymbol::factory()->for($tracked)->create([
+            'provider' => MarketDataProvider::AlphaVantage,
+            'provider_symbol' => 'TRACKED',
+        ]);
         Watchlist::factory()->create(['user_id' => $user->id, 'stock_id' => $tracked->id]);
         Watchlist::factory()->create([
             'user_id' => $user->id,

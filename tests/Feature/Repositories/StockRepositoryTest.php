@@ -8,6 +8,7 @@ use App\Enums\AnalysisSentiment;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
 use App\Models\Stock;
+use App\Models\StockSignal;
 use App\Repositories\StockRepositoryInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -87,6 +88,28 @@ final class StockRepositoryTest extends TestCase
         // Assert
         $this->assertSame([$currentAnalysis->id], $analyses->pluck('id')->all());
         $this->assertNotContains($legacyAnalysis->id, $analyses->pluck('id')->all());
+    }
+
+    #[Test]
+    public function 銘柄シグナル履歴は現行prompt_versionの結果だけを取得する(): void
+    {
+        // Arrange
+        $stock = Stock::factory()->create();
+        $legacySignal = StockSignal::factory()->for($stock)->create([
+            'prompt_version' => self::LEGACY_PROMPT_VERSION,
+            'signal_date' => '2026-07-12',
+        ]);
+        $currentSignal = StockSignal::factory()->for($stock)->create([
+            'prompt_version' => self::CURRENT_PROMPT_VERSION,
+            'signal_date' => '2026-07-12',
+        ]);
+
+        // Act
+        $signals = $this->repository->findSignalsByStockId($stock->id, 10);
+
+        // Assert
+        $this->assertSame([$currentSignal->id], $signals->pluck('id')->all());
+        $this->assertNotContains($legacySignal->id, $signals->pluck('id')->all());
     }
 
     private function createAnalysis(

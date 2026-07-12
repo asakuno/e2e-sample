@@ -20,8 +20,9 @@ const stock: StockDetail = {
     open: 208,
     high: 214,
     low: 207,
-    close: 210,
+    close: 420,
     adjusted_close: 210,
+    effective_close: 210,
     volume: 2000,
   },
   price_history: [
@@ -30,8 +31,9 @@ const stock: StockDetail = {
       open: 198,
       high: 202,
       low: 197,
-      close: 200,
+      close: 400,
       adjusted_close: 200,
+      effective_close: 200,
       volume: 1800,
     },
     {
@@ -39,8 +41,9 @@ const stock: StockDetail = {
       open: 208,
       high: 214,
       low: 207,
-      close: 210,
+      close: 420,
       adjusted_close: 210,
+      effective_close: 210,
       volume: 2000,
     },
   ],
@@ -48,7 +51,8 @@ const stock: StockDetail = {
   analyses: [],
   signals: [],
   selected_period: '1M',
-  period_options: [{ value: '1M', label: '1M' }],
+  period_options: [{ value: '1M', label: '1M', available: true }],
+  price_history_notice: null,
 };
 
 describe('StockDetailHeader', () => {

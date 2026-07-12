@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Services\MarketData\Exceptions\UnusableNewsFeedException;
 use App\UseCases\MarketData\FetchStockNewsUseCase;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -46,7 +47,11 @@ final class FetchStockNewsJob implements ShouldBeUnique, ShouldQueue
 
     public function handle(FetchStockNewsUseCase $useCase): void
     {
-        $useCase->execute($this->stockId);
+        try {
+            $useCase->execute($this->stockId);
+        } catch (UnusableNewsFeedException $exception) {
+            $this->fail($exception);
+        }
     }
 
     public function failed(?Throwable $exception): void

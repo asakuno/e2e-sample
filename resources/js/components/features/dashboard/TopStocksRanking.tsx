@@ -2,6 +2,7 @@ import { ArrowRight } from 'lucide-react';
 import { SentimentBadge } from '@/components/features/news/SentimentBadge';
 import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { formatJstDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import { show as stockShow } from '@/routes/stocks';
 import type { TopStockData } from '@/types/dashboard';
@@ -92,7 +93,7 @@ function TopStockLink({ stock, rank }: { stock: TopStockData; rank: number }) {
           {stock.updatedAt === null ? (
             '更新日時不明'
           ) : (
-            <time dateTime={stock.updatedAt.replace(' ', 'T')}>更新 {stock.updatedAt}</time>
+            <time dateTime={stock.updatedAt}>更新 {formatJstDateTime(stock.updatedAt)}</time>
           )}
         </span>
       </span>

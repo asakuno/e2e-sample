@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\UseCases\MarketData;
 
+use App\Enums\MarketDataProvider;
 use App\Repositories\MarketIngestionRepositoryInterface;
 
 final class ListTrackedStockIdsUseCase
@@ -15,8 +16,8 @@ final class ListTrackedStockIdsUseCase
     /**
      * @return array<int, int>
      */
-    public function execute(): array
+    public function execute(MarketDataProvider $provider): array
     {
-        return $this->marketIngestionRepository->findTrackedStockIds();
+        return $this->marketIngestionRepository->findTrackedStockIds($provider);
     }
 }

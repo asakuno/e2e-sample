@@ -8,7 +8,8 @@ type StockPriceChartProps = {
 
 export function StockPriceChart({ prices, currency }: StockPriceChartProps) {
   const chartPrices = prices.filter(
-    (price): price is StockPricePoint & { close: number } => price.close !== null,
+    (price): price is StockPricePoint & { effective_close: number } =>
+      price.effective_close !== null,
   );
 
   if (chartPrices.length === 0) {
@@ -26,7 +27,7 @@ export function StockPriceChart({ prices, currency }: StockPriceChartProps) {
   const priceBottom = 214;
   const volumeTop = 254;
   const volumeBottom = 296;
-  const closes = chartPrices.map((price) => price.close);
+  const closes = chartPrices.map((price) => price.effective_close);
   const min = Math.min(...closes);
   const max = Math.max(...closes);
   const range = max - min || 1;
@@ -38,7 +39,7 @@ export function StockPriceChart({ prices, currency }: StockPriceChartProps) {
     const x =
       paddingX +
       (chartPrices.length === 1 ? plotWidth / 2 : (index / (chartPrices.length - 1)) * plotWidth);
-    const y = priceBottom - ((price.close - min) / range) * (priceBottom - priceTop);
+    const y = priceBottom - ((price.effective_close - min) / range) * (priceBottom - priceTop);
 
     return { x, y };
   });

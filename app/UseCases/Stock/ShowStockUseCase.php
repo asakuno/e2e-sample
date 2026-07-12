@@ -13,6 +13,8 @@ use App\Data\Stock\StockWatchlistData;
 use App\Enums\StockPricePeriod;
 use App\Repositories\StockRepositoryInterface;
 use App\Repositories\WatchlistRepositoryInterface;
+use App\Services\Stock\StockPricePeriodAvailabilityService;
+use Carbon\CarbonImmutable;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class ShowStockUseCase
@@ -20,6 +22,7 @@ final class ShowStockUseCase
     public function __construct(
         private StockRepositoryInterface $stockRepository,
         private WatchlistRepositoryInterface $watchlistRepository,
+        private StockPricePeriodAvailabilityService $stockPricePeriodAvailabilityService,
     ) {}
 
     public function execute(int $stockId, StockPricePeriod $period, int $userId): StockDetailData
@@ -31,8 +34,24 @@ final class ShowStockUseCase
         }
 
         $latestPrice = $this->stockRepository->findLatestPriceByStockId($stock->id);
+        $oldestPrice = $this->stockRepository->findOldestPriceByStockId($stock->id);
+        $latestPriceDate = $latestPrice === null
+            ? null
+            : CarbonImmutable::parse($latestPrice->price_date);
+        $oldestPriceDate = $oldestPrice === null
+            ? null
+            : CarbonImmutable::parse($oldestPrice->price_date);
+        $periodAvailability = $this->stockPricePeriodAvailabilityService->resolve(
+            requestedPeriod: $period,
+            oldestDate: $oldestPriceDate,
+            latestDate: $latestPriceDate,
+        );
+        $selectedPeriod = $periodAvailability->selectedPeriod;
         $priceHistory = $this->stockRepository
-            ->findPricesByStockIdSince($stock->id, $period->startDate())
+            ->findPricesByStockIdSince(
+                $stock->id,
+                $selectedPeriod->startDate($latestPriceDate),
+            )
             ->map(fn ($price): StockPriceData => StockPriceData::fromModel($price))
             ->all();
         $relatedNews = $this->stockRepository
@@ -57,8 +76,9 @@ final class ShowStockUseCase
             relatedNews: $relatedNews,
             analyses: $analyses,
             signals: $signals,
-            selectedPeriod: $period,
-            periodOptions: StockPricePeriod::toSelectArray(),
+            selectedPeriod: $selectedPeriod,
+            periodOptions: $periodAvailability->periodOptions,
+            priceHistoryNotice: $periodAvailability->notice,
         );
     }
 }

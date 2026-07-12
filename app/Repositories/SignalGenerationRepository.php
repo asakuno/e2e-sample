@@ -58,6 +58,7 @@ final class SignalGenerationRepository implements SignalGenerationRepositoryInte
     public function upsertSignal(
         int $stockId,
         CarbonInterface $signalDate,
+        string $promptVersion,
         GeneratedStockSignalData $data,
     ): StockSignal {
         $date = $signalDate->toDateString();
@@ -66,6 +67,7 @@ final class SignalGenerationRepository implements SignalGenerationRepositoryInte
                 [
                     'stock_id' => $stockId,
                     'signal_date' => $date,
+                    'prompt_version' => $promptVersion,
                     'news_score' => $data->newsScore,
                     'disclosure_score' => $data->disclosureScore,
                     'macro_score' => $data->macroScore,
@@ -77,7 +79,7 @@ final class SignalGenerationRepository implements SignalGenerationRepositoryInte
                     'generated_at' => now(),
                 ],
             ],
-            ['stock_id', 'signal_date'],
+            ['stock_id', 'signal_date', 'prompt_version'],
             [
                 'news_score',
                 'disclosure_score',
@@ -94,6 +96,7 @@ final class SignalGenerationRepository implements SignalGenerationRepositoryInte
         return StockSignal::query()
             ->where('stock_id', $stockId)
             ->whereDate('signal_date', $date)
+            ->where('prompt_version', $promptVersion)
             ->firstOrFail();
     }
 }

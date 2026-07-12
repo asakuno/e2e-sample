@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Watchlist;
 use App\Repositories\DashboardRepositoryInterface;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -111,6 +112,34 @@ final class DashboardRepositoryTest extends TestCase
             fn ($score): float => (float) $score,
         )->all());
         $this->assertRankedSelectionUsesSqlLimit(5);
+    }
+
+    public function test_ランキングは現行prompt_versionのシグナルだけを使用する(): void
+    {
+        // Arrange
+        config()->set('services.openai.prompt_version', 'v2');
+        $user = User::factory()->create();
+        $stock = Stock::factory()->create();
+        Watchlist::factory()->for($user)->for($stock)->create(['is_active' => true]);
+        $legacySignal = StockSignal::factory()->for($stock)->create([
+            'prompt_version' => 'v1',
+            'signal_date' => '2026-06-16',
+            'total_score' => 10,
+        ]);
+        $currentSignal = StockSignal::factory()->for($stock)->create([
+            'prompt_version' => 'v2',
+            'signal_date' => '2026-06-16',
+            'total_score' => 2,
+        ]);
+
+        // Act
+        $topSignals = $this->repository->findTopSignals($user->id, 5);
+        $attentionSignals = $this->repository->findAttentionSignals($user->id, 5);
+
+        // Assert
+        $this->assertSame([$currentSignal->id], $topSignals->pluck('id')->all());
+        $this->assertSame([$currentSignal->id], $attentionSignals->pluck('id')->all());
+        $this->assertNotContains($legacySignal->id, $topSignals->pluck('id')->all());
     }
 
     public function test_重要ニュースは直近7日の現行prompt分析を記事ごとに一件返す(): void
@@ -321,6 +350,31 @@ final class DashboardRepositoryTest extends TestCase
 
         // Assert
         $this->assertSame($expected, $actual);
+    }
+
+    public function test_日別分析件数は日本標準時の日付境界で集計する(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $stock = Stock::factory()->create();
+        Watchlist::factory()->for($user)->for($stock)->create(['is_active' => true]);
+
+        foreach ([
+            '2026-07-11 14:59:59',
+            '2026-07-11 15:00:00',
+            '2026-07-12 14:59:59',
+            '2026-07-12 15:00:00',
+        ] as $analyzedAt) {
+            AnalysisResult::factory()->for($stock)->create(['analyzed_at' => $analyzedAt]);
+        }
+
+        $date = CarbonImmutable::parse('2026-07-12', 'Asia/Tokyo');
+
+        // Act
+        $counts = $this->repository->countAnalysesByDate($user->id, $date, $date);
+
+        // Assert
+        $this->assertSame(['2026-07-12' => 2], $counts);
     }
 
     private function assertRankedSelectionUsesSqlLimit(int $limit): void

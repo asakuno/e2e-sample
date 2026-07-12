@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Unit\Services\MarketData;
 
 use App\Data\MarketData\StockPriceData;
-use App\Models\Stock;
 use App\Services\MarketData\Providers\AlphaVantagePriceProvider;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\Factory;
@@ -63,7 +62,7 @@ final class AlphaVantagePriceProviderTest extends TestCase
         $provider = $this->provider();
 
         // Act
-        $prices = $provider->fetchDailyPrices($this->stock('AAPL'));
+        $prices = $provider->fetchDailyPrices('AAPL');
 
         // Assert
         $this->assertCount(1, $prices);
@@ -107,7 +106,7 @@ final class AlphaVantagePriceProviderTest extends TestCase
         $provider = $this->provider(function: AlphaVantagePriceProvider::FUNCTION_DAILY);
 
         // Act
-        $price = $provider->fetchDailyPrices($this->stock('IBM'))->first();
+        $price = $provider->fetchDailyPrices('IBM')->first();
 
         // Assert
         $this->assertInstanceOf(StockPriceData::class, $price);
@@ -130,7 +129,7 @@ final class AlphaVantagePriceProviderTest extends TestCase
         $this->expectExceptionMessage('Alpha Vantage API error:');
 
         // Act
-        $provider->fetchDailyPrices($this->stock('AAPL'));
+        $provider->fetchDailyPrices('AAPL');
     }
 
     /**
@@ -156,7 +155,7 @@ final class AlphaVantagePriceProviderTest extends TestCase
         $this->expectExceptionMessage('Time Series (Daily)');
 
         // Act
-        $provider->fetchDailyPrices($this->stock('AAPL'));
+        $provider->fetchDailyPrices('AAPL');
     }
 
     /**
@@ -178,7 +177,7 @@ final class AlphaVantagePriceProviderTest extends TestCase
         $this->expectExceptionMessage('missing or invalid');
 
         // Act
-        $provider->fetchDailyPrices($this->stock('AAPL'));
+        $provider->fetchDailyPrices('AAPL');
     }
 
     /**
@@ -230,7 +229,7 @@ final class AlphaVantagePriceProviderTest extends TestCase
         $this->expectExceptionMessage('invalid price date');
 
         // Act
-        $provider->fetchDailyPrices($this->stock('AAPL'));
+        $provider->fetchDailyPrices('AAPL');
     }
 
     public function test_httpエラーをruntime例外へ変換する(): void
@@ -244,7 +243,7 @@ final class AlphaVantagePriceProviderTest extends TestCase
         $this->expectExceptionMessage('HTTP status 503');
 
         // Act
-        $provider->fetchDailyPrices($this->stock('AAPL'));
+        $provider->fetchDailyPrices('AAPL');
     }
 
     private function provider(string $function = AlphaVantagePriceProvider::FUNCTION_DAILY_ADJUSTED): AlphaVantagePriceProvider
@@ -255,11 +254,6 @@ final class AlphaVantagePriceProviderTest extends TestCase
             baseUrl: self::BASE_URL,
             function: $function,
         );
-    }
-
-    private function stock(string $symbol): Stock
-    {
-        return new Stock(['symbol' => $symbol]);
     }
 
     /**

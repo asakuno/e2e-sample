@@ -67,9 +67,27 @@ final class StockRepository implements StockRepositoryInterface
     {
         return StockPrice::query()
             ->where('stock_id', $stockId)
-            ->whereNotNull('close')
+            ->where(
+                fn (Builder $query): Builder => $query
+                    ->whereNotNull('adjusted_close')
+                    ->orWhereNotNull('close'),
+            )
             ->orderByDesc('price_date')
             ->orderByDesc('id')
+            ->first();
+    }
+
+    public function findOldestPriceByStockId(int $stockId): ?StockPrice
+    {
+        return StockPrice::query()
+            ->where('stock_id', $stockId)
+            ->where(
+                fn (Builder $query): Builder => $query
+                    ->whereNotNull('adjusted_close')
+                    ->orWhereNotNull('close'),
+            )
+            ->orderBy('price_date')
+            ->orderBy('id')
             ->first();
     }
 
@@ -81,7 +99,11 @@ final class StockRepository implements StockRepositoryInterface
         return StockPrice::query()
             ->where('stock_id', $stockId)
             ->whereDate('price_date', '>=', $since->toDateString())
-            ->whereNotNull('close')
+            ->where(
+                fn (Builder $query): Builder => $query
+                    ->whereNotNull('adjusted_close')
+                    ->orWhereNotNull('close'),
+            )
             ->orderBy('price_date')
             ->orderBy('id')
             ->get();
@@ -134,6 +156,7 @@ final class StockRepository implements StockRepositoryInterface
     {
         return StockSignal::query()
             ->where('stock_id', $stockId)
+            ->where('prompt_version', $this->currentPromptVersion())
             ->orderByDesc('signal_date')
             ->orderByDesc('id')
             ->limit($limit)

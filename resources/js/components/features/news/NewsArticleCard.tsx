@@ -36,7 +36,7 @@ export function NewsArticleCard({
           {article.published_at === null ? (
             <span>公開日時不明</span>
           ) : (
-            <time dateTime={article.published_at.replace(' ', 'T')} className="tabular-nums">
+            <time dateTime={article.published_at} className="tabular-nums">
               {formatNewsDateTime(article.published_at)}
             </time>
           )}

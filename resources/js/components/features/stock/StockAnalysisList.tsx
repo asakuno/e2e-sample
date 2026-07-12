@@ -171,10 +171,7 @@ function AnalysisTimestamp({ analyzedAt }: { analyzedAt: string | null }) {
   }
 
   return (
-    <time
-      dateTime={analyzedAt.replace(' ', 'T')}
-      className="text-muted-foreground text-xs tabular-nums"
-    >
+    <time dateTime={analyzedAt} className="text-muted-foreground text-xs tabular-nums">
       分析 {formatNewsDateTime(analyzedAt)}
     </time>
   );

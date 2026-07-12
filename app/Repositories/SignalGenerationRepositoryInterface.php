@@ -32,6 +32,7 @@ interface SignalGenerationRepositoryInterface
     public function upsertSignal(
         int $stockId,
         CarbonInterface $signalDate,
+        string $promptVersion,
         GeneratedStockSignalData $data,
     ): StockSignal;
 }

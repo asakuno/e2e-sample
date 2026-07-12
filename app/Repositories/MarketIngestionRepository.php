@@ -6,9 +6,10 @@ namespace App\Repositories;
 
 use App\Data\MarketData\NewsArticleData;
 use App\Data\MarketData\StockPriceData;
+use App\Enums\MarketDataProvider;
 use App\Models\NewsArticle;
-use App\Models\Stock;
 use App\Models\StockPrice;
+use App\Models\StockProviderSymbol;
 use App\Models\Watchlist;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -18,11 +19,21 @@ final class MarketIngestionRepository implements MarketIngestionRepositoryInterf
     /**
      * @return array<int, int>
      */
-    public function findTrackedStockIds(): array
+    public function findTrackedStockIds(MarketDataProvider $provider): array
     {
         return Watchlist::query()
             ->active()
-            ->whereHas('stock', fn (Builder $query): Builder => $query->where('is_active', true))
+            ->whereHas(
+                'stock',
+                fn (Builder $query): Builder => $query
+                    ->where('is_active', true)
+                    ->whereHas(
+                        'providerSymbols',
+                        fn (Builder $query): Builder => $query
+                            ->where('provider', $provider->value)
+                            ->whereRaw("TRIM(provider_symbol) <> ''"),
+                    ),
+            )
             ->select('stock_id')
             ->distinct()
             ->orderBy('stock_id')
@@ -31,9 +42,24 @@ final class MarketIngestionRepository implements MarketIngestionRepositoryInterf
             ->all();
     }
 
-    public function findActiveStockById(int $stockId): ?Stock
-    {
-        return Stock::query()->active()->find($stockId);
+    public function findProviderSymbolForActiveStock(
+        int $stockId,
+        MarketDataProvider $provider,
+    ): ?string {
+        $providerSymbol = StockProviderSymbol::query()
+            ->where('stock_id', $stockId)
+            ->where('provider', $provider->value)
+            ->whereRaw("TRIM(provider_symbol) <> ''")
+            ->whereHas('stock', fn (Builder $query): Builder => $query->where('is_active', true))
+            ->value('provider_symbol');
+
+        if (! is_string($providerSymbol)) {
+            return null;
+        }
+
+        $providerSymbol = trim($providerSymbol);
+
+        return $providerSymbol === '' ? null : $providerSymbol;
     }
 
     public function upsertStockPrice(int $stockId, StockPriceData $data): StockPrice

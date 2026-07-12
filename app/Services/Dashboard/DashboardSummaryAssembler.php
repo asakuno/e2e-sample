@@ -10,6 +10,7 @@ use App\Data\Dashboard\DashboardSummaryData;
 use App\Data\Dashboard\DashboardTopStockData;
 use App\Data\Dashboard\DashboardTrendData;
 use App\Data\Dashboard\DashboardTrendPointData;
+use App\Data\Support\UtcDateTimeSerializer;
 use App\Enums\AnalysisSentiment;
 use App\Enums\DashboardStatKind;
 use App\Models\AnalysisResult;
@@ -264,14 +265,6 @@ final class DashboardSummaryAssembler
 
     private function formatDateTime(mixed $value): ?string
     {
-        if ($value === null) {
-            return null;
-        }
-
-        if ($value instanceof CarbonInterface) {
-            return $value->format('Y-m-d H:i');
-        }
-
-        return CarbonImmutable::parse((string) $value)->format('Y-m-d H:i');
+        return UtcDateTimeSerializer::serialize($value);
     }
 }

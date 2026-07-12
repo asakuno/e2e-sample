@@ -267,6 +267,7 @@ final class StocksPageControllerTest extends TestCase
         StockPrice::factory()->for($stock)->create([
             'price_date' => '2025-12-31',
             'close' => 150.00,
+            'adjusted_close' => 150.00,
             'volume' => 10_000,
         ]);
         StockPrice::factory()->for($stock)->create([
@@ -275,6 +276,7 @@ final class StocksPageControllerTest extends TestCase
             'high' => 166.00,
             'low' => 158.00,
             'close' => 165.00,
+            'adjusted_close' => null,
             'volume' => 20_000,
         ]);
         StockPrice::factory()->for($stock)->create([
@@ -283,6 +285,7 @@ final class StocksPageControllerTest extends TestCase
             'high' => 185.00,
             'low' => 178.00,
             'close' => 182.50,
+            'adjusted_close' => 91.25,
             'volume' => 30_000,
         ]);
 
@@ -300,11 +303,190 @@ final class StocksPageControllerTest extends TestCase
             ->where('stock.selected_period', '3M')
             ->where('stock.latest_price.price_date', '2026-05-30')
             ->where('stock.latest_price.close', 182.5)
+            ->where('stock.latest_price.effective_close', 91.25)
             ->where('stock.latest_price.volume', 30_000)
             ->has('stock.price_history', 2)
             ->where('stock.price_history.0.price_date', '2026-03-01')
+            ->where('stock.price_history.0.effective_close', 165)
             ->where('stock.price_history.1.price_date', '2026-05-30')
+            ->where('stock.price_history.1.effective_close', 91.25)
             ->has('stock.period_options', 4)
+        );
+    }
+
+    public function test_30日分の価格履歴では1か月だけ利用でき長期指定は既定期間へ戻る(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $stock = Stock::factory()->create();
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2026-06-10',
+            'close' => 100,
+            'adjusted_close' => 100,
+        ]);
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2026-07-10',
+            'close' => 110,
+            'adjusted_close' => 110,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)->get(route('stocks.show', [
+            'stock' => $stock->id,
+            'period' => '1Y',
+        ]));
+
+        // Assert
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('stock.selected_period', '1M')
+            ->where('stock.period_options', [
+                ['value' => '1M', 'label' => '1M', 'available' => true],
+                ['value' => '3M', 'label' => '3M', 'available' => false],
+                ['value' => '6M', 'label' => '6M', 'available' => false],
+                ['value' => '1Y', 'label' => '1Y', 'available' => false],
+            ])
+            ->where(
+                'stock.price_history_notice',
+                '指定期間の価格履歴が不足しているため、1Mを表示しています。',
+            )
+        );
+    }
+
+    public function test_通常終値がnullでも調整後終値がある価格を銘柄詳細に表示できる(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $stock = Stock::factory()->create();
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2026-06-10',
+            'close' => 100,
+            'adjusted_close' => 100,
+        ]);
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2026-07-10',
+            'close' => null,
+            'adjusted_close' => 110,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)->get(route('stocks.show', $stock->id));
+
+        // Assert
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('stock.latest_price.price_date', '2026-07-10')
+            ->where('stock.latest_price.close', null)
+            ->where('stock.latest_price.effective_close', 110)
+            ->has('stock.price_history', 2)
+        );
+    }
+
+    public function test_約100営業日分の価格履歴では3か月まで利用できる(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $stock = Stock::factory()->create();
+        $date = Carbon::parse('2026-07-10');
+        $createdCount = 0;
+
+        while ($createdCount < 100) {
+            if ($date->isWeekday()) {
+                StockPrice::factory()->for($stock)->create([
+                    'price_date' => $date->toDateString(),
+                    'close' => 100 + $createdCount,
+                    'adjusted_close' => 100 + $createdCount,
+                ]);
+                $createdCount++;
+            }
+
+            $date->subDay();
+        }
+
+        // Act
+        $response = $this->actingAs($user)->get(route('stocks.show', [
+            'stock' => $stock->id,
+            'period' => '3M',
+        ]));
+
+        // Assert
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('stock.selected_period', '3M')
+            ->where('stock.period_options.0.available', true)
+            ->where('stock.period_options.1.available', true)
+            ->where('stock.period_options.2.available', false)
+            ->where('stock.period_options.3.available', false)
+            ->where('stock.price_history_notice', null)
+        );
+    }
+
+    public function test_1年以上の価格履歴ではすべての期間を利用できる(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $stock = Stock::factory()->create();
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2025-07-10',
+            'close' => 100,
+            'adjusted_close' => 100,
+        ]);
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2026-07-10',
+            'close' => 120,
+            'adjusted_close' => 120,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)->get(route('stocks.show', [
+            'stock' => $stock->id,
+            'period' => '1Y',
+        ]));
+
+        // Assert
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('stock.selected_period', '1Y')
+            ->where('stock.period_options.0.available', true)
+            ->where('stock.period_options.1.available', true)
+            ->where('stock.period_options.2.available', true)
+            ->where('stock.period_options.3.available', true)
+            ->where('stock.price_history_notice', null)
+        );
+    }
+
+    public function test_1か月未満の価格履歴では全期間を無効化して取得済み範囲を表示する(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $stock = Stock::factory()->create();
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2026-06-25',
+            'close' => 100,
+            'adjusted_close' => 100,
+        ]);
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2026-07-10',
+            'close' => 110,
+            'adjusted_close' => 110,
+        ]);
+
+        // Act
+        $response = $this->actingAs($user)->get(route('stocks.show', $stock->id));
+
+        // Assert
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('stock.selected_period', '1M')
+            ->where('stock.period_options.0.available', false)
+            ->where('stock.period_options.1.available', false)
+            ->where('stock.period_options.2.available', false)
+            ->where('stock.period_options.3.available', false)
+            ->where(
+                'stock.price_history_notice',
+                '価格履歴が1か月分に満たないため、取得済みの範囲のみ表示しています。',
+            )
+            ->has('stock.price_history', 2)
         );
     }
 
@@ -368,6 +550,9 @@ final class StocksPageControllerTest extends TestCase
             ->where('stock.signals.0.signal_date', '2026-06-15')
             ->where('stock.signals.0.total_score', 7)
             ->where('stock.signals.0.reason', 'ニュースと分析結果が上向きです。')
+            ->where('stock.related_news.0.published_at', '2026-06-15T10:00:00+00:00')
+            ->where('stock.analyses.0.analyzed_at', '2026-06-15T11:00:00+00:00')
+            ->where('stock.signals.0.generated_at', '2026-06-15T12:00:00+00:00')
         );
     }
 

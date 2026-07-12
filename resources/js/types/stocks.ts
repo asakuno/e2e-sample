@@ -24,12 +24,14 @@ export interface StockPricePoint {
   low: number | null;
   close: number | null;
   adjusted_close: number | null;
+  effective_close: number | null;
   volume: number | null;
 }
 
 export interface StockPeriodOption {
   value: '1M' | '3M' | '6M' | '1Y';
   label: string;
+  available: boolean;
 }
 
 export interface StockWatchlist {
@@ -48,6 +50,7 @@ export interface StockDetail extends StockListItem {
   signals: StockSignal[];
   selected_period: StockPeriodOption['value'];
   period_options: StockPeriodOption[];
+  price_history_notice: string | null;
 }
 
 export interface StockSignal {

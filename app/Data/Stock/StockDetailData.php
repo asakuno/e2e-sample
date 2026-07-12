@@ -22,7 +22,7 @@ final class StockDetailData extends Data
      * @param  array<int, NewsArticleData>  $relatedNews
      * @param  array<int, NewsAnalysisData>  $analyses
      * @param  array<int, StockSignalData>  $signals
-     * @param  array<int, array{value: string, label: string}>  $periodOptions
+     * @param  array<int, array{value: string, label: string, available: bool}>  $periodOptions
      */
     public function __construct(
         public readonly int $id,
@@ -43,6 +43,7 @@ final class StockDetailData extends Data
         public readonly array $signals,
         public readonly StockPricePeriod $selectedPeriod,
         public readonly array $periodOptions,
+        public readonly ?string $priceHistoryNotice,
     ) {}
 
     /**
@@ -50,7 +51,7 @@ final class StockDetailData extends Data
      * @param  array<int, NewsArticleData>  $relatedNews
      * @param  array<int, NewsAnalysisData>  $analyses
      * @param  array<int, StockSignalData>  $signals
-     * @param  array<int, array{value: string, label: string}>  $periodOptions
+     * @param  array<int, array{value: string, label: string, available: bool}>  $periodOptions
      */
     public static function fromModel(
         Stock $stock,
@@ -62,6 +63,7 @@ final class StockDetailData extends Data
         array $signals,
         StockPricePeriod $selectedPeriod,
         array $periodOptions,
+        ?string $priceHistoryNotice,
     ): self {
         return new self(
             id: $stock->id,
@@ -82,6 +84,7 @@ final class StockDetailData extends Data
             signals: $signals,
             selectedPeriod: $selectedPeriod,
             periodOptions: $periodOptions,
+            priceHistoryNotice: $priceHistoryNotice,
         );
     }
 }

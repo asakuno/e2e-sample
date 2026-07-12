@@ -1,5 +1,6 @@
 import type { StockSignal } from '@/types/stocks';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { formatJstDateTime } from '@/lib/formatters';
 
 interface StockSignalListProps {
   signals: StockSignal[];
@@ -20,7 +21,7 @@ export function StockSignalList({ signals }: StockSignalListProps) {
                 {signal.signal_date}
               </p>
               <p className="mt-1 text-muted-foreground text-xs tabular-nums">
-                生成日時 {formatSignalDateTime(signal.generated_at)}
+                生成日時 {formatJstDateTime(signal.generated_at)}
               </p>
             </div>
             <ScoreBadge score={signal.total_score} />
@@ -81,10 +82,4 @@ function EmptyState({ message }: { message: string }) {
 
 function formatScore(value: number): string {
   return value > 0 ? `+${value.toFixed(2)}` : value.toFixed(2);
-}
-
-function formatSignalDateTime(value: string): string {
-  const normalized = value.replace('T', ' ');
-
-  return normalized.length >= 16 ? normalized.slice(0, 16) : normalized;
 }

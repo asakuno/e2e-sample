@@ -10,7 +10,7 @@ type StockDetailHeaderProps = {
 };
 
 export function StockDetailHeader({ stock, watchlistControl }: StockDetailHeaderProps) {
-  const latestClose = stock.latest_price?.close ?? null;
+  const latestClose = stock.latest_price?.effective_close ?? null;
   const previousDayChange = calculatePreviousDayChange(stock.latest_price, stock.price_history);
 
   return (
