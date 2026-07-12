@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 import type {
@@ -406,10 +406,17 @@ describe('Stock app navigation pages', () => {
 
   it('StockDetail ページに価格履歴が表示されること', () => {
     render(<StockDetail {...stocksProps} stock={stockDetail} />);
+    const priceMetric = screen.getByText('基準価格（調整後優先）').closest('div');
+    const historyTable = screen.getByRole('columnheader', { name: '調整後終値' }).closest('table');
+    const historyRow =
+      historyTable === null ? null : within(historyTable).getByText('2026-05-30').closest('tr');
+
     expect(document.querySelector('title')).toHaveTextContent('AAPL - Stocks');
     expect(screen.getByRole('heading', { name: 'AAPL' })).toBeInTheDocument();
-    expect(screen.getByText('最新価格')).toBeInTheDocument();
-    expect(screen.getAllByText('$182.50')).toHaveLength(2);
+    expect(priceMetric).not.toBeNull();
+    expect(within(priceMetric!).getByText('$182.50')).toBeInTheDocument();
+    expect(historyRow).not.toBeNull();
+    expect(within(historyRow!).getAllByText('$182.50')).toHaveLength(2);
     expect(screen.getByRole('link', { name: '3M' })).toHaveAttribute('href', '/stocks/1?period=3M');
     expect(screen.getByText('価格履歴一覧')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '関連ニュース' })).toBeInTheDocument();

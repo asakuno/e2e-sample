@@ -195,10 +195,10 @@ P0 / P1 相当の動作、データ破壊、セキュリティ上の重大な指
 
 ## 自動検証結果
 
-2026-07-12 時点の結果:
+2026-07-12 時点のローカル検証結果:
 
 - PHPUnit: **239 tests / 1240 assertions passed**
-- Vitest: **53 files / 295 tests passed**
+- Vitest: 前回全件 **53 files / 295 tests passed**、今回変更したページ回帰テスト **1 file / 18 tests passed**
 - Playwright: **2 tests passed**（認証セットアップ + Stocks 検索から詳細表示）
 - PHPStan: passed
 - Pint: passed
@@ -214,7 +214,7 @@ P0 / P1 相当の動作、データ破壊、セキュリティ上の重大な指
 
 CI には SQLite の分離DBを作成し、migrate / seed / build 後に Playwright を実行する E2E ジョブを追加した。失敗時は Playwright のレポートと実行成果物を保存する。
 
-`npm run test:coverage` は、既存の `@vitest/coverage-v8` が依存関係に含まれていないため未実行である。今回の依頼には依存追加の承認がないため追加していない。通常の全 Vitest は完走している。
+`npm run test:coverage` は、既存の `@vitest/coverage-v8` が依存関係に含まれていないため未実行である。今回の依頼には依存追加の承認がないため追加していない。価格ラベル変更に伴うページ回帰テストとPlaywrightは修正後に完走しており、全CIはpush後に再確認する。
 
 ## 運用開始前に残る確認
 

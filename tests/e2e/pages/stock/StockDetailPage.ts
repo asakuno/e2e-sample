@@ -8,7 +8,7 @@ export class StockDetailPage extends BasePage {
   constructor(page: Page, path: string) {
     super(page);
     this.path = path;
-    this.backToStocksLink = page.getByRole('link', { name: '銘柄一覧へ戻る' });
+    this.backToStocksLink = page.getByRole('link', { name: '銘柄一覧', exact: true });
   }
 
   async goto(): Promise<void> {
@@ -18,6 +18,6 @@ export class StockDetailPage extends BasePage {
   async expectLoaded(symbol: string): Promise<void> {
     await expect(this.page).toHaveURL(/\/stocks\/\d+/);
     await expect(this.page.getByRole('heading', { name: symbol, exact: true })).toBeVisible();
-    await expect(this.page.getByText('最新価格', { exact: true })).toBeVisible();
+    await expect(this.page.getByText('基準価格（調整後優先）', { exact: true })).toBeVisible();
   }
 }
