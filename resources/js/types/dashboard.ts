@@ -45,6 +45,8 @@ export interface ActivityItemData {
   description: string;
   timeAgo: string;
   dotColor: 'blue' | 'green' | 'orange' | 'gray';
+  source: string | null;
+  publishedAt: string | null;
 }
 
 /** 注目銘柄ランキングデータ */
@@ -54,10 +56,15 @@ export interface TopStockData {
   name: string;
   market: string;
   totalScore: number;
+  latestPrice: number | null;
+  changePercent: number | null;
+  sentiment: number | null;
+  sentimentLabel: string | null;
   positiveCount: number;
   negativeCount: number;
   reason: string | null;
   signalDate: string | null;
+  updatedAt: string | null;
 }
 
 /** ダッシュボードページProps */

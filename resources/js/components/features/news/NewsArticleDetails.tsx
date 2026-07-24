@@ -1,7 +1,8 @@
 import { ExternalLink } from 'lucide-react';
+import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
+import { show as stockShow } from '@/routes/stocks';
 import type { NewsAnalysis, NewsArticle, NewsArticleStock } from '@/types/news';
-import { formatNewsDateTime, formatSignedImpactScore } from './news-presenter';
-import { SentimentBadge } from './SentimentBadge';
+import { NewsAnalysisCard } from './NewsAnalysisCard';
 
 export function NewsArticleDetails({ article }: { article: NewsArticle }) {
   return (
@@ -50,14 +51,20 @@ function RelatedStocks({ stocks }: { stocks: NewsArticleStock[] }) {
       ) : (
         <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {stocks.map((stock) => (
-            <li key={stock.id} className="rounded-md border border-border bg-muted/55 p-3">
-              <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
-                <span className="font-semibold text-foreground text-sm">{stock.symbol}</span>
-                <span className="min-w-0 break-words text-foreground text-sm">{stock.name}</span>
-              </div>
-              <p className="mt-1 text-muted-foreground text-xs tabular-nums">
-                関連度 {stock.relevance_score ?? '未算出'}
-              </p>
+            <li key={stock.id}>
+              <InertiaActionLink
+                href={stockShow.url(stock.id)}
+                pendingClassName="opacity-70"
+                className="block min-h-11 rounded-md border border-border bg-muted/55 p-3 transition-[background-color,border-color] duration-motion-fast ease-standard hover:border-ring hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none"
+              >
+                <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+                  <span className="font-semibold text-foreground text-sm">{stock.symbol}</span>
+                  <span className="min-w-0 break-words text-foreground text-sm">{stock.name}</span>
+                </span>
+                <span className="mt-1 block text-muted-foreground text-xs tabular-nums">
+                  関連度 {stock.relevance_score ?? '未算出'}
+                </span>
+              </InertiaActionLink>
             </li>
           ))}
         </ul>
@@ -77,46 +84,8 @@ function AnalysisDetails({ analyses }: { analyses: NewsAnalysis[] }) {
       ) : (
         <ul className="mt-3 flex flex-col gap-3">
           {analyses.map((analysis) => (
-            <li key={analysis.id} className="rounded-md border border-border bg-muted/55 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-semibold text-foreground text-sm">{analysis.stock.symbol}</p>
-                  <p className="mt-0.5 break-words text-muted-foreground text-xs">
-                    {analysis.stock.name}
-                  </p>
-                </div>
-                <SentimentBadge sentiment={analysis.sentiment} label={analysis.sentiment_label} />
-              </div>
-
-              <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-xs sm:grid-cols-3">
-                <div>
-                  <dt className="text-muted-foreground">影響度</dt>
-                  <dd className="mt-1 font-semibold text-foreground tabular-nums">
-                    {formatSignedImpactScore(analysis.impact_score)}/10
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">信頼度</dt>
-                  <dd className="mt-1 font-semibold text-foreground tabular-nums">
-                    {analysis.confidence_score}%
-                  </dd>
-                </div>
-                <div className="col-span-2 sm:col-span-1">
-                  <dt className="text-muted-foreground">分析日時</dt>
-                  <dd className="mt-1 text-foreground tabular-nums">
-                    {analysis.analyzed_at === null
-                      ? '日時不明'
-                      : formatNewsDateTime(analysis.analyzed_at)}
-                  </dd>
-                </div>
-              </dl>
-
-              <div className="mt-4 border-border border-t pt-3">
-                <h4 className="font-medium text-muted-foreground text-xs">AI要約</h4>
-                <p className="mt-1 break-words whitespace-pre-wrap text-foreground text-sm leading-6">
-                  {analysis.summary}
-                </p>
-              </div>
+            <li key={analysis.id}>
+              <NewsAnalysisCard analysis={analysis} />
             </li>
           ))}
         </ul>

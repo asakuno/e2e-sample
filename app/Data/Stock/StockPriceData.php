@@ -22,18 +22,23 @@ final class StockPriceData extends Data
         public readonly ?float $low,
         public readonly ?float $close,
         public readonly ?float $adjustedClose,
+        public readonly ?float $effectiveClose,
         public readonly ?int $volume,
     ) {}
 
     public static function fromModel(StockPrice $price): self
     {
+        $close = self::nullableFloat($price->close);
+        $adjustedClose = self::nullableFloat($price->adjusted_close);
+
         return new self(
             priceDate: Carbon::parse($price->price_date)->toDateString(),
             open: self::nullableFloat($price->open),
             high: self::nullableFloat($price->high),
             low: self::nullableFloat($price->low),
-            close: self::nullableFloat($price->close),
-            adjustedClose: self::nullableFloat($price->adjusted_close),
+            close: $close,
+            adjustedClose: $adjustedClose,
+            effectiveClose: $adjustedClose ?? $close,
             volume: $price->volume,
         );
     }

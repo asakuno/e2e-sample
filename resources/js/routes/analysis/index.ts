@@ -129,7 +129,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 * @see Http/Controllers/Web/AnalysisPageController.php:68
 * @route '/analysis/{analysisBatch}'
 */
-export const show = (args: { analysisBatch: string | number | { public_id: string | number } } | [analysisBatch: string | number | { public_id: string | number } ] | string | number | { public_id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+export const show = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
@@ -144,7 +144,7 @@ show.definition = {
 * @see Http/Controllers/Web/AnalysisPageController.php:68
 * @route '/analysis/{analysisBatch}'
 */
-show.url = (args: { analysisBatch: string | number | { public_id: string | number } } | [analysisBatch: string | number | { public_id: string | number } ] | string | number | { public_id: string | number }, options?: RouteQueryOptions) => {
+show.url = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { analysisBatch: args }
     }
@@ -177,7 +177,7 @@ show.url = (args: { analysisBatch: string | number | { public_id: string | numbe
 * @see Http/Controllers/Web/AnalysisPageController.php:68
 * @route '/analysis/{analysisBatch}'
 */
-show.get = (args: { analysisBatch: string | number | { public_id: string | number } } | [analysisBatch: string | number | { public_id: string | number } ] | string | number | { public_id: string | number }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+show.get = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: show.url(args, options),
     method: 'get',
 })
@@ -187,7 +187,7 @@ show.get = (args: { analysisBatch: string | number | { public_id: string | numbe
 * @see Http/Controllers/Web/AnalysisPageController.php:68
 * @route '/analysis/{analysisBatch}'
 */
-show.head = (args: { analysisBatch: string | number | { public_id: string | number } } | [analysisBatch: string | number | { public_id: string | number } ] | string | number | { public_id: string | number }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+show.head = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: show.url(args, options),
     method: 'head',
 })

@@ -28,13 +28,14 @@ class StocksPageController extends Controller
         $userId = (int) $request->user()->getAuthIdentifier();
 
         return Inertia::render('Stocks', [
-            'stocks' => fn (): array => StockListItemResource::collection($useCase->execute($filters, $userId))->resolve($request),
+            'stocks' => fn (): array => StockListItemResource::collection(
+                $useCase->execute($filters, $userId),
+            )->response()->getData(true),
             'filters' => [
                 'q' => $filters->q ?? '',
                 'market' => $filters->market ?? '',
             ],
             'marketOptions' => fn (): array => $useCase->marketOptions(),
-            'watchlistedStockIds' => fn (): array => $useCase->watchlistedStockIds($userId),
         ]);
     }
 
@@ -43,12 +44,12 @@ class StocksPageController extends Controller
      */
     public function show(StockShowRequest $request, int $stock, ShowStockUseCase $useCase): Response
     {
+        $userId = (int) $request->user()->getAuthIdentifier();
+
         return Inertia::render('StockDetail', [
-            'stock' => StockDetailResource::make($useCase->execute(
-                $stock,
-                $request->period(),
-                (int) $request->user()->getAuthIdentifier(),
-            ))->resolve($request),
+            'stock' => StockDetailResource::make(
+                $useCase->execute($stock, $request->period(), $userId),
+            )->resolve($request),
         ]);
     }
 }

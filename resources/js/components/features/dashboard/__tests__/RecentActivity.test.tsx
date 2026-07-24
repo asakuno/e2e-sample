@@ -15,6 +15,8 @@ describe('RecentActivity', () => {
       description: 'タスクAを完了',
       timeAgo: '1分前',
       dotColor: 'green',
+      source: null,
+      publishedAt: null,
     },
     {
       id: 2,
@@ -23,6 +25,8 @@ describe('RecentActivity', () => {
       description: 'コメントを投稿',
       timeAgo: '3分前',
       dotColor: 'blue',
+      source: null,
+      publishedAt: null,
     },
   ];
 

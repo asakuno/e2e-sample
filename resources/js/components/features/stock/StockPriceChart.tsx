@@ -8,7 +8,8 @@ type StockPriceChartProps = {
 
 export function StockPriceChart({ prices, currency }: StockPriceChartProps) {
   const chartPrices = prices.filter(
-    (price): price is StockPricePoint & { close: number } => price.close !== null,
+    (price): price is StockPricePoint & { effective_close: number } =>
+      price.effective_close !== null,
   );
 
   if (chartPrices.length === 0) {
@@ -20,20 +21,25 @@ export function StockPriceChart({ prices, currency }: StockPriceChartProps) {
   }
 
   const width = 720;
-  const height = 260;
+  const height = 320;
   const paddingX = 28;
-  const paddingY = 24;
-  const closes = chartPrices.map((price) => price.close);
+  const priceTop = 24;
+  const priceBottom = 214;
+  const volumeTop = 254;
+  const volumeBottom = 296;
+  const closes = chartPrices.map((price) => price.effective_close);
   const min = Math.min(...closes);
   const max = Math.max(...closes);
   const range = max - min || 1;
+  const maxVolume = Math.max(...chartPrices.map((price) => price.volume ?? 0), 1);
+  const plotWidth = width - paddingX * 2;
+  const volumeSlotWidth = plotWidth / chartPrices.length;
+  const volumeBarWidth = Math.max(2, Math.min(14, volumeSlotWidth * 0.7));
   const coordinates = chartPrices.map((price, index) => {
     const x =
       paddingX +
-      (chartPrices.length === 1
-        ? (width - paddingX * 2) / 2
-        : (index / (chartPrices.length - 1)) * (width - paddingX * 2));
-    const y = height - paddingY - ((price.close - min) / range) * (height - paddingY * 2);
+      (chartPrices.length === 1 ? plotWidth / 2 : (index / (chartPrices.length - 1)) * plotWidth);
+    const y = priceBottom - ((price.effective_close - min) / range) * (priceBottom - priceTop);
 
     return { x, y };
   });
@@ -46,9 +52,12 @@ export function StockPriceChart({ prices, currency }: StockPriceChartProps) {
       <svg
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label={`${first.price_date}から${last.price_date}までの終値チャート`}
-        className="h-72 w-full"
+        aria-label={`${first.price_date}から${last.price_date}までの調整後終値（未取得時は終値）と出来高チャート`}
+        className="h-80 w-full"
       >
+        <title>
+          {first.price_date}から{last.price_date}までの調整後終値（未取得時は終値）と出来高
+        </title>
         <defs>
           <linearGradient id="price-line" x1="0" x2="1" y1="0" y2="0">
             <stop offset="0%" stopColor="var(--chart-1)" />
@@ -56,7 +65,7 @@ export function StockPriceChart({ prices, currency }: StockPriceChartProps) {
           </linearGradient>
         </defs>
         {[0, 1, 2, 3].map((line) => {
-          const y = paddingY + (line / 3) * (height - paddingY * 2);
+          const y = priceTop + (line / 3) * (priceBottom - priceTop);
 
           return (
             <line
@@ -85,6 +94,36 @@ export function StockPriceChart({ prices, currency }: StockPriceChartProps) {
               cy={point.y}
               className="fill-foreground"
               r="4"
+            />
+          );
+        })}
+        <line
+          x1={paddingX}
+          x2={width - paddingX}
+          y1={238}
+          y2={238}
+          className="stroke-border"
+          strokeWidth="1"
+        />
+        <text x={paddingX} y={250} className="fill-muted-foreground text-[11px]">
+          出来高
+        </text>
+        {chartPrices.map((price, index) => {
+          const volume = price.volume ?? 0;
+          const barHeight = (volume / maxVolume) * (volumeBottom - volumeTop);
+          const point = coordinates[index]!;
+
+          return (
+            <rect
+              key={`volume-${price.price_date}`}
+              data-volume-bar="true"
+              x={point.x - volumeBarWidth / 2}
+              y={volumeBottom - barHeight}
+              width={volumeBarWidth}
+              height={barHeight}
+              rx="1"
+              className="fill-chart-3"
+              opacity="0.6"
             />
           );
         })}

@@ -2,10 +2,23 @@
  * GuestLayout コンポーネントテスト
  */
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+
+const pageState = vi.hoisted(() => ({
+  flash: {} as { success?: string; error?: string },
+}));
+
+vi.mock('@inertiajs/react', () => ({
+  usePage: vi.fn(() => ({ props: { flash: pageState.flash } })),
+}));
+
 import { GuestLayout } from '../GuestLayout';
 
 describe('GuestLayout', () => {
+  beforeEach(() => {
+    pageState.flash = {};
+  });
+
   it('children が表示されること', () => {
     render(
       <GuestLayout>
@@ -40,5 +53,22 @@ describe('GuestLayout', () => {
       </GuestLayout>,
     );
     expect(screen.getByRole('main')).toBeInTheDocument();
+  });
+
+  it('成功フラッシュが共有された場合、カード内に通知を表示すること', () => {
+    // Arrange
+    const expected = '保存しました。';
+    pageState.flash = { success: expected };
+
+    // Act
+    render(
+      <GuestLayout>
+        <p>コンテンツ</p>
+      </GuestLayout>,
+    );
+    const actual = screen.getByRole('status').textContent;
+
+    // Assert
+    expect(actual).toBe(expected);
   });
 });

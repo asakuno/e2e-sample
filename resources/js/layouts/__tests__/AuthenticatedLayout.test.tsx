@@ -3,7 +3,11 @@
  */
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+
+const pageState = vi.hoisted(() => ({
+  flash: {} as { success?: string; error?: string },
+}));
 
 vi.mock('@inertiajs/react', () => ({
   router: {
@@ -16,6 +20,7 @@ vi.mock('@inertiajs/react', () => ({
       auth: {
         user: { id: 1, name: 'テストユーザー' },
       },
+      flash: pageState.flash,
     },
   })),
 }));
@@ -23,6 +28,10 @@ vi.mock('@inertiajs/react', () => ({
 import { AuthenticatedLayout } from '../AuthenticatedLayout';
 
 describe('AuthenticatedLayout', () => {
+  beforeEach(() => {
+    pageState.flash = {};
+  });
+
   it('children が描画されること', () => {
     // Arrange & Act
     render(
@@ -145,5 +154,22 @@ describe('AuthenticatedLayout', () => {
 
     // Assert
     expect(actual).not.toBeInTheDocument();
+  });
+
+  it('エラーフラッシュが共有された場合、メイン領域に警告を表示すること', () => {
+    // Arrange
+    const expected = '更新に失敗しました。';
+    pageState.flash = { error: expected };
+
+    // Act
+    render(
+      <AuthenticatedLayout>
+        <p>コンテンツ</p>
+      </AuthenticatedLayout>,
+    );
+    const actual = screen.getByRole('alert').textContent;
+
+    // Assert
+    expect(actual).toBe(expected);
   });
 });

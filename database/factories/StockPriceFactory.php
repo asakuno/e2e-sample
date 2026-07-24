@@ -31,7 +31,7 @@ class StockPriceFactory extends Factory
             'close' => $close,
             'adjusted_close' => $close,
             'volume' => fake()->numberBetween(100_000, 500_000_000),
-            'source' => 'factory',
+            'source' => 'alpha_vantage',
             'fetched_at' => now(),
         ];
     }

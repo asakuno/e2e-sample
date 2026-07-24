@@ -31,6 +31,13 @@ final class StockDetailResource extends JsonResource
             'sector' => $stock->sector,
             'industry' => $stock->industry,
             'description' => $stock->description,
+            'watchlist' => $stock->watchlist === null
+                ? null
+                : [
+                    'id' => $stock->watchlist->id,
+                    'memo' => $stock->watchlist->memo,
+                    'priority' => $stock->watchlist->priority,
+                ],
             'latest_price' => $stock->latestPrice === null
                 ? null
                 : StockPriceResource::make($stock->latestPrice)->resolve($request),
@@ -42,6 +49,7 @@ final class StockDetailResource extends JsonResource
             'period_signal' => $stock->periodSignal,
             'selected_period' => $stock->selectedPeriod->value,
             'period_options' => $stock->periodOptions,
+            'price_history_notice' => $stock->priceHistoryNotice,
         ];
     }
 }

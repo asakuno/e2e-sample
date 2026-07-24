@@ -2,6 +2,7 @@ import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { WatchlistContent } from '@/components/features/watchlist/WatchlistContent';
 import { WatchlistEditDialog } from '@/components/features/watchlist/WatchlistEditDialog';
+import { Pagination } from '@/components/ui/Pagination';
 import { AuthenticatedLayout } from '@/layouts/AuthenticatedLayout';
 import { runInertiaAction } from '@/lib/inertia-actions';
 import { destroy } from '@/routes/watchlist';
@@ -34,16 +35,18 @@ export default function Watchlist({ watchlists }: WatchlistPageProps) {
             <div className="rounded-md border border-border bg-card px-3 py-2 text-muted-foreground text-sm">
               登録件数{' '}
               <span className="font-semibold text-foreground tabular-nums">
-                {watchlists.length}
+                {watchlists.meta.total}
               </span>
             </div>
           </div>
 
           <WatchlistContent
-            items={watchlists}
+            items={watchlists.data}
             onEditMemo={setEditingItem}
             removeAction={handleRemove}
           />
+
+          <Pagination links={watchlists.links} meta={watchlists.meta} />
 
           <WatchlistEditDialog
             item={editingItem}

@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { NewsArticleList } from '@/components/features/news/NewsArticleList';
 import { NewsFiltersPanel } from '@/components/features/news/NewsFiltersPanel';
 import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
+import { Pagination } from '@/components/ui/Pagination';
 import { Surface } from '@/components/ui/surface';
 import { AuthenticatedLayout } from '@/layouts/AuthenticatedLayout';
 import { index as newsIndex } from '@/routes/news';
@@ -19,7 +20,7 @@ export default function News({ news, filters, stockOptions, sentimentOptions }: 
     filters.from,
     filters.to,
   ].join(':');
-  const newsListKey = `${filtersKey}:${news.map((article) => article.id).join(',')}`;
+  const newsListKey = `${filtersKey}:${news.data.map((article) => article.id).join(',')}`;
   const selectedArticleId = hasSelectedArticle ? Number(filters.article_id) : null;
 
   const filtersPanel = (
@@ -44,8 +45,10 @@ export default function News({ news, filters, stockOptions, sentimentOptions }: 
               </p>
             </div>
             <div className="rounded-md border border-border bg-card px-3 py-2 text-muted-foreground text-sm">
-              表示件数{' '}
-              <span className="font-semibold text-foreground tabular-nums">{news.length}</span>
+              該当件数{' '}
+              <span className="font-semibold text-foreground tabular-nums">
+                {news.meta.total.toLocaleString('ja-JP')}
+              </span>
             </div>
           </div>
 
@@ -54,9 +57,10 @@ export default function News({ news, filters, stockOptions, sentimentOptions }: 
               <SelectedArticleNotice />
               <NewsArticleList
                 key={newsListKey}
-                articles={news}
+                articles={news.data}
                 initialExpandedArticleId={selectedArticleId}
               />
+              <Pagination links={news.links} meta={news.meta} itemLabel="件" />
               <section aria-labelledby="other-news-search-heading" className="flex flex-col gap-4">
                 <div>
                   <h2
@@ -75,7 +79,8 @@ export default function News({ news, filters, stockOptions, sentimentOptions }: 
           ) : (
             <>
               {filtersPanel}
-              <NewsArticleList key={newsListKey} articles={news} />
+              <NewsArticleList key={newsListKey} articles={news.data} />
+              <Pagination links={news.links} meta={news.meta} itemLabel="件" />
             </>
           )}
         </div>

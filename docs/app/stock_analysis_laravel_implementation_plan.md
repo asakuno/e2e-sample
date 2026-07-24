@@ -510,12 +510,14 @@ MVPで必要なServiceは以下とする。
 ```php
 namespace App\Services\MarketData\Contracts;
 
-use App\Models\Stock;
+use App\Enums\MarketDataProvider;
 use Illuminate\Support\Collection;
 
 interface StockPriceProviderInterface
 {
-    public function fetchDailyPrices(Stock $stock): Collection;
+    public function provider(): MarketDataProvider;
+
+    public function fetchDailyPrices(string $providerSymbol): Collection;
 }
 ```
 
@@ -524,14 +526,18 @@ interface StockPriceProviderInterface
 ```php
 namespace App\Services\MarketData\Contracts;
 
-use App\Models\Stock;
+use App\Enums\MarketDataProvider;
 use Illuminate\Support\Collection;
 
 interface NewsProviderInterface
 {
-    public function fetchNewsForStock(Stock $stock): Collection;
+    public function provider(): MarketDataProvider;
+
+    public function fetchNewsForStock(string $providerSymbol): Collection;
 }
 ```
+
+`stocks.symbol` は画面表示・内部識別用とし、外部APIには `stock_provider_symbols` で明示した `provider_symbol` を渡す。対応関係が登録されていない銘柄はJobをdispatchせず、プロバイダ固有の suffix を推測しない。
 
 ### ArticleAnalyzerInterface
 
@@ -605,20 +611,28 @@ market:generate-signals
 
 ---
 
-## 5.4 Scheduler案
+## 5.4 Scheduler方針
 
 ```php
 use Illuminate\Support\Facades\Schedule;
 
-Schedule::command('market:fetch-prices')->dailyAt('07:00');
-Schedule::command('market:fetch-news')->everyThirtyMinutes();
+Schedule::command('market:fetch-prices')
+    ->cron((string) config('services.alpha_vantage.price_cron'))
+    ->timezone((string) config('services.alpha_vantage.schedule_timezone'));
+
+Schedule::command('market:fetch-news')
+    ->cron((string) config('services.alpha_vantage.news_cron'))
+    ->timezone((string) config('services.alpha_vantage.schedule_timezone'));
+
 Schedule::command('market:analyze-news')->everyThirtyMinutes();
 Schedule::command('market:generate-signals')->hourly();
 ```
 
 米国市場の取引終了後に日足株価を取得する想定とする。
 
-日本時間では、米国市場の通常取引終了は早朝になるため、MVPでは日本時間 07:00 に日足取得を行う。
+日本時間では、米国市場の通常取引終了は早朝になるため、MVPでは日本時間 07:00 に日足取得を行う。Alpha Vantage 無料枠の日次クォータを前提とし、ニュース取得の既定値も日本時間 07:30 の1日1回とする。Premium契約等で十分なクォータがある環境は `ALPHA_VANTAGE_NEWS_CRON` を変更し、より高頻度に取得できる。
+
+AI分析登録は30分ごとに未分析記事を探すが、既定設定で新しいニュースが入るのは1日1回である。分析頻度だけを上げても、ニュースの鮮度は上がらない。
 
 ---
 
@@ -768,6 +782,7 @@ MVPに必要なデータ構造を作る。
 ### タスク
 
 - [ ] `stocks` migration作成
+- [ ] `stock_provider_symbols` migration作成
 - [ ] `watchlists` migration作成
 - [ ] `stock_prices` migration作成
 - [ ] `news_articles` migration作成
@@ -783,6 +798,7 @@ MVPに必要なデータ構造を作る。
 ### Model一覧
 
 - [ ] `Stock`
+- [ ] `StockProviderSymbol`
 - [ ] `Watchlist`
 - [ ] `StockPrice`
 - [ ] `NewsArticle`

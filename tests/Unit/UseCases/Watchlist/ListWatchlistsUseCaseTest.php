@@ -8,6 +8,7 @@ use App\Models\Stock;
 use App\Models\Watchlist;
 use App\Repositories\WatchlistRepositoryInterface;
 use App\UseCases\Watchlist\ListWatchlistsUseCase;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Tests\TestCase;
 
@@ -39,7 +40,7 @@ final class ListWatchlistsUseCaseTest extends TestCase
         $repository->expects($this->once())
             ->method('findActiveByUser')
             ->with(1)
-            ->willReturn(new Collection([$watchlist]));
+            ->willReturn(new LengthAwarePaginator(new Collection([$watchlist]), 1, 20));
 
         $useCase = new ListWatchlistsUseCase($repository);
 

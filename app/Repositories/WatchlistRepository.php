@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Models\Watchlist;
-use Illuminate\Support\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 final class WatchlistRepository implements WatchlistRepositoryInterface
 {
     /**
-     * @return Collection<int, Watchlist>
+     * @return LengthAwarePaginator<int, Watchlist>
      */
-    public function findActiveByUser(int $userId): Collection
+    public function findActiveByUser(int $userId): LengthAwarePaginator
     {
         return Watchlist::query()
             ->with('stock')
@@ -21,17 +21,23 @@ final class WatchlistRepository implements WatchlistRepositoryInterface
             ->orderByDesc('priority')
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
     }
 
     /**
+     * @param  array<int, int>|null  $stockIds
      * @return array<int, int>
      */
-    public function findActiveStockIdsByUser(int $userId): array
+    public function findActiveStockIdsByUser(int $userId, ?array $stockIds = null): array
     {
         return Watchlist::query()
             ->forUser($userId)
             ->active()
+            ->when(
+                $stockIds !== null,
+                fn ($query) => $query->whereIn('stock_id', $stockIds),
+            )
             ->pluck('stock_id')
             ->all();
     }
@@ -42,6 +48,15 @@ final class WatchlistRepository implements WatchlistRepositoryInterface
             ->with('stock')
             ->forUser($userId)
             ->where('stock_id', $stockId)
+            ->first();
+    }
+
+    public function findActiveByUserAndStock(int $userId, int $stockId): ?Watchlist
+    {
+        return Watchlist::query()
+            ->forUser($userId)
+            ->where('stock_id', $stockId)
+            ->active()
             ->first();
     }
 

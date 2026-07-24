@@ -37,7 +37,8 @@ services:
   queue_worker:
     build: ".docker/local/php"
     working_dir: "/app"
-    command: "php artisan queue:work --tries=3 --queue=high,default,low"
+    command: "php artisan queue:work --tries=3 --queue=market-data,ai-analysis,signals,high,default,low"
+    restart: unless-stopped
     environment:
       - USER_NAME
       - USER_ID
@@ -49,9 +50,35 @@ services:
       - "./.docker/local/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
       - "./.docker/local/php-fpm/www.conf:/usr/local/etc/php-fpm.d/www.conf"
     depends_on:
-      - mysql
-      - redis
-      - minio
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  scheduler:
+    build: ".docker/local/php"
+    working_dir: "/app"
+    command: "php artisan schedule:work"
+    restart: unless-stopped
+    environment:
+      - USER_NAME
+      - USER_ID
+      - GROUP_NAME
+      - GROUP_ID
+      - OS_NAME
+    volumes:
+      - ".:/app"
+      - "./.docker/local/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
+      - "./.docker/local/php-fpm/www.conf:/usr/local/etc/php-fpm.d/www.conf"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -68,6 +95,12 @@ services:
       MYSQL_USER: ${DB_USERNAME}
       MYSQL_PASSWORD: ${DB_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$${MYSQL_PASSWORD}\" mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
 
   redis:
     image: redis:6.2-buster

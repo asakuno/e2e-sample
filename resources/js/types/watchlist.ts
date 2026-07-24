@@ -1,4 +1,4 @@
-import type { AppPageProps } from '@/types/index.d.ts';
+import type { AppPageProps, PaginatedData } from '@/types/index.d.ts';
 import type { StockListItem } from '@/types/stocks';
 
 export interface WatchlistItem {
@@ -10,7 +10,7 @@ export interface WatchlistItem {
 }
 
 export interface WatchlistPageProps extends AppPageProps {
-  watchlists: WatchlistItem[];
+  watchlists: PaginatedData<WatchlistItem>;
 }
 
 export interface WatchlistPriorityOption {

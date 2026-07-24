@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Middleware;
 
 use App\Data\Auth\AuthenticatedUserData;
@@ -39,6 +41,10 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user()
                     ? AuthenticatedUserData::from($request->user())
                     : null,
+            ],
+            'flash' => [
+                'success' => fn (): ?string => $request->session()->get('success'),
+                'error' => fn (): ?string => $request->session()->get('error'),
             ],
         ];
     }

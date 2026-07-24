@@ -8,6 +8,7 @@ use App\Data\Stock\StockListItemData;
 use App\Data\Stock\StockSearchData;
 use App\Repositories\StockRepositoryInterface;
 use App\Repositories\WatchlistRepositoryInterface;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 final class ListStocksUseCase
 {
@@ -17,19 +18,20 @@ final class ListStocksUseCase
     ) {}
 
     /**
-     * @return array<int, StockListItemData>
+     * @return LengthAwarePaginator<int, StockListItemData>
      */
-    public function execute(StockSearchData $filters, int $userId): array
+    public function execute(StockSearchData $filters, int $userId): LengthAwarePaginator
     {
-        $watchlistStockIds = array_flip($this->watchlistRepository->findActiveStockIdsByUser($userId));
+        $stocks = $this->stockRepository->search($filters);
+        $stockIds = $stocks->getCollection()->pluck('id')->all();
+        $watchlistStockIds = array_flip(
+            $this->watchlistRepository->findActiveStockIdsByUser($userId, $stockIds),
+        );
 
-        return $this->stockRepository
-            ->search($filters)
-            ->map(fn ($stock): StockListItemData => StockListItemData::fromModel(
-                stock: $stock,
-                isInWatchlist: isset($watchlistStockIds[$stock->id]),
-            ))
-            ->all();
+        return $stocks->through(fn ($stock): StockListItemData => StockListItemData::fromModel(
+            stock: $stock,
+            isInWatchlist: isset($watchlistStockIds[$stock->id]),
+        ));
     }
 
     /**
@@ -44,14 +46,6 @@ final class ListStocksUseCase
             ],
             $this->stockRepository->findAvailableMarkets(),
         );
-    }
-
-    /**
-     * @return array<int, int>
-     */
-    public function watchlistedStockIds(int $userId): array
-    {
-        return $this->watchlistRepository->findActiveStockIdsByUser($userId);
     }
 
     private function marketLabel(string $market): string

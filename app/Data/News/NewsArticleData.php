@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Data\News;
 
+use App\Data\Support\UtcDateTimeSerializer;
 use App\Models\NewsArticle;
-use Illuminate\Support\Carbon;
 use Spatie\LaravelData\Attributes\MapName;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\Mappers\SnakeCaseMapper;
@@ -42,9 +42,7 @@ final class NewsArticleData extends Data
             source: $article->source,
             provider: $article->provider,
             language: $article->language,
-            publishedAt: $article->published_at === null
-                ? null
-                : Carbon::parse($article->published_at)->toDateTimeString(),
+            publishedAt: UtcDateTimeSerializer::serialize($article->published_at),
             stocks: $article->stocks
                 ->map(fn ($stock): NewsArticleStockData => NewsArticleStockData::fromModel($stock))
                 ->all(),

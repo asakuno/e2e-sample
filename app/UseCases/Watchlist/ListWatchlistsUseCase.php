@@ -6,6 +6,7 @@ namespace App\UseCases\Watchlist;
 
 use App\Data\Watchlist\WatchlistItemData;
 use App\Repositories\WatchlistRepositoryInterface;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 final class ListWatchlistsUseCase
 {
@@ -14,13 +15,14 @@ final class ListWatchlistsUseCase
     ) {}
 
     /**
-     * @return array<int, WatchlistItemData>
+     * @return LengthAwarePaginator<int, WatchlistItemData>
      */
-    public function execute(int $userId): array
+    public function execute(int $userId): LengthAwarePaginator
     {
         return $this->watchlistRepository
             ->findActiveByUser($userId)
-            ->map(fn ($watchlist): WatchlistItemData => WatchlistItemData::fromModel($watchlist))
-            ->all();
+            ->through(
+                fn ($watchlist): WatchlistItemData => WatchlistItemData::fromModel($watchlist),
+            );
     }
 }

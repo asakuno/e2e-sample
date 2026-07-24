@@ -1,17 +1,13 @@
 import { Head, router } from '@inertiajs/react';
 import { StockTable } from '@/components/features/stock/StockTable';
 import { StocksSearchPanel } from '@/components/features/stock/StocksSearchPanel';
+import { Pagination } from '@/components/ui/Pagination';
 import { AuthenticatedLayout } from '@/layouts/AuthenticatedLayout';
 import { runInertiaAction } from '@/lib/inertia-actions';
 import { store as storeWatchlist } from '@/routes/watchlist';
 import type { StockListItem, StocksPageProps } from '@/types/stocks';
 
-export default function Stocks({
-  stocks,
-  filters,
-  marketOptions,
-  watchlistedStockIds,
-}: StocksPageProps) {
+export default function Stocks({ stocks, filters, marketOptions }: StocksPageProps) {
   const handleAddToWatchlist = (stock: StockListItem): Promise<void> => {
     return runInertiaAction(
       (visitOptions) => {
@@ -43,7 +39,9 @@ export default function Stocks({
             </div>
             <div className="rounded-md border border-border bg-card px-3 py-2 text-muted-foreground text-sm">
               表示件数{' '}
-              <span className="font-semibold text-foreground tabular-nums">{stocks.length}</span>
+              <span className="font-semibold text-foreground tabular-nums">
+                {stocks.meta.total}
+              </span>
             </div>
           </div>
 
@@ -54,11 +52,12 @@ export default function Stocks({
           />
 
           <StockTable
-            stocks={stocks}
+            stocks={stocks.data}
             marketOptions={marketOptions}
-            watchlistedStockIds={watchlistedStockIds}
             addToWatchlistAction={handleAddToWatchlist}
           />
+
+          <Pagination links={stocks.links} meta={stocks.meta} itemLabel="銘柄" />
         </div>
       </AuthenticatedLayout>
     </>

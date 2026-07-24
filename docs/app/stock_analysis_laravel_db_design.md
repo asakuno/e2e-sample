@@ -45,6 +45,7 @@ AI分析結果は、ニュースや将来の開示情報など、複数種別の
 |---|---|
 | users | ユーザー管理 |
 | stocks | 銘柄マスタ |
+| stock_provider_symbols | 外部データプロバイダ固有の銘柄コード |
 | watchlists | ユーザーの監視銘柄 |
 | stock_prices | 日足株価データ |
 | news_articles | ニュース記事 |
@@ -127,6 +128,33 @@ Laravel Breezeの標準usersテーブルを利用する。
 ### 備考
 
 同じsymbolが市場をまたいで存在する可能性があるため、`symbol` 単体ではなく `market + symbol` を一意にする。
+外部APIには `stocks.symbol` を直接渡さず、次の `stock_provider_symbols` で明示したプロバイダ固有コードを使用する。
+
+---
+
+## 4.2.1 stock_provider_symbols
+
+画面表示・内部識別用の銘柄コードと、外部データプロバイダ固有の銘柄コードを分離する。
+
+| カラム | 型 | NULL | 説明 |
+|---|---:|:---:|---|
+| id | bigint unsigned | NO | 主キー |
+| stock_id | bigint unsigned | NO | stocks.id |
+| provider | varchar(64) | NO | データ取得元。例: alpha_vantage |
+| provider_symbol | varchar(64) | NO | プロバイダに渡す正式な銘柄コード |
+| created_at | timestamp | YES | 作成日時 |
+| updated_at | timestamp | YES | 更新日時 |
+
+### Index
+
+| 種別 | カラム | 説明 |
+|---|---|---|
+| unique | stock_id, provider | 1銘柄・1プロバイダに1つの対応関係 |
+| unique | provider, provider_symbol | プロバイダ内で銘柄コードを一意にする |
+
+### 備考
+
+`market` や `exchange` から suffix を推測しない。プロバイダの検索APIや公式資料で確認できたコードだけを登録し、対応関係がない銘柄は取り込み対象から除外する。
 
 ---
 
@@ -336,6 +364,7 @@ AI分析の再現性・検証性のため、`model_provider`, `model_name`, `pro
 | id | bigint unsigned | NO | 主キー |
 | stock_id | bigint unsigned | NO | stocks.id |
 | signal_date | date | NO | シグナル日付 |
+| prompt_version | varchar(32) | NO | 集計元のAI分析prompt version |
 | news_score | decimal(5,2) | NO | ニュース由来スコア |
 | disclosure_score | decimal(5,2) | NO | 開示由来スコア。MVPでは0固定可 |
 | macro_score | decimal(5,2) | NO | マクロ由来スコア。MVPでは0固定可 |
@@ -352,14 +381,14 @@ AI分析の再現性・検証性のため、`model_provider`, `model_name`, `pro
 
 | 種別 | カラム | 説明 |
 |---|---|---|
-| unique | stock_id, signal_date | 銘柄ごとに日次1件 |
+| unique | stock_id, signal_date, prompt_version | 銘柄・日付・prompt versionごとに1件 |
 | index | stock_id, signal_date | 銘柄別推移取得用 |
 | index | signal_date | 当日シグナル一覧用 |
 | index | total_score | 強いシグナル抽出用 |
 
 ### 備考
 
-MVPでは `news_score` を中心に算出し、`disclosure_score`, `macro_score` は0で保存してよい。
+MVPでは `news_score` を中心に算出し、`disclosure_score`, `macro_score` は0で保存してよい。表示・集計は現行設定の `prompt_version` に限定する。
 将来の開示情報・マクロ指標連携で利用する。
 
 ---
@@ -496,6 +525,7 @@ users
   └── alert_logs
 
 stocks
+  ├── stock_provider_symbols
   ├── watchlists
   ├── stock_prices
   ├── stock_news
@@ -554,6 +584,11 @@ class User extends Authenticatable
 ```php
 class Stock extends Model
 {
+    public function providerSymbols(): HasMany
+    {
+        return $this->hasMany(StockProviderSymbol::class);
+    }
+
     public function watchlists(): HasMany
     {
         return $this->hasMany(Watchlist::class);
@@ -640,22 +675,23 @@ Laravelでは外部キー制約の都合上、以下の順序で作成する。
 ```text
 1. users
 2. stocks
-3. watchlists
-4. stock_prices
-5. news_articles
-6. stock_news
-7. analysis_results
-8. stock_signals
-9. alerts
-10. alert_logs
+3. stock_provider_symbols
+4. watchlists
+5. stock_prices
+6. news_articles
+7. stock_news
+8. analysis_results
+9. stock_signals
+10. alerts
+11. alert_logs
 ```
 
 将来拡張時:
 
 ```text
-11. disclosures
-12. stock_disclosures
-13. macro_indicators
+12. disclosures
+13. stock_disclosures
+14. macro_indicators
 ```
 
 ---
@@ -668,6 +704,7 @@ Laravel標準に合わせ、複数形のスネークケースを使用する。
 
 ```text
 stocks
+stock_provider_symbols
 stock_prices
 news_articles
 analysis_results
@@ -755,19 +792,23 @@ AlertLog
 
 米国株、日本株を両方扱うため、`symbol` 単体ではなく `market + symbol` で一意制約を設定する。
 
-## 13.2 news_articlesはcontent_hashで重複排除する
+## 13.2 外部APIはsymbolを明示的にマッピングする
+
+`stock_provider_symbols` に登録済みの銘柄だけを各プロバイダの取り込み対象にする。内部表示用の `stocks.symbol` は外部APIに直接渡さない。
+
+## 13.3 news_articlesはcontent_hashで重複排除する
 
 無料ニュースAPIやRSSでは同じ記事を複数回取得する可能性があるため、`content_hash` を必須にする。
 
-## 13.3 analysis_resultsにはモデル情報を残す
+## 13.4 analysis_resultsにはモデル情報を残す
 
 AI分析は後から改善するため、モデル名とプロンプトバージョンを必ず保存する。
 
-## 13.4 stock_signalsは日次集計にする
+## 13.5 stock_signalsは日次・prompt version単位で集計する
 
-MVPでは日足データを扱うため、シグナルも日次単位で生成する。
+MVPでは日足データを扱うため、シグナルも日次単位で生成する。プロンプト改定前後の結果を混在・上書きしないよう `prompt_version` も一意キーに含める。
 
-## 13.5 ウォッチリストは保有株管理ではない
+## 13.6 ウォッチリストは保有株管理ではない
 
 watchlistsには保有数量や取得単価を持たせない。
 アプリの役割を投資情報分析に限定する。

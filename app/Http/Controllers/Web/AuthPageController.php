@@ -31,7 +31,9 @@ class AuthPageController extends Controller
      */
     public function showLogin(): Response
     {
-        return Inertia::render('Auth/Login');
+        return Inertia::render('Auth/Login', [
+            'status' => session('status'),
+        ]);
     }
 
     /**

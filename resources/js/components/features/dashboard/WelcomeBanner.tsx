@@ -1,5 +1,7 @@
 /** ダッシュボードのページヘッダー。 */
 
+import { formatJstDateTime } from '@/lib/formatters';
+
 interface WelcomeBannerProps {
   userName: string;
   latestAnalysisAt?: string | null;
@@ -22,8 +24,8 @@ export function WelcomeBanner({ userName, latestAnalysisAt }: WelcomeBannerProps
       {latestAnalysisAt != null && (
         <p className="shrink-0 text-muted-foreground text-sm tabular-nums">
           最新分析日時:{' '}
-          <time className="text-foreground" dateTime={latestAnalysisAt.replace(' ', 'T')}>
-            {latestAnalysisAt}
+          <time className="text-foreground" dateTime={latestAnalysisAt}>
+            {formatJstDateTime(latestAnalysisAt)}
           </time>
         </p>
       )}

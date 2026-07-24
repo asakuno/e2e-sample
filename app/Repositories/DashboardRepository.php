@@ -8,9 +8,15 @@ use App\Enums\AnalysisSentiment;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
 use App\Models\PeriodAnalysisSignal;
+use App\Models\Stock;
+use App\Models\StockPrice;
 use App\Models\Watchlist;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 
 final class DashboardRepository implements DashboardRepositoryInterface
@@ -28,33 +34,29 @@ final class DashboardRepository implements DashboardRepositoryInterface
         AnalysisSentiment $sentiment,
         CarbonInterface $since,
     ): int {
-        $stockIds = $this->activeStockIds($userId);
-
-        if ($stockIds === []) {
-            return 0;
-        }
-
         return AnalysisResult::query()
-            ->whereIn('stock_id', $stockIds)
+            ->whereIn('stock_id', $this->activeStockIdsQuery($userId))
+            ->where('prompt_version', $this->currentPromptVersion())
             ->where('sentiment', $sentiment->value)
-            ->where('analyzed_at', '>=', $since)
+            ->where('analyzed_at', '>=', CarbonImmutable::instance($since)->utc())
             ->count();
     }
 
     public function countUnanalysedNews(int $userId): int
     {
-        $stockIds = $this->activeStockIds($userId);
-
-        if ($stockIds === []) {
-            return 0;
-        }
-
-        return NewsArticle::query()
-            ->whereHas(
-                'stocks',
-                fn ($query) => $query->whereIn('stocks.id', $stockIds),
+        return Watchlist::query()
+            ->forUser($userId)
+            ->active()
+            ->join('stock_news', 'stock_news.stock_id', '=', 'watchlists.stock_id')
+            ->whereNotExists(
+                fn (QueryBuilder $query): QueryBuilder => $query
+                    ->selectRaw('1')
+                    ->from('analysis_results')
+                    ->where('analysis_results.analysable_type', NewsArticle::class)
+                    ->whereColumn('analysis_results.analysable_id', 'stock_news.news_article_id')
+                    ->whereColumn('analysis_results.stock_id', 'stock_news.stock_id')
+                    ->where('analysis_results.prompt_version', $this->currentPromptVersion()),
             )
-            ->whereDoesntHave('analysisResults')
             ->count();
     }
 
@@ -63,16 +65,7 @@ final class DashboardRepository implements DashboardRepositoryInterface
      */
     public function findTopSignals(int $userId, int $limit): Collection
     {
-        $stockIds = $this->activeStockIds($userId);
-
-        if ($stockIds === []) {
-            return new Collection;
-        }
-
-        return PeriodAnalysisSignal::query()
-            ->with('stock')
-            ->where('user_id', $userId)
-            ->whereIn('stock_id', $stockIds)
+        return $this->periodSignalsForUser($userId)
             ->orderByDesc('total_score')
             ->orderByDesc('signal_date')
             ->orderByDesc('id')
@@ -85,18 +78,10 @@ final class DashboardRepository implements DashboardRepositoryInterface
      */
     public function findAttentionSignals(int $userId, int $limit): Collection
     {
-        $stockIds = $this->activeStockIds($userId);
-
-        if ($stockIds === []) {
-            return new Collection;
-        }
-
-        return PeriodAnalysisSignal::query()
-            ->with('stock')
-            ->where('user_id', $userId)
-            ->whereIn('stock_id', $stockIds)
+        return $this->periodSignalsForUser($userId)
             ->orderByRaw('ABS(total_score) DESC')
             ->orderByDesc('signal_date')
+            ->orderByDesc('generated_at')
             ->orderByDesc('id')
             ->limit($limit)
             ->get();
@@ -107,22 +92,23 @@ final class DashboardRepository implements DashboardRepositoryInterface
      */
     public function findImportantNewsAnalyses(int $userId, int $limit): Collection
     {
-        $stockIds = $this->activeStockIds($userId);
-
-        if ($stockIds === []) {
-            return new Collection;
-        }
-
+        $now = Carbon::now();
         $rankedAnalyses = AnalysisResult::query()
             ->select('analysis_results.*')
             ->selectRaw(<<<'SQL'
                 ROW_NUMBER() OVER (
-                    PARTITION BY analysable_id
-                    ORDER BY ABS(impact_score) DESC, analyzed_at DESC, id DESC
+                    PARTITION BY analysis_results.analysable_id
+                    ORDER BY ABS(analysis_results.impact_score) DESC,
+                        analysis_results.analyzed_at DESC,
+                        analysis_results.id DESC
                 ) AS article_rank
                 SQL)
-            ->whereIn('stock_id', $stockIds)
-            ->where('analysable_type', NewsArticle::class);
+            ->join('news_articles', 'news_articles.id', '=', 'analysis_results.analysable_id')
+            ->whereIn('analysis_results.stock_id', $this->activeStockIdsQuery($userId))
+            ->where('analysis_results.analysable_type', NewsArticle::class)
+            ->where('analysis_results.prompt_version', $this->currentPromptVersion())
+            ->whereBetween('news_articles.published_at', [$now->copy()->subDays(7), $now])
+            ->toBase();
 
         return AnalysisResult::query()
             ->fromSub($rankedAnalyses, 'ranked_news_analyses')
@@ -137,14 +123,9 @@ final class DashboardRepository implements DashboardRepositoryInterface
 
     public function findLatestAnalysisAt(int $userId): ?CarbonInterface
     {
-        $stockIds = $this->activeStockIds($userId);
-
-        if ($stockIds === []) {
-            return null;
-        }
-
         $latest = AnalysisResult::query()
-            ->whereIn('stock_id', $stockIds)
+            ->whereIn('stock_id', $this->activeStockIdsQuery($userId))
+            ->where('prompt_version', $this->currentPromptVersion())
             ->max('analyzed_at');
 
         return $latest === null ? null : Carbon::parse($latest);
@@ -155,19 +136,24 @@ final class DashboardRepository implements DashboardRepositoryInterface
      */
     public function countAnalysesByDate(int $userId, CarbonInterface $from, CarbonInterface $to): array
     {
-        $stockIds = $this->activeStockIds($userId);
-
-        if ($stockIds === []) {
-            return [];
-        }
+        $localFrom = CarbonImmutable::instance($from);
+        $timezone = $localFrom->getTimezone();
+        $fromUtc = $localFrom->startOfDay()->utc();
+        $toExclusiveUtc = CarbonImmutable::instance($to)->addDay()->startOfDay()->utc();
 
         /** @var array<string, int> $counts */
         $counts = AnalysisResult::query()
-            ->selectRaw('DATE(analyzed_at) as analyzed_date, COUNT(*) as aggregate')
-            ->whereIn('stock_id', $stockIds)
-            ->whereBetween('analyzed_at', [$from->startOfDay(), $to->endOfDay()])
-            ->groupByRaw('DATE(analyzed_at)')
-            ->pluck('aggregate', 'analyzed_date')
+            ->whereIn('stock_id', $this->activeStockIdsQuery($userId))
+            ->where('prompt_version', $this->currentPromptVersion())
+            ->where('analyzed_at', '>=', $fromUtc)
+            ->where('analyzed_at', '<', $toExclusiveUtc)
+            ->pluck('analyzed_at')
+            ->map(
+                fn ($analyzedAt): string => CarbonImmutable::parse((string) $analyzedAt, 'UTC')
+                    ->setTimezone($timezone)
+                    ->toDateString(),
+            )
+            ->countBy()
             ->map(fn ($count): int => (int) $count)
             ->all();
 
@@ -175,14 +161,55 @@ final class DashboardRepository implements DashboardRepositoryInterface
     }
 
     /**
-     * @return array<int, int>
+     * @return Builder<Watchlist>
      */
-    private function activeStockIds(int $userId): array
+    private function activeStockIdsQuery(int $userId): Builder
     {
         return Watchlist::query()
             ->forUser($userId)
             ->active()
-            ->pluck('stock_id')
-            ->all();
+            ->select('stock_id');
+    }
+
+    /**
+     * @return Builder<PeriodAnalysisSignal>
+     */
+    private function periodSignalsForUser(int $userId): Builder
+    {
+        return PeriodAnalysisSignal::query()
+            ->with([
+                'stock.prices' => $this->constrainDashboardPrices(...),
+                'sourceAnalysisImport.analysisBatch.result',
+            ])
+            ->where('user_id', $userId)
+            ->whereIn('stock_id', $this->activeStockIdsQuery($userId));
+    }
+
+    private function currentPromptVersion(): string
+    {
+        return (string) config('services.openai.prompt_version', 'v1');
+    }
+
+    /**
+     * @param  HasMany<StockPrice, Stock>  $query
+     * @return HasMany<StockPrice, Stock>
+     */
+    private function constrainDashboardPrices(HasMany $query): HasMany
+    {
+        return $query
+            ->where('source', $this->displayPriceSource())
+            ->where(
+                fn ($query) => $query
+                    ->whereNotNull('adjusted_close')
+                    ->orWhereNotNull('close'),
+            )
+            ->orderByDesc('price_date')
+            ->orderByDesc('id')
+            ->limit(2);
+    }
+
+    private function displayPriceSource(): string
+    {
+        return (string) config('services.stock_analysis.price_display_source', 'alpha_vantage');
     }
 }

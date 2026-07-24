@@ -25,6 +25,7 @@ final class StockPriceResource extends JsonResource
             'low' => $price->low,
             'close' => $price->close,
             'adjusted_close' => $price->adjustedClose,
+            'effective_close' => $price->effectiveClose,
             'volume' => $price->volume,
         ];
     }

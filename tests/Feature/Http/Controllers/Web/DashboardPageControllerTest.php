@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Controllers\Web;
 
+use App\Enums\AnalysisBatchStatus;
+use App\Enums\AnalysisImportStatus;
 use App\Enums\AnalysisSentiment;
+use App\Models\AnalysisBatch;
+use App\Models\AnalysisImport;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
 use App\Models\PeriodAnalysisSignal;
 use App\Models\Stock;
+use App\Models\StockPrice;
 use App\Models\User;
 use App\Models\Watchlist;
 use Carbon\Carbon;
@@ -49,6 +54,7 @@ final class DashboardPageControllerTest extends TestCase
 
         $positiveNews = NewsArticle::factory()->create([
             'title' => 'Apple product news',
+            'source' => 'Reuters',
             'published_at' => '2026-06-15 10:00:00',
         ]);
         $positiveNews->stocks()->attach($stock->id, [
@@ -75,15 +81,50 @@ final class DashboardPageControllerTest extends TestCase
             'updated_at' => now(),
         ]);
 
+        $batch = AnalysisBatch::factory()->for($user)->for($stock)->create([
+            'status' => AnalysisBatchStatus::Completed,
+        ]);
+        $import = AnalysisImport::factory()->for($batch)->create([
+            'revision' => 1,
+            'status' => AnalysisImportStatus::Committed,
+            'committed_at' => '2026-06-15 12:00:00',
+        ]);
+        $batch->update(['current_import_id' => $import->id]);
+        AnalysisResult::factory()->for($stock)->create([
+            'source_import_id' => $import->id,
+            'analysable_type' => AnalysisBatch::class,
+            'analysable_id' => $batch->id,
+            'sentiment' => AnalysisSentiment::Positive,
+            'prompt_version' => $batch->prompt_version,
+            'analyzed_at' => '2026-06-15 12:00:00',
+        ]);
         PeriodAnalysisSignal::factory()->create([
             'user_id' => $user->id,
             'stock_id' => $stock->id,
+            'source_analysis_import_id' => $import->id,
+            'prompt_version' => $batch->prompt_version,
             'signal_date' => '2026-06-15',
             'total_score' => 8.25,
             'positive_count' => 3,
             'negative_count' => 1,
             'reason' => 'ポジティブ材料が増加',
             'generated_at' => '2026-06-15 12:00:00',
+        ]);
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2026-06-14',
+            'close' => 100,
+            'adjusted_close' => 100,
+        ]);
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2026-06-15',
+            'close' => 119,
+            'adjusted_close' => 120,
+        ]);
+        StockPrice::factory()->for($stock)->create([
+            'price_date' => '2026-06-15',
+            'close' => 999,
+            'adjusted_close' => 999,
+            'source' => 'demo',
         ]);
 
         // Act
@@ -102,11 +143,19 @@ final class DashboardPageControllerTest extends TestCase
             ->where('recentTrend.total', 1)
             ->where('topStocks.0.symbol', 'AAPL')
             ->where('topStocks.0.totalScore', 8.25)
+            ->where('topStocks.0.latestPrice', 120)
+            ->where('topStocks.0.changePercent', 20)
+            ->where('topStocks.0.sentiment', AnalysisSentiment::Positive->value)
+            ->where('topStocks.0.sentimentLabel', 'ポジティブ')
+            ->where('topStocks.0.updatedAt', '2026-06-15T12:00:00+00:00')
             ->where('attentionStocks.0.symbol', 'AAPL')
             ->where('attentionStocks.0.totalScore', 8.25)
             ->where('importantNews.0.articleId', $positiveNews->id)
             ->where('importantNews.0.title', 'Apple product news')
-            ->where('latestAnalysisAt', '2026-06-15 11:00')
+            ->where('importantNews.0.source', 'Reuters')
+            ->where('importantNews.0.timeAgo', '2026-06-15T11:00:00+00:00')
+            ->where('importantNews.0.publishedAt', '2026-06-15T10:00:00+00:00')
+            ->where('latestAnalysisAt', '2026-06-15T11:00:00+00:00')
         );
     }
 

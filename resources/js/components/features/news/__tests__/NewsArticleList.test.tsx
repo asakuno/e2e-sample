@@ -46,6 +46,12 @@ function buildArticle(overrides: Partial<NewsArticle> = {}): NewsArticle {
         sentiment_label: 'ポジティブ',
         impact_score: 3,
         confidence_score: 74,
+        time_horizon: 1,
+        time_horizon_label: '短期',
+        positive_factors: ['新製品需要'],
+        negative_factors: ['供給制約'],
+        risk_points: ['需要予測の不確実性'],
+        reason: '新製品需要が業績を押し上げる可能性があります。',
         analyzed_at: '2026-07-10T10:00:00',
       },
       {
@@ -61,6 +67,12 @@ function buildArticle(overrides: Partial<NewsArticle> = {}): NewsArticle {
         sentiment_label: 'ネガティブ',
         impact_score: -9,
         confidence_score: 88,
+        time_horizon: 2,
+        time_horizon_label: '中期',
+        positive_factors: [],
+        negative_factors: ['競争激化'],
+        risk_points: ['市場シェア低下'],
+        reason: '競合製品の増加により利益率が低下する可能性があります。',
         analyzed_at: '2026-07-10T10:05:00',
       },
     ],
@@ -137,6 +149,19 @@ describe('NewsArticleList', () => {
 
     // Assert
     expect(actual).toBeVisible();
+  });
+
+  it('折りたたみ時に代表分析の時間軸と銘柄詳細への導線を表示すること', () => {
+    // Arrange & Act
+    render(<NewsArticleList articles={[buildArticle()]} />);
+    const stockLinks = screen.getAllByRole('link', {
+      name: 'MSFTの銘柄詳細を見る',
+    });
+    const expected = '/stocks/2';
+
+    // Assert
+    expect(stockLinks.map((link) => link.getAttribute('href'))).toEqual([expected, expected]);
+    expectSingleVisibleText('中期');
   });
 
   it('折りたたみ時は関連銘柄を2件まで表示し、残数と他の分析件数を示すこと', () => {
@@ -218,8 +243,20 @@ describe('NewsArticleList', () => {
     });
     expect(detailQueries.getByText('新製品の需要が堅調で、売上への追い風です。')).toBeVisible();
     expect(detailQueries.getByText('競争激化により大きな下振れリスクがあります。')).toBeVisible();
+    expect(detailQueries.getByText('新製品需要が業績を押し上げる可能性があります。')).toBeVisible();
+    expect(detailQueries.getByText('供給制約')).toBeVisible();
+    expect(detailQueries.getByText('市場シェア低下')).toBeVisible();
     expect(detailQueries.getByText('+3/10')).toBeVisible();
     expect(detailQueries.getByText('−9/10')).toBeVisible();
+    const relatedStocksSection = detailQueries
+      .getByRole('heading', { name: '関連銘柄' })
+      .closest('section');
+    expect(relatedStocksSection).not.toBeNull();
+    expect(
+      within(relatedStocksSection as HTMLElement).getByRole('link', {
+        name: /AAPL.*Apple Inc\./,
+      }),
+    ).toHaveAttribute('href', '/stocks/1');
     expect(sourceLink).toHaveAttribute('href', article.url);
     expect(sourceLink).toHaveAttribute('target', '_blank');
     expect(sourceLink).toHaveAttribute('rel', 'noopener noreferrer');

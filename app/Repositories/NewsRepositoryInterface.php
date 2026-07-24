@@ -7,17 +7,18 @@ namespace App\Repositories;
 use App\Data\News\NewsSearchData;
 use App\Models\NewsArticle;
 use App\Models\Stock;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 interface NewsRepositoryInterface
 {
     /**
-     * @return Collection<int, NewsArticle>
+     * @return LengthAwarePaginator<int, NewsArticle>
      */
-    public function search(NewsSearchData $filters): Collection;
+    public function search(NewsSearchData $filters): LengthAwarePaginator;
 
     /**
      * @return Collection<int, Stock>
      */
-    public function findStocksWithNews(): Collection;
+    public function findStocksWithNews(int $userId): Collection;
 }

@@ -47,7 +47,7 @@ const stats: DashboardStatData[] = [
   },
   {
     kind: 'latestAnalysis',
-    value: '2026-06-15 11:00',
+    value: '2026-06-15T11:00:00+00:00',
   },
 ];
 
@@ -77,10 +77,15 @@ const topStocks: TopStockData[] = [
     name: 'Apple Inc.',
     market: 'us',
     totalScore: 8.25,
+    latestPrice: 182.5,
+    changePercent: 2.35,
+    sentiment: 1,
+    sentimentLabel: 'ポジティブ',
     positiveCount: 3,
     negativeCount: 1,
     reason: 'ポジティブ材料が増加',
     signalDate: '2026-06-15',
+    updatedAt: '2026-06-15T12:00:00+00:00',
   },
 ];
 
@@ -91,10 +96,15 @@ const attentionStocks: TopStockData[] = [
     name: 'Tesla Inc.',
     market: 'us',
     totalScore: -9,
+    latestPrice: 320.25,
+    changePercent: -4.2,
+    sentiment: -1,
+    sentimentLabel: 'ネガティブ',
     positiveCount: 1,
     negativeCount: 5,
     reason: '強いネガティブシグナルを検出',
     signalDate: '2026-06-15',
+    updatedAt: '2026-06-15T12:30:00+00:00',
   },
 ];
 
@@ -104,8 +114,10 @@ const importantNews: ActivityItemData[] = [
     articleId: 1,
     title: 'Apple announces new product',
     description: 'AAPL / impact 8: 売上成長にポジティブ',
-    timeAgo: '30分前',
+    timeAgo: '2026-06-15T11:00:00+00:00',
     dotColor: 'green',
+    source: 'Reuters',
+    publishedAt: '2026-06-15T10:00:00+00:00',
   },
 ];
 
@@ -119,7 +131,7 @@ const defaultProps = {
   topStocks,
   attentionStocks,
   importantNews,
-  latestAnalysisAt: '2026-06-15 11:00',
+  latestAnalysisAt: '2026-06-15T11:00:00+00:00',
 };
 
 describe('Dashboard', () => {
@@ -148,6 +160,7 @@ describe('Dashboard', () => {
       'href',
       '/news?article_id=1',
     );
+    expect(screen.getByText('Reuters · 2026/06/15 19:00 · 2026/06/15 20:00')).toBeVisible();
     expect(screen.getByRole('link', { name: /TSLA Tesla Inc\./ })).toHaveAttribute(
       'href',
       '/stocks/2',
@@ -168,7 +181,7 @@ describe('Dashboard', () => {
     expect(screen.getByText('直近ネガティブ材料')).toBeInTheDocument();
     expect(screen.getByText('未分析ニュース')).toBeInTheDocument();
     expect(document.body.textContent?.match(/最新分析日時/g) ?? []).toHaveLength(1);
-    expect(screen.getByText('2026-06-15 11:00')).toBeInTheDocument();
+    expect(screen.getByText('2026/06/15 20:00')).toBeInTheDocument();
   });
 
   it('TrendChart が表示されること', () => {
@@ -181,6 +194,12 @@ describe('Dashboard', () => {
     render(<Dashboard {...defaultProps} />);
     expect(screen.getByText('注目銘柄ランキング')).toBeInTheDocument();
     expect(screen.getByText('AAPL')).toBeInTheDocument();
+    expect(screen.getByText('182.50')).toBeVisible();
+    expect(screen.getByText('+2.35%')).toBeVisible();
+    expect(screen.getByRole('link', { name: /1位 AAPL Apple Inc\./ })).toHaveAttribute(
+      'href',
+      '/stocks/1',
+    );
   });
 
   it('確認候補がない場合に空状態と銘柄探索導線を表示すること', () => {

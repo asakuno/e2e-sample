@@ -4,7 +4,7 @@ import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefa
 * @see Http/Controllers/Web/AnalysisExportController.php:18
 * @route '/analysis/{analysisBatch}/exports/copy'
 */
-export const markPromptCopied = (args: { analysisBatch: string | number | { public_id: string | number } } | [analysisBatch: string | number | { public_id: string | number } ] | string | number | { public_id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const markPromptCopied = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: markPromptCopied.url(args, options),
     method: 'post',
 })
@@ -19,7 +19,7 @@ markPromptCopied.definition = {
 * @see Http/Controllers/Web/AnalysisExportController.php:18
 * @route '/analysis/{analysisBatch}/exports/copy'
 */
-markPromptCopied.url = (args: { analysisBatch: string | number | { public_id: string | number } } | [analysisBatch: string | number | { public_id: string | number } ] | string | number | { public_id: string | number }, options?: RouteQueryOptions) => {
+markPromptCopied.url = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { analysisBatch: args }
     }
@@ -52,7 +52,7 @@ markPromptCopied.url = (args: { analysisBatch: string | number | { public_id: st
 * @see Http/Controllers/Web/AnalysisExportController.php:18
 * @route '/analysis/{analysisBatch}/exports/copy'
 */
-markPromptCopied.post = (args: { analysisBatch: string | number | { public_id: string | number } } | [analysisBatch: string | number | { public_id: string | number } ] | string | number | { public_id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+markPromptCopied.post = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: markPromptCopied.url(args, options),
     method: 'post',
 })
@@ -62,7 +62,7 @@ markPromptCopied.post = (args: { analysisBatch: string | number | { public_id: s
 * @see Http/Controllers/Web/AnalysisExportController.php:29
 * @route '/analysis/{analysisBatch}/exports/prompt'
 */
-export const downloadPrompt = (args: { analysisBatch: string | number | { public_id: string | number } } | [analysisBatch: string | number | { public_id: string | number } ] | string | number | { public_id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const downloadPrompt = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: downloadPrompt.url(args, options),
     method: 'post',
 })
@@ -77,7 +77,7 @@ downloadPrompt.definition = {
 * @see Http/Controllers/Web/AnalysisExportController.php:29
 * @route '/analysis/{analysisBatch}/exports/prompt'
 */
-downloadPrompt.url = (args: { analysisBatch: string | number | { public_id: string | number } } | [analysisBatch: string | number | { public_id: string | number } ] | string | number | { public_id: string | number }, options?: RouteQueryOptions) => {
+downloadPrompt.url = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { analysisBatch: args }
     }
@@ -110,7 +110,7 @@ downloadPrompt.url = (args: { analysisBatch: string | number | { public_id: stri
 * @see Http/Controllers/Web/AnalysisExportController.php:29
 * @route '/analysis/{analysisBatch}/exports/prompt'
 */
-downloadPrompt.post = (args: { analysisBatch: string | number | { public_id: string | number } } | [analysisBatch: string | number | { public_id: string | number } ] | string | number | { public_id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+downloadPrompt.post = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: downloadPrompt.url(args, options),
     method: 'post',
 })
@@ -120,7 +120,7 @@ downloadPrompt.post = (args: { analysisBatch: string | number | { public_id: str
 * @see Http/Controllers/Web/AnalysisExportController.php:47
 * @route '/analysis/{analysisBatch}/exports/result-template'
 */
-export const downloadResultTemplate = (args: { analysisBatch: string | number | { public_id: string | number } } | [analysisBatch: string | number | { public_id: string | number } ] | string | number | { public_id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const downloadResultTemplate = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: downloadResultTemplate.url(args, options),
     method: 'post',
 })
@@ -135,7 +135,7 @@ downloadResultTemplate.definition = {
 * @see Http/Controllers/Web/AnalysisExportController.php:47
 * @route '/analysis/{analysisBatch}/exports/result-template'
 */
-downloadResultTemplate.url = (args: { analysisBatch: string | number | { public_id: string | number } } | [analysisBatch: string | number | { public_id: string | number } ] | string | number | { public_id: string | number }, options?: RouteQueryOptions) => {
+downloadResultTemplate.url = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { analysisBatch: args }
     }
@@ -168,7 +168,7 @@ downloadResultTemplate.url = (args: { analysisBatch: string | number | { public_
 * @see Http/Controllers/Web/AnalysisExportController.php:47
 * @route '/analysis/{analysisBatch}/exports/result-template'
 */
-downloadResultTemplate.post = (args: { analysisBatch: string | number | { public_id: string | number } } | [analysisBatch: string | number | { public_id: string | number } ] | string | number | { public_id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+downloadResultTemplate.post = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: downloadResultTemplate.url(args, options),
     method: 'post',
 })

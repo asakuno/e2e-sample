@@ -105,12 +105,15 @@ describe('presentDashboardStat', () => {
 
   it('最新分析日時がある場合に日付と時刻の表示データへ変換すること', () => {
     // Arrange
-    const stat: DashboardStatData = { kind: 'latestAnalysis', value: '2026-06-15 11:00' };
+    const stat: DashboardStatData = {
+      kind: 'latestAnalysis',
+      value: '2026-06-15T11:00:00+00:00',
+    };
     const expected: StatCardData = {
       label: '最新分析日時',
-      value: '2026-06-15',
+      value: '2026/06/15',
       subLabel: '時刻',
-      subValue: '11:00',
+      subValue: '20:00',
       change: '最終更新',
       changeTone: 'neutral',
       icon: 'schedule',
@@ -124,12 +127,12 @@ describe('presentDashboardStat', () => {
     expect(actual).toEqual(expected);
   });
 
-  it('最新分析日時に時刻がない場合に日付のみの表示データへ変換すること', () => {
+  it('最新分析日時が不正な場合にハイフンの表示データへ変換すること', () => {
     // Arrange
-    const stat: DashboardStatData = { kind: 'latestAnalysis', value: '2026-06-15' };
+    const stat: DashboardStatData = { kind: 'latestAnalysis', value: 'invalid-date-time' };
     const expected: StatCardData = {
       label: '最新分析日時',
-      value: '2026-06-15',
+      value: '-',
       change: '最終更新',
       changeTone: 'neutral',
       icon: 'schedule',
