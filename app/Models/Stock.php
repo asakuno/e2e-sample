@@ -87,6 +87,22 @@ class Stock extends Model
     }
 
     /**
+     * @return HasMany<AnalysisBatch, $this>
+     */
+    public function analysisBatches(): HasMany
+    {
+        return $this->hasMany(AnalysisBatch::class);
+    }
+
+    /**
+     * @return HasMany<PeriodAnalysisSignal, $this>
+     */
+    public function periodAnalysisSignals(): HasMany
+    {
+        return $this->hasMany(PeriodAnalysisSignal::class);
+    }
+
+    /**
      * @return HasMany<StockSignal, $this>
      */
     public function signals(): HasMany

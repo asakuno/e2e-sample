@@ -24,9 +24,9 @@ describe('SideNav', () => {
     expect(actual).toBeInTheDocument();
   });
 
-  it('4つのナビゲーション項目が表示されること', () => {
+  it('5つのナビゲーション項目が表示されること', () => {
     // Arrange
-    const expected = ['Dashboard', 'Stocks', 'Watchlist', 'News'];
+    const expected = ['Dashboard', 'Stocks', 'Watchlist', 'News', 'Analysis'];
 
     // Act
     render(<SideNav />);

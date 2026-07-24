@@ -22,6 +22,8 @@ final class StockDetailData extends Data
      * @param  array<int, NewsArticleData>  $relatedNews
      * @param  array<int, NewsAnalysisData>  $analyses
      * @param  array<int, StockSignalData>  $signals
+     * @param  array<string, mixed>|null  $latestPeriodAnalysis
+     * @param  array<string, mixed>|null  $periodSignal
      * @param  array<int, array{value: string, label: string}>  $periodOptions
      */
     public function __construct(
@@ -40,6 +42,8 @@ final class StockDetailData extends Data
         public readonly array $relatedNews,
         public readonly array $analyses,
         public readonly array $signals,
+        public readonly ?array $latestPeriodAnalysis,
+        public readonly ?array $periodSignal,
         public readonly StockPricePeriod $selectedPeriod,
         public readonly array $periodOptions,
     ) {}
@@ -49,6 +53,8 @@ final class StockDetailData extends Data
      * @param  array<int, NewsArticleData>  $relatedNews
      * @param  array<int, NewsAnalysisData>  $analyses
      * @param  array<int, StockSignalData>  $signals
+     * @param  array<string, mixed>|null  $latestPeriodAnalysis
+     * @param  array<string, mixed>|null  $periodSignal
      * @param  array<int, array{value: string, label: string}>  $periodOptions
      */
     public static function fromModel(
@@ -58,6 +64,8 @@ final class StockDetailData extends Data
         array $relatedNews,
         array $analyses,
         array $signals,
+        ?array $latestPeriodAnalysis,
+        ?array $periodSignal,
         StockPricePeriod $selectedPeriod,
         array $periodOptions,
     ): self {
@@ -77,6 +85,8 @@ final class StockDetailData extends Data
             relatedNews: $relatedNews,
             analyses: $analyses,
             signals: $signals,
+            latestPeriodAnalysis: $latestPeriodAnalysis,
+            periodSignal: $periodSignal,
             selectedPeriod: $selectedPeriod,
             periodOptions: $periodOptions,
         );

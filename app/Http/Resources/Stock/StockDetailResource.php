@@ -38,6 +38,8 @@ final class StockDetailResource extends JsonResource
             'related_news' => NewsArticleResource::collection($stock->relatedNews)->resolve($request),
             'analyses' => NewsAnalysisResource::collection($stock->analyses)->resolve($request),
             'signals' => StockSignalResource::collection($stock->signals)->resolve($request),
+            'latest_period_analysis' => $stock->latestPeriodAnalysis,
+            'period_signal' => $stock->periodSignal,
             'selected_period' => $stock->selectedPeriod->value,
             'period_options' => $stock->periodOptions,
         ];

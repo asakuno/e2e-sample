@@ -7,7 +7,7 @@ namespace App\Repositories;
 use App\Enums\AnalysisSentiment;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
-use App\Models\StockSignal;
+use App\Models\PeriodAnalysisSignal;
 use App\Models\Watchlist;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -59,7 +59,7 @@ final class DashboardRepository implements DashboardRepositoryInterface
     }
 
     /**
-     * @return Collection<int, StockSignal>
+     * @return Collection<int, PeriodAnalysisSignal>
      */
     public function findTopSignals(int $userId, int $limit): Collection
     {
@@ -69,8 +69,9 @@ final class DashboardRepository implements DashboardRepositoryInterface
             return new Collection;
         }
 
-        return StockSignal::query()
+        return PeriodAnalysisSignal::query()
             ->with('stock')
+            ->where('user_id', $userId)
             ->whereIn('stock_id', $stockIds)
             ->orderByDesc('total_score')
             ->orderByDesc('signal_date')
@@ -80,7 +81,7 @@ final class DashboardRepository implements DashboardRepositoryInterface
     }
 
     /**
-     * @return Collection<int, StockSignal>
+     * @return Collection<int, PeriodAnalysisSignal>
      */
     public function findAttentionSignals(int $userId, int $limit): Collection
     {
@@ -90,20 +91,10 @@ final class DashboardRepository implements DashboardRepositoryInterface
             return new Collection;
         }
 
-        $rankedSignals = StockSignal::query()
-            ->select('stock_signals.*')
-            ->selectRaw(<<<'SQL'
-                ROW_NUMBER() OVER (
-                    PARTITION BY stock_id
-                    ORDER BY ABS(total_score) DESC, signal_date DESC, id DESC
-                ) AS attention_rank
-                SQL)
-            ->whereIn('stock_id', $stockIds);
-
-        return StockSignal::query()
-            ->fromSub($rankedSignals, 'ranked_stock_signals')
+        return PeriodAnalysisSignal::query()
             ->with('stock')
-            ->where('attention_rank', 1)
+            ->where('user_id', $userId)
+            ->whereIn('stock_id', $stockIds)
             ->orderByRaw('ABS(total_score) DESC')
             ->orderByDesc('signal_date')
             ->orderByDesc('id')

@@ -244,6 +244,8 @@ const stockDetail: StockDetailType = {
       generated_at: '2026-06-15 12:00:00',
     },
   ],
+  latest_period_analysis: null,
+  period_signal: null,
   selected_period: '1M',
   period_options: [
     { value: '1M', label: '1M' },
@@ -323,7 +325,7 @@ describe('Stock app navigation pages', () => {
     expect(screen.getByText('価格履歴一覧')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '関連ニュース' })).toBeInTheDocument();
     expect(screen.getByText('Apple supplier raises guidance')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'AI分析結果' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '記事単位の分析結果' })).toBeInTheDocument();
     expect(screen.getByText('AI要約: 需要回復にポジティブ')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'シグナル' })).toBeInTheDocument();
     expect(screen.getByText('ニュースと分析結果が上向きです。')).toBeInTheDocument();

@@ -8,6 +8,7 @@ use Database\Factories\NewsArticleFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class NewsArticle extends Model
@@ -58,5 +59,13 @@ class NewsArticle extends Model
     public function analysisResults(): MorphMany
     {
         return $this->morphMany(AnalysisResult::class, 'analysable');
+    }
+
+    /**
+     * @return HasMany<AnalysisBatchNews, $this>
+     */
+    public function analysisBatchNews(): HasMany
+    {
+        return $this->hasMany(AnalysisBatchNews::class);
     }
 }

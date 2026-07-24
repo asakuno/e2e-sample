@@ -22,6 +22,7 @@ class AnalysisResult extends Model
      */
     protected $fillable = [
         'stock_id',
+        'source_import_id',
         'analysable_type',
         'analysable_id',
         'summary',
@@ -32,6 +33,7 @@ class AnalysisResult extends Model
         'positive_factors',
         'negative_factors',
         'risk_points',
+        'evidence_items',
         'reason',
         'model_provider',
         'model_name',
@@ -54,6 +56,7 @@ class AnalysisResult extends Model
             'positive_factors' => 'array',
             'negative_factors' => 'array',
             'risk_points' => 'array',
+            'evidence_items' => 'array',
             'input_tokens' => 'integer',
             'output_tokens' => 'integer',
             'analyzed_at' => 'datetime',
@@ -74,5 +77,13 @@ class AnalysisResult extends Model
     public function analysable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    /**
+     * @return BelongsTo<AnalysisImport, $this>
+     */
+    public function sourceImport(): BelongsTo
+    {
+        return $this->belongsTo(AnalysisImport::class, 'source_import_id');
     }
 }

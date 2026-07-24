@@ -10,6 +10,7 @@ describe('StockInsightsPanel', () => {
     // Act
     render(
       <StockInsightsPanel
+        periodAnalysis={<p>期間分析の内容</p>}
         relatedNews={<p>関連ニュースの内容</p>}
         analyses={<p>AI分析の内容</p>}
         signals={[]}

@@ -6,8 +6,8 @@ namespace Tests\Feature\Repositories;
 
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
+use App\Models\PeriodAnalysisSignal;
 use App\Models\Stock;
-use App\Models\StockSignal;
 use App\Models\User;
 use App\Models\Watchlist;
 use App\Repositories\DashboardRepositoryInterface;
@@ -39,19 +39,21 @@ final class DashboardRepositoryTest extends TestCase
         Watchlist::factory()->for($user)->for($negativeStock)->create(['is_active' => true]);
         Watchlist::factory()->for($user)->for($inactiveStock)->create(['is_active' => false]);
 
-        $positiveSignal = StockSignal::factory()->for($positiveStock)->create([
+        $positiveSignal = PeriodAnalysisSignal::factory()->create([
+            'user_id' => $user->id,
+            'stock_id' => $positiveStock->id,
             'signal_date' => '2026-06-15',
             'total_score' => 1,
         ]);
-        $weakerPositiveSignal = StockSignal::factory()->for($positiveStock)->create([
-            'signal_date' => '2026-06-16',
-            'total_score' => 0.5,
-        ]);
-        $negativeSignal = StockSignal::factory()->for($negativeStock)->create([
+        $negativeSignal = PeriodAnalysisSignal::factory()->create([
+            'user_id' => $user->id,
+            'stock_id' => $negativeStock->id,
             'signal_date' => '2026-06-16',
             'total_score' => -9,
         ]);
-        $inactiveSignal = StockSignal::factory()->for($inactiveStock)->create([
+        $inactiveSignal = PeriodAnalysisSignal::factory()->create([
+            'user_id' => $user->id,
+            'stock_id' => $inactiveStock->id,
             'signal_date' => '2026-06-16',
             'total_score' => -10,
         ]);
@@ -65,7 +67,6 @@ final class DashboardRepositoryTest extends TestCase
             [$negativeSignal->id, $positiveSignal->id],
             $attentionSignals->pluck('id')->all(),
         );
-        $this->assertNotContains($weakerPositiveSignal->id, $attentionSignals->pluck('id')->all());
         $this->assertNotContains($inactiveSignal->id, $attentionSignals->pluck('id')->all());
         $this->assertSame($positiveSignal->id, $topSignals->first()?->id);
     }
@@ -78,7 +79,9 @@ final class DashboardRepositoryTest extends TestCase
         foreach (range(5, 10) as $score) {
             $stock = Stock::factory()->create();
             Watchlist::factory()->for($user)->for($stock)->create(['is_active' => true]);
-            StockSignal::factory()->for($stock)->create([
+            PeriodAnalysisSignal::factory()->create([
+                'user_id' => $user->id,
+                'stock_id' => $stock->id,
                 'signal_date' => '2026-06-16',
                 'total_score' => -$score,
             ]);
@@ -94,7 +97,7 @@ final class DashboardRepositoryTest extends TestCase
         $this->assertSame([-10.0, -9.0, -8.0, -7.0, -6.0], $result->pluck('total_score')->map(
             fn ($score): float => (float) $score,
         )->all());
-        $this->assertRankedSelectionUsesSqlLimit(5);
+        $this->assertSelectionUsesSqlLimit('period_analysis_signals', 5);
     }
 
     public function test_重要ニュースは記事ごとに絶対impact最大の分析を代表として返す(): void
@@ -154,15 +157,16 @@ final class DashboardRepositoryTest extends TestCase
             [$sharedArticle->id, $secondArticle->id],
             $result->pluck('analysable_id')->all(),
         );
-        $this->assertRankedSelectionUsesSqlLimit(2);
+        $this->assertSelectionUsesSqlLimit('row_number() over', 2);
     }
 
-    private function assertRankedSelectionUsesSqlLimit(int $limit): void
+    private function assertSelectionUsesSqlLimit(string $needle, int $limit): void
     {
         $selectionSql = collect(DB::getQueryLog())
             ->pluck('query')
             ->first(fn ($query): bool => is_string($query)
-                && str_contains(strtolower($query), 'row_number() over'));
+                && str_contains(strtolower($query), $needle)
+                && str_contains(strtolower($query), "limit {$limit}"));
 
         DB::disableQueryLog();
 

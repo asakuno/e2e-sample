@@ -7,8 +7,8 @@ namespace Tests\Feature\Http\Controllers\Web;
 use App\Enums\AnalysisSentiment;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
+use App\Models\PeriodAnalysisSignal;
 use App\Models\Stock;
-use App\Models\StockSignal;
 use App\Models\User;
 use App\Models\Watchlist;
 use Carbon\Carbon;
@@ -75,7 +75,9 @@ final class DashboardPageControllerTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        StockSignal::factory()->for($stock)->create([
+        PeriodAnalysisSignal::factory()->create([
+            'user_id' => $user->id,
+            'stock_id' => $stock->id,
             'signal_date' => '2026-06-15',
             'total_score' => 8.25,
             'positive_count' => 3,

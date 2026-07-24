@@ -44,7 +44,11 @@ class StocksPageController extends Controller
     public function show(StockShowRequest $request, int $stock, ShowStockUseCase $useCase): Response
     {
         return Inertia::render('StockDetail', [
-            'stock' => StockDetailResource::make($useCase->execute($stock, $request->period()))->resolve($request),
+            'stock' => StockDetailResource::make($useCase->execute(
+                $stock,
+                $request->period(),
+                (int) $request->user()->getAuthIdentifier(),
+            ))->resolve($request),
         ]);
     }
 }

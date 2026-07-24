@@ -39,8 +39,38 @@ export interface StockDetail extends StockListItem {
   related_news: NewsArticle[];
   analyses: NewsAnalysis[];
   signals: StockSignal[];
+  latest_period_analysis: PeriodAnalysisSummary | null;
+  period_signal: PeriodAnalysisSignal | null;
   selected_period: StockPeriodOption['value'];
   period_options: StockPeriodOption[];
+}
+
+export interface PeriodAnalysisSummary {
+  public_id: string;
+  period_start: string;
+  period_end: string;
+  revision: number | null;
+  summary: string;
+  sentiment_label: string;
+  impact_score: number;
+  confidence_score: number;
+  evidence_items: Array<{
+    news_key: string;
+    type: 'positive' | 'negative' | 'risk' | 'context';
+    note: string;
+  }>;
+  reason: string;
+  model_name: string;
+}
+
+export interface PeriodAnalysisSignal {
+  signal_date: string;
+  news_score: number;
+  total_score: number;
+  positive_count: number;
+  negative_count: number;
+  neutral_count: number;
+  reason: string | null;
 }
 
 export interface StockSignal {

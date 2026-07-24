@@ -1,5 +1,10 @@
 <?php
 
+use App\Http\Controllers\Web\AnalysisBatchController;
+use App\Http\Controllers\Web\AnalysisExportController;
+use App\Http\Controllers\Web\AnalysisImportController;
+use App\Http\Controllers\Web\AnalysisPageController;
+use App\Http\Controllers\Web\AnalysisReplacementImportController;
 use App\Http\Controllers\Web\AuthPageController;
 use App\Http\Controllers\Web\DashboardPageController;
 use App\Http\Controllers\Web\EmailVerificationPageController;
@@ -53,4 +58,38 @@ Route::middleware(['auth', 'verified', 'precognitive'])->group(function () {
         ->whereNumber('watchlist')
         ->name('watchlist.destroy');
     Route::get('/news', NewsPageController::class)->name('news.index');
+
+    Route::get('/analysis', [AnalysisPageController::class, 'index'])
+        ->name('analysis.index');
+    Route::get('/analysis/create', [AnalysisPageController::class, 'create'])
+        ->name('analysis.create');
+    Route::post('/analysis', [AnalysisBatchController::class, 'store'])
+        ->name('analysis.store');
+    Route::get('/analysis/{analysisBatch}', [AnalysisPageController::class, 'show'])
+        ->name('analysis.show');
+    Route::post('/analysis/{analysisBatch}/exports/copy', [AnalysisExportController::class, 'markPromptCopied'])
+        ->name('analysis.exports.copy');
+    Route::post('/analysis/{analysisBatch}/exports/prompt', [AnalysisExportController::class, 'downloadPrompt'])
+        ->name('analysis.exports.prompt');
+    Route::post('/analysis/{analysisBatch}/exports/result-template', [AnalysisExportController::class, 'downloadResultTemplate'])
+        ->name('analysis.exports.result-template');
+    Route::post('/analysis/{analysisBatch}/imports', [AnalysisImportController::class, 'store'])
+        ->middleware('throttle:analysis-import-upload')
+        ->name('analysis.imports.store');
+    Route::post('/analysis/{analysisBatch}/replacement-imports', [AnalysisReplacementImportController::class, 'store'])
+        ->middleware('throttle:analysis-import-upload')
+        ->name('analysis.replacement-imports.store');
+    Route::get('/analysis/{analysisBatch}/imports/{analysisImport}', [AnalysisPageController::class, 'importPreview'])
+        ->scopeBindings()
+        ->name('analysis.imports.show');
+    Route::post('/analysis/{analysisBatch}/imports/{analysisImport}/reprepare', [AnalysisImportController::class, 'reprepare'])
+        ->middleware('throttle:analysis-import-upload')
+        ->scopeBindings()
+        ->name('analysis.imports.reprepare');
+    Route::post('/analysis/{analysisBatch}/imports/{analysisImport}/commit', [AnalysisImportController::class, 'commit'])
+        ->scopeBindings()
+        ->name('analysis.imports.commit');
+    Route::post('/analysis/{analysisBatch}/imports/{analysisImport}/replace', [AnalysisImportController::class, 'replace'])
+        ->scopeBindings()
+        ->name('analysis.imports.replace');
 });
