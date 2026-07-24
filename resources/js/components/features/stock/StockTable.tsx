@@ -8,16 +8,10 @@ import type { StockListItem, StockMarketOption } from '@/types/stocks';
 interface StockTableProps {
   stocks: StockListItem[];
   marketOptions: StockMarketOption[];
-  watchlistedStockIds?: number[];
   addToWatchlistAction?: ((stock: StockListItem) => Promise<void>) | undefined;
 }
 
-export function StockTable({
-  stocks,
-  marketOptions,
-  watchlistedStockIds = [],
-  addToWatchlistAction,
-}: StockTableProps) {
+export function StockTable({ stocks, marketOptions, addToWatchlistAction }: StockTableProps) {
   if (stocks.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-card p-10 text-center shadow-sm">
@@ -26,8 +20,6 @@ export function StockTable({
       </div>
     );
   }
-
-  const watchlistedStockIdSet = new Set(watchlistedStockIds);
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
@@ -50,9 +42,7 @@ export function StockTable({
                 key={stock.id}
                 stock={stock}
                 marketOptions={marketOptions}
-                isInWatchlist={
-                  watchlistedStockIdSet.has(stock.id) || stock.is_in_watchlist === true
-                }
+                isInWatchlist={stock.is_in_watchlist === true}
                 addToWatchlistAction={addToWatchlistAction}
               />
             ))}

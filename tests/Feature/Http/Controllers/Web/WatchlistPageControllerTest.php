@@ -48,11 +48,11 @@ final class WatchlistPageControllerTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page
             ->component('Watchlist')
-            ->has('watchlists', 1)
-            ->where('watchlists.0.stock.symbol', 'AAPL')
-            ->where('watchlists.0.memo', '決算前に確認')
-            ->where('watchlists.0.priority', 3)
-            ->where('watchlists.0.is_active', true)
+            ->has('watchlists.data', 1)
+            ->where('watchlists.data.0.stock.symbol', 'AAPL')
+            ->where('watchlists.data.0.memo', '決算前に確認')
+            ->where('watchlists.data.0.priority', 3)
+            ->where('watchlists.data.0.is_active', true)
         );
     }
 
@@ -192,5 +192,48 @@ final class WatchlistPageControllerTest extends TestCase
 
         // Assert
         $response->assertRedirect(route('login'));
+    }
+
+    public function test_ウォッチリストの正規_ur_lは複数形である(): void
+    {
+        // Arrange
+        $expected = url('/watchlists');
+
+        // Act
+        $actual = route('watchlist.index');
+
+        // Assert
+        $this->assertSame($expected, $actual);
+    }
+
+    public function test_旧ウォッチリスト_ur_lは正規_ur_lへリダイレクトされる(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+
+        // Act
+        $response = $this->actingAs($user)->get('/watchlist');
+
+        // Assert
+        $response->assertRedirect('/watchlists');
+    }
+
+    public function test_ウォッチリスト一覧は20件単位でページネーションされる(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        Watchlist::factory()->count(21)->for($user)->create();
+
+        // Act
+        $response = $this->actingAs($user)->get(route('watchlist.index', ['page' => 2]));
+
+        // Assert
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('watchlists.data', 1)
+            ->where('watchlists.meta.current_page', 2)
+            ->where('watchlists.meta.per_page', 20)
+            ->where('watchlists.meta.total', 21)
+            ->where('watchlists.links.next', null)
+        );
     }
 }

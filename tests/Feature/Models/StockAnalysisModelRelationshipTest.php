@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Tests\Feature\Models;
 
 use App\Enums\AnalysisSentiment;
+use App\Enums\MarketDataProvider;
 use App\Models\Alert;
 use App\Models\AlertLog;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
 use App\Models\Stock;
 use App\Models\StockPrice;
+use App\Models\StockProviderSymbol;
 use App\Models\StockSignal;
 use App\Models\User;
 use App\Models\Watchlist;
@@ -53,6 +55,10 @@ final class StockAnalysisModelRelationshipTest extends TestCase
         // Arrange
         $stock = Stock::factory()->create();
         $price = StockPrice::factory()->for($stock)->create();
+        $providerSymbol = StockProviderSymbol::factory()->for($stock)->create([
+            'provider' => MarketDataProvider::AlphaVantage,
+            'provider_symbol' => 'MODEL-SYMBOL',
+        ]);
         $article = NewsArticle::factory()->create();
         $stock->newsArticles()->attach($article->id, [
             'relevance_score' => 90,
@@ -74,6 +80,8 @@ final class StockAnalysisModelRelationshipTest extends TestCase
 
         // Assert
         $this->assertTrue($stock->prices()->whereKey($price)->exists());
+        $this->assertTrue($stock->providerSymbols()->whereKey($providerSymbol)->exists());
+        $this->assertSame(MarketDataProvider::AlphaVantage, $providerSymbol->fresh()?->provider);
         $this->assertSame($article->id, $newsArticle?->id);
         $this->assertSame(90, $newsArticle?->pivot->relevance_score);
         $this->assertTrue($stock->analysisResults()->whereKey($analysisResult)->exists());
@@ -140,6 +148,19 @@ final class StockAnalysisModelRelationshipTest extends TestCase
             'market' => 'jp',
             'symbol' => '7203',
         ]);
+        $this->assertDatabaseHas('stock_provider_symbols', [
+            'provider' => MarketDataProvider::AlphaVantage->value,
+            'provider_symbol' => 'AAPL',
+        ]);
+        $jpStockId = Stock::query()
+            ->where('market', 'jp')
+            ->where('symbol', '7203')
+            ->value('id');
+        $this->assertDatabaseMissing('stock_provider_symbols', [
+            'stock_id' => $jpStockId,
+            'provider' => MarketDataProvider::AlphaVantage->value,
+        ]);
         $this->assertSame(10, Stock::query()->count());
+        $this->assertSame(6, StockProviderSymbol::query()->count());
     }
 }

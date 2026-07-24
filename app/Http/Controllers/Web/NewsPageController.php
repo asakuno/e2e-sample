@@ -22,10 +22,13 @@ class NewsPageController extends Controller
      */
     public function __invoke(NewsIndexRequest $request, ListNewsUseCase $useCase): Response
     {
-        $filters = $request->toNewsSearchData((int) $request->user()->getAuthIdentifier());
+        $userId = (int) $request->user()->getAuthIdentifier();
+        $filters = $request->toNewsSearchData($userId);
 
         return Inertia::render('News', [
-            'news' => fn (): array => NewsArticleResource::collection($useCase->execute($filters))->resolve($request),
+            'news' => fn (): array => NewsArticleResource::collection(
+                $useCase->execute($filters),
+            )->response()->getData(true),
             'filters' => [
                 'article_id' => $filters->articleId === null ? '' : (string) $filters->articleId,
                 'stock_id' => $filters->stockId === null ? '' : (string) $filters->stockId,
@@ -34,7 +37,7 @@ class NewsPageController extends Controller
                 'from' => $filters->from ?? '',
                 'to' => $filters->to ?? '',
             ],
-            'stockOptions' => fn (): array => $useCase->stockOptions(),
+            'stockOptions' => fn (): array => $useCase->stockOptions($userId),
             'sentimentOptions' => AnalysisSentiment::toSelectArray(),
         ]);
     }

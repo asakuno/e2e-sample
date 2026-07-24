@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { MobileNavigationDrawer } from '@/components/layouts/MobileNavigationDrawer';
 import { SideNav } from '@/components/layouts/SideNav';
 import { TopNav } from '@/components/layouts/TopNav';
+import { SharedFlashMessages } from '@/components/ui/FlashMessages';
 
 interface AuthenticatedLayoutProps {
   children: React.ReactNode;
@@ -39,6 +40,7 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
           onNavigationOpenChange={setMobileNavigationOpen}
         />
         <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 p-4 sm:p-6">
+          <SharedFlashMessages className="mb-4" />
           {children}
         </main>
         <footer className="border-border border-t bg-card px-4 py-3 sm:px-6">

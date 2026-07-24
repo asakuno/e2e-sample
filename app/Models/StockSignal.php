@@ -20,6 +20,7 @@ class StockSignal extends Model
     protected $fillable = [
         'stock_id',
         'signal_date',
+        'prompt_version',
         'news_score',
         'disclosure_score',
         'macro_score',

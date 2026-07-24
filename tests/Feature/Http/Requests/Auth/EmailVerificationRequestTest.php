@@ -63,4 +63,23 @@ final class EmailVerificationRequestTest extends TestCase
         // Assert
         $response->assertForbidden();
     }
+
+    #[Test]
+    public function it_rejects_signed_request_when_email_hash_does_not_match(): void
+    {
+        // Arrange
+        $user = User::factory()->unverified()->create();
+        $verificationUrl = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(60),
+            ['id' => $user->id, 'hash' => sha1('different@example.com')]
+        );
+
+        // Act
+        $response = $this->actingAs($user)->get($verificationUrl);
+
+        // Assert
+        $response->assertForbidden();
+        $this->assertNull($user->fresh()->email_verified_at);
+    }
 }

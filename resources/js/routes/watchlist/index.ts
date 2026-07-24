@@ -2,7 +2,7 @@ import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefa
 /**
 * @see \App\Http\Controllers\Web\WatchlistPageController::__invoke
 * @see Http/Controllers/Web/WatchlistPageController.php:30
-* @route '/watchlist'
+* @route '/watchlists'
 */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
@@ -11,13 +11,13 @@ export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 index.definition = {
     methods: ["get","head"],
-    url: '/watchlist',
+    url: '/watchlists',
 } satisfies RouteDefinition<["get","head"]>
 
 /**
 * @see \App\Http\Controllers\Web\WatchlistPageController::__invoke
 * @see Http/Controllers/Web/WatchlistPageController.php:30
-* @route '/watchlist'
+* @route '/watchlists'
 */
 index.url = (options?: RouteQueryOptions) => {
     return index.definition.url + queryParams(options)
@@ -26,7 +26,7 @@ index.url = (options?: RouteQueryOptions) => {
 /**
 * @see \App\Http\Controllers\Web\WatchlistPageController::__invoke
 * @see Http/Controllers/Web/WatchlistPageController.php:30
-* @route '/watchlist'
+* @route '/watchlists'
 */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
     url: index.url(options),
@@ -36,7 +36,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 /**
 * @see \App\Http\Controllers\Web\WatchlistPageController::__invoke
 * @see Http/Controllers/Web/WatchlistPageController.php:30
-* @route '/watchlist'
+* @route '/watchlists'
 */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
     url: index.url(options),
@@ -46,7 +46,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 /**
 * @see \App\Http\Controllers\Web\WatchlistPageController::store
 * @see Http/Controllers/Web/WatchlistPageController.php:42
-* @route '/watchlist'
+* @route '/watchlists'
 */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
@@ -55,13 +55,13 @@ export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => (
 
 store.definition = {
     methods: ["post"],
-    url: '/watchlist',
+    url: '/watchlists',
 } satisfies RouteDefinition<["post"]>
 
 /**
 * @see \App\Http\Controllers\Web\WatchlistPageController::store
 * @see Http/Controllers/Web/WatchlistPageController.php:42
-* @route '/watchlist'
+* @route '/watchlists'
 */
 store.url = (options?: RouteQueryOptions) => {
     return store.definition.url + queryParams(options)
@@ -70,7 +70,7 @@ store.url = (options?: RouteQueryOptions) => {
 /**
 * @see \App\Http\Controllers\Web\WatchlistPageController::store
 * @see Http/Controllers/Web/WatchlistPageController.php:42
-* @route '/watchlist'
+* @route '/watchlists'
 */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(options),
@@ -80,7 +80,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 /**
 * @see \App\Http\Controllers\Web\WatchlistPageController::update
 * @see Http/Controllers/Web/WatchlistPageController.php:54
-* @route '/watchlist/{watchlist}'
+* @route '/watchlists/{watchlist}'
 */
 export const update = (args: { watchlist: number | { id: number } } | [watchlist: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: update.url(args, options),
@@ -89,13 +89,13 @@ export const update = (args: { watchlist: number | { id: number } } | [watchlist
 
 update.definition = {
     methods: ["patch"],
-    url: '/watchlist/{watchlist}',
+    url: '/watchlists/{watchlist}',
 } satisfies RouteDefinition<["patch"]>
 
 /**
 * @see \App\Http\Controllers\Web\WatchlistPageController::update
 * @see Http/Controllers/Web/WatchlistPageController.php:54
-* @route '/watchlist/{watchlist}'
+* @route '/watchlists/{watchlist}'
 */
 update.url = (args: { watchlist: number | { id: number } } | [watchlist: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
@@ -128,7 +128,7 @@ update.url = (args: { watchlist: number | { id: number } } | [watchlist: number 
 /**
 * @see \App\Http\Controllers\Web\WatchlistPageController::update
 * @see Http/Controllers/Web/WatchlistPageController.php:54
-* @route '/watchlist/{watchlist}'
+* @route '/watchlists/{watchlist}'
 */
 update.patch = (args: { watchlist: number | { id: number } } | [watchlist: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: update.url(args, options),
@@ -138,7 +138,7 @@ update.patch = (args: { watchlist: number | { id: number } } | [watchlist: numbe
 /**
 * @see \App\Http\Controllers\Web\WatchlistPageController::destroy
 * @see Http/Controllers/Web/WatchlistPageController.php:71
-* @route '/watchlist/{watchlist}'
+* @route '/watchlists/{watchlist}'
 */
 export const destroy = (args: { watchlist: number | { id: number } } | [watchlist: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
@@ -147,13 +147,13 @@ export const destroy = (args: { watchlist: number | { id: number } } | [watchlis
 
 destroy.definition = {
     methods: ["delete"],
-    url: '/watchlist/{watchlist}',
+    url: '/watchlists/{watchlist}',
 } satisfies RouteDefinition<["delete"]>
 
 /**
 * @see \App\Http\Controllers\Web\WatchlistPageController::destroy
 * @see Http/Controllers/Web/WatchlistPageController.php:71
-* @route '/watchlist/{watchlist}'
+* @route '/watchlists/{watchlist}'
 */
 destroy.url = (args: { watchlist: number | { id: number } } | [watchlist: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
@@ -186,7 +186,7 @@ destroy.url = (args: { watchlist: number | { id: number } } | [watchlist: number
 /**
 * @see \App\Http\Controllers\Web\WatchlistPageController::destroy
 * @see Http/Controllers/Web/WatchlistPageController.php:71
-* @route '/watchlist/{watchlist}'
+* @route '/watchlists/{watchlist}'
 */
 destroy.delete = (args: { watchlist: number | { id: number } } | [watchlist: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),

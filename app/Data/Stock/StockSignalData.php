@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Data\Stock;
 
+use App\Data\Support\UtcDateTimeSerializer;
 use App\Models\StockSignal;
 use Illuminate\Support\Carbon;
 use Spatie\LaravelData\Attributes\MapName;
@@ -42,7 +43,7 @@ final class StockSignalData extends Data
             negativeCount: $signal->negative_count,
             neutralCount: $signal->neutral_count,
             reason: $signal->reason,
-            generatedAt: Carbon::parse($signal->generated_at)->toDateTimeString(),
+            generatedAt: UtcDateTimeSerializer::serializeRequired($signal->generated_at),
         );
     }
 }

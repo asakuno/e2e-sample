@@ -1,4 +1,4 @@
-import type { AppPageProps } from '@/types/index.d.ts';
+import type { AppPageProps, PaginatedData } from '@/types/index.d.ts';
 
 export interface NewsArticleStock {
   id: number;
@@ -24,6 +24,12 @@ export interface NewsAnalysis {
   sentiment_label: string;
   impact_score: number;
   confidence_score: number;
+  time_horizon: number;
+  time_horizon_label: string;
+  positive_factors: string[];
+  negative_factors: string[];
+  risk_points: string[];
+  reason: string;
   analyzed_at: string | null;
 }
 
@@ -55,7 +61,7 @@ export interface NewsSelectOption {
 }
 
 export interface NewsPageProps extends AppPageProps {
-  news: NewsArticle[];
+  news: PaginatedData<NewsArticle>;
   filters: NewsFilters;
   stockOptions: NewsSelectOption[];
   sentimentOptions: NewsSelectOption[];

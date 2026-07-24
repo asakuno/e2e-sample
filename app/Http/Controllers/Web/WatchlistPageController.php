@@ -32,7 +32,7 @@ class WatchlistPageController extends Controller
         return Inertia::render('Watchlist', [
             'watchlists' => fn (): array => WatchlistItemResource::collection(
                 $useCase->execute((int) $request->user()->getAuthIdentifier()),
-            )->resolve($request),
+            )->response()->getData(true),
         ]);
     }
 

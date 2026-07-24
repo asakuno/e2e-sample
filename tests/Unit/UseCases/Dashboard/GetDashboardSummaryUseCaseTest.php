@@ -10,8 +10,10 @@ use App\Enums\DashboardStatKind;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
 use App\Models\Stock;
+use App\Models\StockPrice;
 use App\Models\StockSignal;
 use App\Repositories\DashboardRepositoryInterface;
+use App\Services\Dashboard\DashboardSummaryAssembler;
 use App\UseCases\Dashboard\GetDashboardSummaryUseCase;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -39,6 +41,7 @@ final class GetDashboardSummaryUseCaseTest extends TestCase
             'positive_count' => 3,
             'negative_count' => 1,
             'reason' => 'ポジティブ材料が増加',
+            'generated_at' => '2026-06-15 12:00:00',
         ]);
         $signal->id = 20;
         $signal->setRelation('stock', $stock);
@@ -46,7 +49,9 @@ final class GetDashboardSummaryUseCaseTest extends TestCase
         $article = new NewsArticle([
             'title' => 'Apple product news',
             'url' => 'https://example.com/apple',
+            'source' => 'Reuters',
             'provider' => 'rss',
+            'published_at' => '2026-06-15 10:00:00',
         ]);
         $article->id = 30;
 
@@ -60,6 +65,19 @@ final class GetDashboardSummaryUseCaseTest extends TestCase
         $analysis->id = 40;
         $analysis->setRelation('stock', $stock);
         $analysis->setRelation('analysable', $article);
+
+        $latestPrice = new StockPrice([
+            'price_date' => '2026-06-15',
+            'adjusted_close' => 120,
+        ]);
+        $latestPrice->id = 51;
+        $previousPrice = new StockPrice([
+            'price_date' => '2026-06-14',
+            'adjusted_close' => 100,
+        ]);
+        $previousPrice->id = 50;
+        $stock->setRelation('prices', new Collection([$latestPrice, $previousPrice]));
+        $stock->setRelation('analysisResults', new Collection([$analysis]));
 
         $repository = new class($signal, $analysis) implements DashboardRepositoryInterface
         {
@@ -114,7 +132,7 @@ final class GetDashboardSummaryUseCaseTest extends TestCase
             }
         };
 
-        $useCase = new GetDashboardSummaryUseCase($repository);
+        $useCase = new GetDashboardSummaryUseCase($repository, new DashboardSummaryAssembler);
 
         // Act
         $result = $useCase->execute(1);
@@ -125,7 +143,10 @@ final class GetDashboardSummaryUseCaseTest extends TestCase
             ['kind' => DashboardStatKind::PositiveAnalysis, 'value' => 2],
             ['kind' => DashboardStatKind::NegativeAnalysis, 'value' => 1],
             ['kind' => DashboardStatKind::UnanalyzedNews, 'value' => 3],
-            ['kind' => DashboardStatKind::LatestAnalysis, 'value' => '2026-06-15 11:00'],
+            [
+                'kind' => DashboardStatKind::LatestAnalysis,
+                'value' => '2026-06-15T11:00:00+00:00',
+            ],
         ];
         $actualStats = array_map(
             fn (DashboardStatData $stat): array => ['kind' => $stat->kind, 'value' => $stat->value],
@@ -135,10 +156,17 @@ final class GetDashboardSummaryUseCaseTest extends TestCase
         $this->assertSame(3, $result->recentTrend->total);
         $this->assertSame('+200.0%', $result->recentTrend->changePercent);
         $this->assertSame('AAPL', $result->topStocks[0]->symbol);
+        $this->assertSame(120.0, $result->topStocks[0]->latestPrice);
+        $this->assertSame(20.0, $result->topStocks[0]->changePercent);
+        $this->assertSame(AnalysisSentiment::Positive->value, $result->topStocks[0]->sentiment);
+        $this->assertSame('ポジティブ', $result->topStocks[0]->sentimentLabel);
+        $this->assertSame('2026-06-15T12:00:00+00:00', $result->topStocks[0]->updatedAt);
         $this->assertSame('AAPL', $result->attentionStocks[0]->symbol);
         $this->assertSame(30, $result->importantNews[0]->articleId);
         $this->assertSame('Apple product news', $result->importantNews[0]->title);
-        $this->assertSame('2026-06-15 11:00', $result->latestAnalysisAt);
+        $this->assertSame('Reuters', $result->importantNews[0]->source);
+        $this->assertSame('2026-06-15T10:00:00+00:00', $result->importantNews[0]->publishedAt);
+        $this->assertSame('2026-06-15T11:00:00+00:00', $result->latestAnalysisAt);
 
         Carbon::setTestNow();
     }

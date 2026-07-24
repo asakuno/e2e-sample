@@ -11,7 +11,23 @@ interface StockInsightsPanelProps {
 
 export function StockInsightsPanel({ relatedNews, analyses, signals }: StockInsightsPanelProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
+    <div className="flex flex-col gap-4">
+      <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+        <SectionHeader
+          icon={<RadioTower aria-hidden="true" className="size-5" />}
+          title="シグナル"
+        />
+        <StockSignalList signals={signals} />
+      </section>
+
+      <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
+        <SectionHeader
+          icon={<Sparkles aria-hidden="true" className="size-5" />}
+          title="AI分析サマリー・材料"
+        />
+        {analyses}
+      </section>
+
       <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
         <SectionHeader
           icon={<Newspaper aria-hidden="true" className="size-5" />}
@@ -19,24 +35,6 @@ export function StockInsightsPanel({ relatedNews, analyses, signals }: StockInsi
         />
         {relatedNews}
       </section>
-
-      <div className="flex flex-col gap-4">
-        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
-          <SectionHeader
-            icon={<Sparkles aria-hidden="true" className="size-5" />}
-            title="AI分析結果"
-          />
-          {analyses}
-        </section>
-
-        <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
-          <SectionHeader
-            icon={<RadioTower aria-hidden="true" className="size-5" />}
-            title="シグナル"
-          />
-          <StockSignalList signals={signals} />
-        </section>
-      </div>
     </div>
   );
 }

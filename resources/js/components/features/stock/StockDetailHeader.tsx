@@ -1,20 +1,22 @@
 import { TrendingDown, TrendingUp } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { formatCurrencyChange, formatPercent, formatPrice, formatVolume } from '@/lib/formatters';
 import type { StockDetail } from '@/types/stocks';
-import { calculatePeriodChange } from './stock-detail-presenter';
+import { calculatePreviousDayChange } from './stock-detail-presenter';
 
 type StockDetailHeaderProps = {
   stock: StockDetail;
+  watchlistControl?: ReactNode;
 };
 
-export function StockDetailHeader({ stock }: StockDetailHeaderProps) {
-  const latestClose = stock.latest_price?.close ?? null;
-  const periodChange = calculatePeriodChange(stock.price_history);
+export function StockDetailHeader({ stock, watchlistControl }: StockDetailHeaderProps) {
+  const latestClose = stock.latest_price?.effective_close ?? null;
+  const previousDayChange = calculatePreviousDayChange(stock.latest_price, stock.price_history);
 
   return (
     <section className="rounded-lg border border-border bg-card p-6 shadow-sm">
       <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
-        <div>
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="font-bold text-3xl text-card-foreground">{stock.symbol}</h1>
             <span className="rounded-full bg-muted px-2.5 py-1 font-medium text-foreground text-xs">
@@ -22,22 +24,19 @@ export function StockDetailHeader({ stock }: StockDetailHeaderProps) {
             </span>
           </div>
           <p className="mt-2 text-foreground">{stock.name}</p>
-          {stock.description && (
-            <p className="mt-3 max-w-3xl text-muted-foreground text-sm leading-6">
-              {stock.description}
-            </p>
-          )}
+          {watchlistControl !== undefined && <div className="mt-4">{watchlistControl}</div>}
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:min-w-96 sm:grid-cols-3">
-          <Metric label="最新価格" value={formatPrice(latestClose, stock.currency)} />
-          <Metric label="出来高" value={formatVolume(stock.latest_price?.volume ?? null)} />
+        <dl className="grid grid-cols-2 gap-3 lg:min-w-[32rem] lg:grid-cols-4">
+          <Metric label="基準価格（調整後優先）" value={formatPrice(latestClose, stock.currency)} />
           <Metric
-            label="期間騰落"
-            value={formatCurrencyChange(periodChange?.amount ?? null, stock.currency)}
-            tone={periodChange?.amount === undefined ? 'neutral' : periodChange.amount}
-            subValue={formatPercent(periodChange?.percent ?? null)}
+            label="前日比"
+            value={formatCurrencyChange(previousDayChange?.amount ?? null, stock.currency)}
+            tone={previousDayChange?.amount ?? 'neutral'}
+            subValue={formatPercent(previousDayChange?.percent ?? null)}
           />
-        </div>
+          <Metric label="価格取得日" value={stock.latest_price?.price_date ?? '-'} />
+          <Metric label="出来高" value={formatVolume(stock.latest_price?.volume ?? null)} />
+        </dl>
       </div>
     </section>
   );

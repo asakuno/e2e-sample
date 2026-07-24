@@ -16,9 +16,14 @@ final class DashboardTopStockData extends Data
         public readonly string $name,
         public readonly string $market,
         public readonly float $totalScore,
+        public readonly ?float $latestPrice,
+        public readonly ?float $changePercent,
+        public readonly ?int $sentiment,
+        public readonly ?string $sentimentLabel,
         public readonly int $positiveCount,
         public readonly int $negativeCount,
         public readonly ?string $reason,
         public readonly ?string $signalDate,
+        public readonly ?string $updatedAt,
     ) {}
 }

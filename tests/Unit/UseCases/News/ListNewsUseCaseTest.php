@@ -6,11 +6,13 @@ namespace Tests\Unit\UseCases\News;
 
 use App\Data\News\NewsSearchData;
 use App\Enums\AnalysisSentiment;
+use App\Enums\AnalysisTimeHorizon;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
 use App\Models\Stock;
 use App\Repositories\NewsRepositoryInterface;
 use App\UseCases\News\ListNewsUseCase;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Tests\TestCase;
 
@@ -55,7 +57,7 @@ final class ListNewsUseCaseTest extends TestCase
         $repository->expects($this->once())
             ->method('search')
             ->with($filters)
-            ->willReturn(new Collection([$article]));
+            ->willReturn(new LengthAwarePaginator(new Collection([$article]), 1, 20));
 
         $useCase = new ListNewsUseCase($repository);
 
@@ -82,12 +84,13 @@ final class ListNewsUseCaseTest extends TestCase
         $repository = $this->createMock(NewsRepositoryInterface::class);
         $repository->expects($this->once())
             ->method('findStocksWithNews')
+            ->with(1)
             ->willReturn(new Collection([$stock]));
 
         $useCase = new ListNewsUseCase($repository);
 
         // Act
-        $result = $useCase->stockOptions();
+        $result = $useCase->stockOptions(1);
 
         // Assert
         $this->assertSame([
@@ -115,6 +118,11 @@ final class ListNewsUseCaseTest extends TestCase
             'sentiment' => AnalysisSentiment::Positive,
             'impact_score' => 7,
             'confidence_score' => 88,
+            'time_horizon' => AnalysisTimeHorizon::ShortTerm,
+            'positive_factors' => ['需要増'],
+            'negative_factors' => ['競争激化'],
+            'risk_points' => ['供給制約'],
+            'reason' => '需要の伸びを重視しました。',
             'analyzed_at' => '2026-06-15 11:00:00',
         ]);
         $analysis->id = 30;
@@ -143,7 +151,7 @@ final class ListNewsUseCaseTest extends TestCase
         $repository->expects($this->once())
             ->method('search')
             ->with($filters)
-            ->willReturn(new Collection([$article]));
+            ->willReturn(new LengthAwarePaginator(new Collection([$article]), 1, 20));
 
         $useCase = new ListNewsUseCase($repository);
 
@@ -155,5 +163,11 @@ final class ListNewsUseCaseTest extends TestCase
         $this->assertSame(AnalysisSentiment::Positive->value, $result[0]->analyses[0]->sentiment);
         $this->assertSame('ポジティブ', $result[0]->analyses[0]->sentimentLabel);
         $this->assertSame(7, $result[0]->analyses[0]->impactScore);
+        $this->assertSame(AnalysisTimeHorizon::ShortTerm->value, $result[0]->analyses[0]->timeHorizon);
+        $this->assertSame('短期', $result[0]->analyses[0]->timeHorizonLabel);
+        $this->assertSame(['需要増'], $result[0]->analyses[0]->positiveFactors);
+        $this->assertSame(['競争激化'], $result[0]->analyses[0]->negativeFactors);
+        $this->assertSame(['供給制約'], $result[0]->analyses[0]->riskPoints);
+        $this->assertSame('需要の伸びを重視しました。', $result[0]->analyses[0]->reason);
     }
 }

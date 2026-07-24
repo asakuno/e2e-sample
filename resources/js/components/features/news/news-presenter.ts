@@ -1,9 +1,8 @@
 import type { NewsAnalysis } from '@/types/news';
+import { formatJstDateTime } from '@/lib/formatters';
 
 export function formatNewsDateTime(value: string): string {
-  const normalized = value.replace('T', ' ');
-
-  return normalized.length >= 16 ? normalized.slice(0, 16) : normalized;
+  return formatJstDateTime(value);
 }
 
 export function formatSignedImpactScore(value: number): string {

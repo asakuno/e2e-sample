@@ -19,19 +19,39 @@ const createAnalysis = (id: number, impactScore: number): NewsAnalysis => ({
   sentiment_label: '中立',
   impact_score: impactScore,
   confidence_score: 80,
+  time_horizon: 0,
+  time_horizon_label: '不明',
+  positive_factors: [],
+  negative_factors: [],
+  risk_points: [],
+  reason: `判断理由${id}`,
   analyzed_at: '2026-07-12T10:30:00+09:00',
 });
 
 describe('formatNewsDateTime', () => {
-  it('ISO形式の日時を分までの表示に整形すること', () => {
+  it.each([
+    ['2026-07-11T14:30:00Z', '2026/07/11 23:30'],
+    ['2026-07-11T18:00:00Z', '2026/07/12 03:00'],
+  ])('UTC日時%sをAsia/Tokyoの%sへ整形すること', (value, expected) => {
     // Arrange
-    const value = '2026-07-12T10:30:45+09:00';
+    const dateTime = value;
+
+    // Act
+    const actual = formatNewsDateTime(dateTime);
+
+    // Assert
+    expect(actual).toBe(expected);
+  });
+
+  it('不正な日時ではハイフンを返すこと', () => {
+    // Arrange
+    const value = 'invalid-date-time';
 
     // Act
     const actual = formatNewsDateTime(value);
 
     // Assert
-    expect(actual).toBe('2026-07-12 10:30');
+    expect(actual).toBe('-');
   });
 });
 

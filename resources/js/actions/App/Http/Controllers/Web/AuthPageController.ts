@@ -45,7 +45,7 @@ showLogin.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Web\AuthPageController::login
-* @see Http/Controllers/Web/AuthPageController.php:40
+* @see Http/Controllers/Web/AuthPageController.php:42
 * @route '/login'
 */
 export const login = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -60,7 +60,7 @@ login.definition = {
 
 /**
 * @see \App\Http\Controllers\Web\AuthPageController::login
-* @see Http/Controllers/Web/AuthPageController.php:40
+* @see Http/Controllers/Web/AuthPageController.php:42
 * @route '/login'
 */
 login.url = (options?: RouteQueryOptions) => {
@@ -69,7 +69,7 @@ login.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Web\AuthPageController::login
-* @see Http/Controllers/Web/AuthPageController.php:40
+* @see Http/Controllers/Web/AuthPageController.php:42
 * @route '/login'
 */
 login.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -79,7 +79,7 @@ login.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Web\AuthPageController::showRegister
-* @see Http/Controllers/Web/AuthPageController.php:54
+* @see Http/Controllers/Web/AuthPageController.php:56
 * @route '/register'
 */
 export const showRegister = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -94,7 +94,7 @@ showRegister.definition = {
 
 /**
 * @see \App\Http\Controllers\Web\AuthPageController::showRegister
-* @see Http/Controllers/Web/AuthPageController.php:54
+* @see Http/Controllers/Web/AuthPageController.php:56
 * @route '/register'
 */
 showRegister.url = (options?: RouteQueryOptions) => {
@@ -103,7 +103,7 @@ showRegister.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Web\AuthPageController::showRegister
-* @see Http/Controllers/Web/AuthPageController.php:54
+* @see Http/Controllers/Web/AuthPageController.php:56
 * @route '/register'
 */
 showRegister.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -113,7 +113,7 @@ showRegister.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Web\AuthPageController::showRegister
-* @see Http/Controllers/Web/AuthPageController.php:54
+* @see Http/Controllers/Web/AuthPageController.php:56
 * @route '/register'
 */
 showRegister.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -123,7 +123,7 @@ showRegister.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Web\AuthPageController::register
-* @see Http/Controllers/Web/AuthPageController.php:62
+* @see Http/Controllers/Web/AuthPageController.php:64
 * @route '/register'
 */
 export const register = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -138,7 +138,7 @@ register.definition = {
 
 /**
 * @see \App\Http\Controllers\Web\AuthPageController::register
-* @see Http/Controllers/Web/AuthPageController.php:62
+* @see Http/Controllers/Web/AuthPageController.php:64
 * @route '/register'
 */
 register.url = (options?: RouteQueryOptions) => {
@@ -147,7 +147,7 @@ register.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Web\AuthPageController::register
-* @see Http/Controllers/Web/AuthPageController.php:62
+* @see Http/Controllers/Web/AuthPageController.php:64
 * @route '/register'
 */
 register.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -157,7 +157,7 @@ register.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Web\AuthPageController::logout
-* @see Http/Controllers/Web/AuthPageController.php:76
+* @see Http/Controllers/Web/AuthPageController.php:78
 * @route '/logout'
 */
 export const logout = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -172,7 +172,7 @@ logout.definition = {
 
 /**
 * @see \App\Http\Controllers\Web\AuthPageController::logout
-* @see Http/Controllers/Web/AuthPageController.php:76
+* @see Http/Controllers/Web/AuthPageController.php:78
 * @route '/logout'
 */
 logout.url = (options?: RouteQueryOptions) => {
@@ -181,7 +181,7 @@ logout.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Web\AuthPageController::logout
-* @see Http/Controllers/Web/AuthPageController.php:76
+* @see Http/Controllers/Web/AuthPageController.php:78
 * @route '/logout'
 */
 logout.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({

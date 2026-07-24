@@ -8,6 +8,9 @@ export function StockCompanyInfo({ stock }: StockCompanyInfoProps) {
   return (
     <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
       <h2 className="font-semibold text-card-foreground text-lg">企業情報</h2>
+      {stock.description !== null && stock.description.trim() !== '' && (
+        <p className="mt-3 text-muted-foreground text-sm leading-6">{stock.description}</p>
+      )}
       <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
         <InfoItem label="国" value={stock.country} />
         <InfoItem label="市場" value={stock.market.toUpperCase()} />

@@ -25,6 +25,7 @@ class StockSignalFactory extends Factory
         return [
             'stock_id' => Stock::factory(),
             'signal_date' => today(),
+            'prompt_version' => (string) config('services.openai.prompt_version', 'v1'),
             'news_score' => $newsScore,
             'disclosure_score' => 0,
             'macro_score' => 0,

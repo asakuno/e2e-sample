@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { defineConfig, devices } from '@playwright/test';
 
 /**
@@ -13,16 +15,17 @@ if (!baseURL.startsWith('http://') && !baseURL.startsWith('https://')) {
 
 // Docker環境判定（nginx を含むURLはDocker内部ネットワーク）
 const isDocker = baseURL.includes('nginx');
+const browserBaseURL = isDocker ? baseURL.replace('nginx', 'localhost') : baseURL;
 
 // リトライ回数を環境変数で設定可能に
 const maxRetries = parseInt(process.env.PLAYWRIGHT_RETRIES ?? '2', 10);
 
 export default defineConfig({
   testDir: './tests/e2e/tests',
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? maxRetries : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   timeout: 30000,
   expect: {
     timeout: 5000,
@@ -33,12 +36,19 @@ export default defineConfig({
     : [['html', { outputFolder: 'playwright-report' }], ['list']],
 
   use: {
-    baseURL,
+    baseURL: browserBaseURL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     locale: 'ja-JP',
     timezoneId: 'Asia/Tokyo',
+    ...(isDocker
+      ? {
+          launchOptions: {
+            args: ['--host-resolver-rules=MAP localhost nginx'],
+          },
+        }
+      : {}),
   },
 
   projects: [
@@ -50,6 +60,7 @@ export default defineConfig({
     // Chrome
     {
       name: 'chromium',
+      testIgnore: /.*\.setup\.ts/,
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'playwright/.auth/user.json',

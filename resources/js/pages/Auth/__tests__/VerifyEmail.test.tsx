@@ -20,6 +20,7 @@ vi.mock('@inertiajs/react', () => ({
     processing: false,
   })),
   Head: ({ title }: { title: string }) => <title>{title}</title>,
+  usePage: vi.fn(() => ({ props: { flash: {} } })),
   Link: ({ href, children, ...props }: Record<string, unknown>) => (
     <a href={href as string} {...props}>
       {children as React.ReactNode}

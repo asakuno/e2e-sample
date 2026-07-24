@@ -27,6 +27,12 @@ final class NewsAnalysisResource extends JsonResource
             'sentiment_label' => $analysis->sentimentLabel,
             'impact_score' => $analysis->impactScore,
             'confidence_score' => $analysis->confidenceScore,
+            'time_horizon' => $analysis->timeHorizon,
+            'time_horizon_label' => $analysis->timeHorizonLabel,
+            'positive_factors' => $analysis->positiveFactors,
+            'negative_factors' => $analysis->negativeFactors,
+            'risk_points' => $analysis->riskPoints,
+            'reason' => $analysis->reason,
             'analyzed_at' => $analysis->analyzedAt,
         ];
     }

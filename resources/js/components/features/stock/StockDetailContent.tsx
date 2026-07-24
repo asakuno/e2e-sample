@@ -11,9 +11,10 @@ import { StockPriceHistoryTable } from './StockPriceHistoryTable';
 type StockDetailContentProps = {
   stock: StockDetail;
   children: ReactNode;
+  watchlistControl?: ReactNode;
 };
 
-export function StockDetailContent({ stock, children }: StockDetailContentProps) {
+export function StockDetailContent({ stock, children, watchlistControl }: StockDetailContentProps) {
   return (
     <div className="flex flex-col gap-6">
       <InertiaActionLink
@@ -25,29 +26,47 @@ export function StockDetailContent({ stock, children }: StockDetailContentProps)
         銘柄一覧
       </InertiaActionLink>
 
-      <StockDetailHeader stock={stock} />
+      <StockDetailHeader stock={stock} watchlistControl={watchlistControl} />
+
+      {children}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
               <BarChart3 aria-hidden="true" className="size-5 text-muted-foreground" />
-              <h2 className="font-semibold text-card-foreground text-lg">価格履歴</h2>
+              <h2 className="font-semibold text-card-foreground text-lg">価格・出来高推移</h2>
             </div>
             <div className="inline-flex w-fit overflow-hidden rounded-md border border-border bg-muted p-1">
               {stock.period_options.map((option) => {
                 const isActive = option.value === stock.selected_period;
+                const className = `inline-flex min-h-11 items-center rounded px-3 py-2 font-medium text-sm tabular-nums transition-[background-color,color,box-shadow] duration-motion-fast ease-standard ${
+                  isActive
+                    ? 'bg-card text-card-foreground shadow-sm'
+                    : 'text-muted-foreground hover:bg-card/80 hover:text-foreground'
+                }`;
+
+                if (!option.available) {
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`${className} cursor-not-allowed opacity-45`}
+                      aria-label={`${option.label}（価格履歴不足）`}
+                      aria-current={isActive ? 'page' : undefined}
+                      disabled
+                    >
+                      {option.label}
+                    </button>
+                  );
+                }
 
                 return (
                   <InertiaActionLink
                     key={option.value}
                     href={show.url(stock.id, { query: { period: option.value } })}
                     pendingClassName="opacity-70"
-                    className={`inline-flex min-h-11 items-center rounded px-3 py-2 font-medium text-sm tabular-nums transition-[background-color,color,box-shadow] duration-motion-fast ease-standard ${
-                      isActive
-                        ? 'bg-card text-card-foreground shadow-sm'
-                        : 'text-muted-foreground hover:bg-card/80 hover:text-foreground'
-                    }`}
+                    className={className}
                     aria-current={isActive ? 'page' : undefined}
                   >
                     {option.label}
@@ -57,6 +76,15 @@ export function StockDetailContent({ stock, children }: StockDetailContentProps)
             </div>
           </div>
 
+          {stock.price_history_notice !== null && (
+            <p
+              role="status"
+              className="mt-4 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-foreground text-sm"
+            >
+              {stock.price_history_notice}
+            </p>
+          )}
+
           <div className="mt-5">
             <StockPriceChart prices={stock.price_history} currency={stock.currency} />
           </div>
@@ -64,8 +92,6 @@ export function StockDetailContent({ stock, children }: StockDetailContentProps)
 
         <StockCompanyInfo stock={stock} />
       </div>
-
-      {children}
 
       <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
         <div className="border-border border-b px-5 py-4">
