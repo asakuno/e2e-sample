@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use App\Data\Analysis\PersistAnalysisBatchData;
+use App\Enums\AnalysisBatchStatus;
 use App\Models\AnalysisBatch;
 use App\Models\NewsArticle;
 use Carbon\CarbonInterface;
@@ -38,5 +39,9 @@ interface AnalysisBatchRepositoryInterface
     /**
      * @return LengthAwarePaginator<int, AnalysisBatch>
      */
-    public function paginateOwned(int $userId, int $perPage = 15): LengthAwarePaginator;
+    public function paginateOwned(
+        int $userId,
+        ?AnalysisBatchStatus $status = null,
+        int $perPage = 15,
+    ): LengthAwarePaginator;
 }

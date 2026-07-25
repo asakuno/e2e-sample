@@ -1,13 +1,28 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { ArrowRight, Plus } from 'lucide-react';
+import { FieldLabel, fieldControlVariants } from '@/components/ui/field';
 import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Surface } from '@/components/ui/surface';
 import { AuthenticatedLayout } from '@/layouts/AuthenticatedLayout';
-import { create, show } from '@/routes/analysis';
+import { create, index, show } from '@/routes/analysis';
 import type { AnalysisIndexPageProps } from '@/types/analysis';
 
-export default function AnalysisIndex({ batches, pagination }: AnalysisIndexPageProps) {
+export default function AnalysisIndex({
+  batches,
+  statusOptions,
+  filters,
+  pagination,
+}: AnalysisIndexPageProps) {
+  const handleStatusChange = (status: string) => {
+    router.get(index.url(), status === '' ? { page: 1 } : { page: 1, status }, {
+      only: ['batches', 'filters', 'pagination'],
+      preserveScroll: true,
+      preserveState: true,
+      replace: true,
+    });
+  };
+
   return (
     <>
       <Head title="Analysis" />
@@ -29,11 +44,36 @@ export default function AnalysisIndex({ batches, pagination }: AnalysisIndexPage
             </InertiaActionLink>
           </header>
 
+          <Surface padding="md">
+            <div className="max-w-xs">
+              <FieldLabel htmlFor="analysis-status">状態</FieldLabel>
+              <select
+                id="analysis-status"
+                value={filters.status}
+                onChange={(event) => handleStatusChange(event.target.value)}
+                className={fieldControlVariants()}
+              >
+                <option value="">すべて</option>
+                {statusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </Surface>
+
           {batches.length === 0 ? (
             <Surface tone="dashed" padding="lg" className="py-14 text-center">
-              <h2 className="font-semibold text-lg">分析バッチはまだありません</h2>
+              <h2 className="font-semibold text-lg">
+                {filters.status === ''
+                  ? '分析バッチはまだありません'
+                  : '該当する分析バッチはありません'}
+              </h2>
               <p className="mt-2 text-muted-foreground text-sm">
-                ウォッチリスト銘柄と期間を選び、最初の分析材料を準備してください。
+                {filters.status === ''
+                  ? 'ウォッチリスト銘柄と期間を選び、最初の分析材料を準備してください。'
+                  : '状態を変更して、別の分析バッチを確認してください。'}
               </p>
             </Surface>
           ) : (

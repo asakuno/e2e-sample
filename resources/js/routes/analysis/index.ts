@@ -4,7 +4,7 @@ import imports from './imports'
 import replacementImports from './replacement-imports'
 /**
 * @see \App\Http\Controllers\Web\AnalysisPageController::index
-* @see Http/Controllers/Web/AnalysisPageController.php:25
+* @see Http/Controllers/Web/AnalysisPageController.php:27
 * @route '/analysis'
 */
 export const index = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -19,7 +19,7 @@ index.definition = {
 
 /**
 * @see \App\Http\Controllers\Web\AnalysisPageController::index
-* @see Http/Controllers/Web/AnalysisPageController.php:25
+* @see Http/Controllers/Web/AnalysisPageController.php:27
 * @route '/analysis'
 */
 index.url = (options?: RouteQueryOptions) => {
@@ -28,7 +28,7 @@ index.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Web\AnalysisPageController::index
-* @see Http/Controllers/Web/AnalysisPageController.php:25
+* @see Http/Controllers/Web/AnalysisPageController.php:27
 * @route '/analysis'
 */
 index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -38,7 +38,7 @@ index.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Web\AnalysisPageController::index
-* @see Http/Controllers/Web/AnalysisPageController.php:25
+* @see Http/Controllers/Web/AnalysisPageController.php:27
 * @route '/analysis'
 */
 index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -48,7 +48,7 @@ index.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\Web\AnalysisPageController::create
-* @see Http/Controllers/Web/AnalysisPageController.php:47
+* @see Http/Controllers/Web/AnalysisPageController.php:55
 * @route '/analysis/create'
 */
 export const create = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -63,7 +63,7 @@ create.definition = {
 
 /**
 * @see \App\Http\Controllers\Web\AnalysisPageController::create
-* @see Http/Controllers/Web/AnalysisPageController.php:47
+* @see Http/Controllers/Web/AnalysisPageController.php:55
 * @route '/analysis/create'
 */
 create.url = (options?: RouteQueryOptions) => {
@@ -72,7 +72,7 @@ create.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Web\AnalysisPageController::create
-* @see Http/Controllers/Web/AnalysisPageController.php:47
+* @see Http/Controllers/Web/AnalysisPageController.php:55
 * @route '/analysis/create'
 */
 create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -82,7 +82,7 @@ create.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\Web\AnalysisPageController::create
-* @see Http/Controllers/Web/AnalysisPageController.php:47
+* @see Http/Controllers/Web/AnalysisPageController.php:55
 * @route '/analysis/create'
 */
 create.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -126,7 +126,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Web\AnalysisPageController::show
-* @see Http/Controllers/Web/AnalysisPageController.php:68
+* @see Http/Controllers/Web/AnalysisPageController.php:76
 * @route '/analysis/{analysisBatch}'
 */
 export const show = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -141,7 +141,7 @@ show.definition = {
 
 /**
 * @see \App\Http\Controllers\Web\AnalysisPageController::show
-* @see Http/Controllers/Web/AnalysisPageController.php:68
+* @see Http/Controllers/Web/AnalysisPageController.php:76
 * @route '/analysis/{analysisBatch}'
 */
 show.url = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions) => {
@@ -174,7 +174,7 @@ show.url = (args: { analysisBatch: string | { public_id: string } } | [analysisB
 
 /**
 * @see \App\Http\Controllers\Web\AnalysisPageController::show
-* @see Http/Controllers/Web/AnalysisPageController.php:68
+* @see Http/Controllers/Web/AnalysisPageController.php:76
 * @route '/analysis/{analysisBatch}'
 */
 show.get = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -184,7 +184,7 @@ show.get = (args: { analysisBatch: string | { public_id: string } } | [analysisB
 
 /**
 * @see \App\Http\Controllers\Web\AnalysisPageController::show
-* @see Http/Controllers/Web/AnalysisPageController.php:68
+* @see Http/Controllers/Web/AnalysisPageController.php:76
 * @route '/analysis/{analysisBatch}'
 */
 show.head = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions): RouteDefinition<'head'> => ({

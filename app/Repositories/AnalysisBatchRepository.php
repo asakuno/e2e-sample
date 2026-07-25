@@ -18,7 +18,17 @@ final class AnalysisBatchRepository implements AnalysisBatchRepositoryInterface
     public function findOwnedByPublicId(int $userId, string $publicId): ?AnalysisBatch
     {
         return AnalysisBatch::query()
-            ->with(['stock', 'newsSnapshots', 'imports', 'currentImport', 'result'])
+            ->with([
+                'stock',
+                'newsSnapshots',
+                'imports.baseCurrentImport',
+                'imports.analysisBatch.currentImport',
+                'imports.analysisBatch.imports',
+                'currentImport.baseCurrentImport',
+                'currentImport.analysisBatch.currentImport',
+                'currentImport.analysisBatch.imports',
+                'result',
+            ])
             ->where('user_id', $userId)
             ->where('public_id', $publicId)
             ->first();
@@ -128,13 +138,24 @@ final class AnalysisBatchRepository implements AnalysisBatchRepositoryInterface
     /**
      * @return LengthAwarePaginator<int, AnalysisBatch>
      */
-    public function paginateOwned(int $userId, int $perPage = 15): LengthAwarePaginator
-    {
+    public function paginateOwned(
+        int $userId,
+        ?AnalysisBatchStatus $status = null,
+        int $perPage = 15,
+    ): LengthAwarePaginator {
         return AnalysisBatch::query()
             ->with(['stock', 'currentImport'])
             ->where('user_id', $userId)
+            ->when(
+                $status !== null,
+                fn (Builder $query): Builder => $query->where(
+                    'status',
+                    $status->value,
+                ),
+            )
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
-            ->paginate($perPage);
+            ->paginate($perPage)
+            ->withQueryString();
     }
 }

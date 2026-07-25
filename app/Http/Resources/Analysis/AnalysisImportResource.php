@@ -22,10 +22,16 @@ final class AnalysisImportResource extends JsonResource
         $import = $this->resource;
         $mode = $import->getAttribute('mode');
         $status = $import->getAttribute('status');
+        $baseCurrentRevision = $import->baseCurrentImport?->revision;
+        $currentRevision = $import->analysisBatch?->currentImport?->revision;
+        $maxCommittedRevision = $import->analysisBatch?->imports->max('revision');
 
         return [
             'id' => $import->id,
             'revision' => $import->revision,
+            'base_current_revision' => $baseCurrentRevision,
+            'current_revision' => $currentRevision,
+            'expected_revision' => ((int) ($maxCommittedRevision ?? 0)) + 1,
             'mode' => $mode instanceof AnalysisImportMode ? $mode->value : $mode,
             'mode_label' => $mode instanceof AnalysisImportMode ? $mode->label() : '',
             'status' => $status instanceof AnalysisImportStatus ? $status->value : $status,

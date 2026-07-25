@@ -31,13 +31,15 @@ export default function AnalysisImportPreview({
   }).withPrecognition(reprepareAction.method, reprepareAction.url);
   const validated = analysisImport.status === 2;
   const stale = analysisImport.status === 4;
+  const confirmationPending =
+    analysisImport.status === 1 || analysisImport.status === 2 || analysisImport.status === 4;
 
   const handleCommit = () => {
     const isReplace = analysisImport.mode === 2;
     const confirmed =
       !isReplace ||
       window.confirm(
-        `現在の結果を置き換え、revisionを更新します。\n理由: ${analysisImport.replacement_reason ?? ''}`,
+        `${formatRevision(analysisImport.current_revision)}を${formatRevision(analysisImport.expected_revision)}へ置き換えます。\n理由: ${analysisImport.replacement_reason ?? ''}`,
       );
     if (!confirmed) return;
 
@@ -113,6 +115,20 @@ export default function AnalysisImportPreview({
             <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
               <AuditRow label="mode" value={analysisImport.mode_label} />
               <AuditRow label="model" value={analysisImport.model_name} />
+              <AuditRow
+                label="アップロード時のcurrent"
+                value={formatRevision(analysisImport.base_current_revision)}
+              />
+              <AuditRow
+                label="現在のcurrent"
+                value={formatRevision(analysisImport.current_revision)}
+              />
+              <AuditRow
+                label={confirmationPending ? '確定予定' : 'このimportのrevision'}
+                value={formatRevision(
+                  confirmationPending ? analysisImport.expected_revision : analysisImport.revision,
+                )}
+              />
               <AuditRow label="file SHA-256" value={analysisImport.file_hash} mono />
               <AuditRow
                 label="raw CSV"
@@ -145,14 +161,16 @@ export default function AnalysisImportPreview({
                   <p className="mt-1 text-muted-foreground text-sm">
                     確定時にraw CSVを再hash・再検証します。
                     {analysisImport.mode === 2
-                      ? ' 現在のrevisionはsupersededとなり、旧payloadは履歴に残ります。'
-                      : ' 初回結果はrevision 1になります。'}
+                      ? ` ${formatRevision(analysisImport.current_revision)}はsupersededとなり、旧payloadは履歴に残ります。確定後は${formatRevision(analysisImport.expected_revision)}です。`
+                      : ` 確定後は${formatRevision(analysisImport.expected_revision)}です。`}
                   </p>
                 </div>
               </div>
               <div className="mt-4 flex justify-end">
                 <Button type="button" onClick={handleCommit}>
-                  {analysisImport.mode === 2 ? '置き換えを確認して確定' : 'revision 1として確定'}
+                  {analysisImport.mode === 2
+                    ? `${formatRevision(analysisImport.expected_revision)}へ置き換えて確定`
+                    : `${formatRevision(analysisImport.expected_revision)}として確定`}
                 </Button>
               </div>
             </Surface>
@@ -166,6 +184,12 @@ export default function AnalysisImportPreview({
               </div>
               <p className="mt-1 text-muted-foreground text-sm">
                 rawが保持中ならファイル選択は不要です。期限切れの場合は、同じSHA-256のCSVだけ復元できます。
+              </p>
+              <p className="mt-2 rounded-md bg-warning-muted p-3 text-sm">
+                アップロード時のcurrentは
+                {formatRevision(analysisImport.base_current_revision)}、現在のcurrentは
+                {formatRevision(analysisImport.current_revision)}
+                です。このimportは再previewが必要です。
               </p>
               <form onSubmit={handleReprepare} className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
@@ -296,4 +320,8 @@ function AuditRow({
       <dd className={`mt-1 break-all ${mono ? 'font-mono text-xs' : ''}`}>{value}</dd>
     </div>
   );
+}
+
+function formatRevision(revision: number | null): string {
+  return revision == null ? 'なし' : `revision ${revision}`;
 }

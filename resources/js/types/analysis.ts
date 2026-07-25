@@ -52,6 +52,9 @@ export interface AnalysisResultPayload {
 export interface AnalysisImport {
   id: number;
   revision: number | null;
+  base_current_revision: number | null;
+  current_revision: number | null;
+  expected_revision: number;
   mode: 1 | 2;
   mode_label: string;
   status: 1 | 2 | 3 | 4 | 5 | 6;
@@ -120,6 +123,10 @@ export interface AnalysisCandidateNews {
 
 export interface AnalysisIndexPageProps extends AppPageProps {
   batches: AnalysisBatchListItem[];
+  statusOptions: Array<{ value: number; label: string }>;
+  filters: {
+    status: string;
+  };
   pagination: {
     current_page: number;
     last_page: number;

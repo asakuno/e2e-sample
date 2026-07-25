@@ -22,9 +22,22 @@ class UploadAnalysisImportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'csv_file' => ['required', 'file', 'max:1024'],
+            'csv_file' => $this->csvFileRules(required: true),
             'model_unknown' => ['required', 'boolean'],
             'model_name' => ['nullable', 'string', 'max:128'],
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function csvFileRules(bool $required): array
+    {
+        return [
+            $required ? 'required' : 'nullable',
+            'file',
+            'extensions:csv',
+            'max:1024',
         ];
     }
 

@@ -1,5 +1,9 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vite-plus/test';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+
+const inertiaMocks = vi.hoisted(() => ({
+  get: vi.fn(),
+}));
 
 vi.mock('@inertiajs/react', () => ({
   Head: ({ title }: { title: string }) => <title>{title}</title>,
@@ -12,6 +16,7 @@ vi.mock('@inertiajs/react', () => ({
     url: '/analysis',
     props: { auth: { user: { id: 1, name: 'Test' } } },
   })),
+  router: { get: inertiaMocks.get },
 }));
 
 import AnalysisIndex from '../Index';
@@ -24,6 +29,10 @@ const commonProps = {
 };
 
 describe('Analysis index', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('所有batchの状態、期間、revisionと作成導線を表示すること', () => {
     render(
       <AnalysisIndex
@@ -44,12 +53,17 @@ describe('Analysis index', () => {
             updated_at: '2026-07-08T00:00:00+09:00',
           },
         ]}
+        statusOptions={[
+          { value: 1, label: '準備済み' },
+          { value: 3, label: '分析取込済み' },
+        ]}
+        filters={{ status: '' }}
         pagination={{ current_page: 1, last_page: 1, prev: null, next: null, total: 1 }}
       />,
     );
 
     expect(screen.getByRole('heading', { name: '期間ニュース分析' })).toBeInTheDocument();
-    expect(screen.getByText('分析取込済み')).toBeInTheDocument();
+    expect(screen.getAllByText('分析取込済み')).toHaveLength(2);
     expect(screen.getByText('revision 2')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /AAPL Apple/ })).toHaveAttribute(
       'href',
@@ -58,6 +72,40 @@ describe('Analysis index', () => {
     expect(screen.getByRole('link', { name: '新しい分析' })).toHaveAttribute(
       'href',
       '/analysis/create',
+    );
+  });
+
+  it('状態を変更すると1ページ目から絞り込み直すこと', () => {
+    render(
+      <AnalysisIndex
+        {...commonProps}
+        batches={[]}
+        statusOptions={[
+          { value: 1, label: '準備済み' },
+          { value: 3, label: '分析取込済み' },
+        ]}
+        filters={{ status: '' }}
+        pagination={{
+          current_page: 2,
+          last_page: 3,
+          prev: '/analysis?page=1',
+          next: null,
+          total: 31,
+        }}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('状態'), { target: { value: '3' } });
+
+    expect(inertiaMocks.get).toHaveBeenCalledWith(
+      '/analysis',
+      { page: 1, status: '3' },
+      {
+        only: ['batches', 'filters', 'pagination'],
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+      },
     );
   });
 });

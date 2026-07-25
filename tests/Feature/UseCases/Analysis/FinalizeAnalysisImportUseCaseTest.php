@@ -14,13 +14,13 @@ use App\Models\Stock;
 use App\Models\User;
 use App\Services\Analysis\AnalysisResultCsvTemplateBuilder;
 use App\UseCases\Analysis\CommitAnalysisImportUseCase;
+use App\UseCases\Analysis\Exceptions\AnalysisImportStaleException;
 use App\UseCases\Analysis\ReplaceAnalysisImportUseCase;
 use App\UseCases\Analysis\UploadAnalysisImportUseCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 final class FinalizeAnalysisImportUseCaseTest extends TestCase
@@ -151,9 +151,12 @@ final class FinalizeAnalysisImportUseCaseTest extends TestCase
                 $batch->id,
                 $staleCandidate->id,
             );
-            $this->fail('current競合は409で拒否される必要があります。');
-        } catch (HttpException $exception) {
-            $this->assertSame(409, $exception->getStatusCode());
+            $this->fail('current競合はstale例外で拒否される必要があります。');
+        } catch (AnalysisImportStaleException $exception) {
+            $this->assertSame(
+                '分析importがstaleになりました。最新状態で再プレビューしてください。',
+                $exception->getMessage(),
+            );
         }
 
         // Assert
@@ -210,9 +213,12 @@ final class FinalizeAnalysisImportUseCaseTest extends TestCase
                 $batch->id,
                 $import->id,
             );
-            $this->fail('保持期限ちょうどのraw CSVは確定できない必要があります。');
-        } catch (HttpException $exception) {
-            $this->assertSame(409, $exception->getStatusCode());
+            $this->fail('保持期限ちょうどのraw CSVはstale例外で拒否される必要があります。');
+        } catch (AnalysisImportStaleException $exception) {
+            $this->assertSame(
+                '分析importがstaleになりました。最新状態で再プレビューしてください。',
+                $exception->getMessage(),
+            );
         }
 
         // Assert

@@ -19,6 +19,26 @@ final class AnalysisImportRepository implements AnalysisImportRepositoryInterfac
             ->first();
     }
 
+    public function findOwnedByBatchAndId(
+        int $userId,
+        int $batchId,
+        int $importId,
+    ): ?AnalysisImport {
+        return AnalysisImport::query()
+            ->with([
+                'baseCurrentImport',
+                'analysisBatch.currentImport',
+                'analysisBatch.imports',
+            ])
+            ->whereKey($importId)
+            ->where('analysis_batch_id', $batchId)
+            ->whereHas(
+                'analysisBatch',
+                fn ($query) => $query->where('user_id', $userId),
+            )
+            ->first();
+    }
+
     public function rawStorageBytesForUser(int $userId): int
     {
         return (int) AnalysisImport::query()

@@ -5,6 +5,7 @@ import type { AnalysisBatch, AnalysisImport } from '@/types/analysis';
 
 const formMocks = vi.hoisted(() => ({
   submit: vi.fn(),
+  post: vi.fn(),
 }));
 
 vi.mock('@inertiajs/react', async () => {
@@ -17,7 +18,7 @@ vi.mock('@inertiajs/react', async () => {
         {children as React.ReactNode}
       </a>
     ),
-    router: { post: vi.fn() },
+    router: { post: formMocks.post },
     useForm: vi.fn((initialData: Record<string, unknown>) => {
       const [data, setDataState] = React.useState(initialData);
 
@@ -45,6 +46,9 @@ import AnalysisImportPreview from '../ImportPreview';
 const staleImport: AnalysisImport = {
   id: 10,
   revision: null,
+  base_current_revision: 1,
+  current_revision: 2,
+  expected_revision: 3,
   mode: 1,
   mode_label: '初回取込',
   status: 4,
@@ -69,6 +73,9 @@ const currentImport: AnalysisImport = {
   ...staleImport,
   id: 11,
   revision: 1,
+  base_current_revision: null,
+  current_revision: 1,
+  expected_revision: 2,
   status: 5,
   status_label: '確定済み',
   replacement_reason: null,
@@ -127,5 +134,59 @@ describe('Analysis import preview', () => {
 
     // Assert
     expect(actual).toEqual(expected);
+  });
+
+  it('upload時点と現在と確定予定のrevisionを表示し、stale importを再previewへ案内すること', () => {
+    render(<AnalysisImportPreview {...commonProps} batch={batch} analysisImport={staleImport} />);
+
+    expect(screen.getByText('アップロード時のcurrent')).toBeInTheDocument();
+    expect(screen.getByText('現在のcurrent')).toBeInTheDocument();
+    expect(screen.getByText('確定予定')).toBeInTheDocument();
+    expect(screen.getByText(/このimportは再previewが必要です/)).toHaveTextContent(
+      'アップロード時のcurrentはrevision 1、現在のcurrentはrevision 2です。',
+    );
+  });
+
+  it('置き換え確定前に現在と確定後のrevisionを具体的に確認すること', () => {
+    const validatedReplacement: AnalysisImport = {
+      ...staleImport,
+      mode: 2,
+      mode_label: '置き換え',
+      status: 2,
+      status_label: '検証済み',
+      base_current_revision: 1,
+      current_revision: 1,
+      expected_revision: 2,
+      replacement_reason: '根拠を更新するため',
+    };
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(
+      <AnalysisImportPreview
+        {...commonProps}
+        batch={batch}
+        analysisImport={validatedReplacement}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'revision 2へ置き換えて確定' }));
+
+    expect(confirm).toHaveBeenCalledWith(
+      'revision 1をrevision 2へ置き換えます。\n理由: 根拠を更新するため',
+    );
+    expect(formMocks.post).toHaveBeenCalled();
+  });
+
+  it('確定済みimportでは将来の予定値ではなく実際のrevisionを表示すること', () => {
+    const committed: AnalysisImport = {
+      ...currentImport,
+      revision: 2,
+      current_revision: 2,
+      expected_revision: 9,
+    };
+
+    render(<AnalysisImportPreview {...commonProps} batch={batch} analysisImport={committed} />);
+
+    expect(screen.getByText('このimportのrevision').parentElement).toHaveTextContent('revision 2');
+    expect(screen.queryByText('確定予定')).not.toBeInTheDocument();
   });
 });

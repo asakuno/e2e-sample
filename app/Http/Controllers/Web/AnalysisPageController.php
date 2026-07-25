@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
 
+use App\Enums\AnalysisBatchStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Analysis\AnalysisBatchCreatePreviewRequest;
+use App\Http\Requests\Analysis\AnalysisIndexRequest;
 use App\Http\Resources\Analysis\AnalysisBatchListItemResource;
 use App\Http\Resources\Analysis\AnalysisBatchResource;
 use App\Http\Resources\Analysis\AnalysisImportResource;
@@ -23,11 +25,13 @@ use Inertia\Response;
 final class AnalysisPageController extends Controller
 {
     public function index(
-        Request $request,
+        AnalysisIndexRequest $request,
         ListAnalysisBatchesUseCase $useCase,
     ): Response {
+        $status = $request->status();
         $paginator = $useCase->execute(
             (int) $request->user()->getAuthIdentifier(),
+            $status,
         );
 
         return Inertia::render('Analysis/Index', [
@@ -40,6 +44,10 @@ final class AnalysisPageController extends Controller
                 'prev' => $paginator->previousPageUrl(),
                 'next' => $paginator->nextPageUrl(),
                 'total' => $paginator->total(),
+            ],
+            'statusOptions' => AnalysisBatchStatus::toSelectArray(),
+            'filters' => [
+                'status' => $status === null ? '' : (string) $status->value,
             ],
         ]);
     }

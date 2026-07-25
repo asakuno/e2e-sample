@@ -19,6 +19,7 @@ use App\Services\Analysis\AnalysisImportRawFileRetentionService;
 use App\Services\Analysis\AnalysisResultCsvParser;
 use App\Services\Analysis\AnalysisResultValidator;
 use App\Services\Analysis\PeriodAnalysisSignalCalculator;
+use App\UseCases\Analysis\Exceptions\AnalysisImportStaleException;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -190,7 +191,7 @@ final class FinalizeAnalysisImportUseCase
         }, 3);
 
         if ($result->getAttribute('status') === AnalysisImportStatus::Stale) {
-            throw new HttpException(409, 'current revisionが変更されました。再プレビューしてください。');
+            throw new AnalysisImportStaleException('分析importがstaleになりました。最新状態で再プレビューしてください。');
         }
 
         return $result;

@@ -15,7 +15,7 @@ final class ReprepareAnalysisImportRequest extends UploadAnalysisImportRequest
     {
         return [
             ...parent::rules(),
-            'csv_file' => ['nullable', 'file', 'max:1024'],
+            'csv_file' => $this->csvFileRules(required: false),
             'replacement_reason' => ['nullable', 'string', 'max:5000'],
         ];
     }

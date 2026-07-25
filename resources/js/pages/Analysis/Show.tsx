@@ -28,6 +28,8 @@ interface ImportFormData {
 
 export default function AnalysisShow({ batch }: AnalysisShowPageProps) {
   const replacing = batch.current_import != null;
+  const expectedRevision =
+    Math.max(0, ...batch.imports.map((analysisImport) => analysisImport.revision ?? 0)) + 1;
   const uploadAction = replacing ? storeReplacement(batch.public_id) : storeImport(batch.public_id);
   const form = useForm<ImportFormData>({
     csv_file: null,
@@ -163,6 +165,12 @@ export default function AnalysisShow({ batch }: AnalysisShowPageProps) {
               ChatGPTの最終回答を固定スキーマのUTF-8 CSV（1データ行）としてアップロードします。 raw
               CSVはprivate storageに保持され、再ダウンロードできません。
             </p>
+            {replacing && (
+              <p className="mt-3 rounded-md bg-muted p-3 font-medium text-sm tabular-nums">
+                現在: revision {batch.current_import?.revision ?? '—'} → 置き換え後: revision{' '}
+                {expectedRevision}
+              </p>
+            )}
             <form onSubmit={handleUpload} className="mt-4 grid gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
                 <FieldLabel htmlFor="analysis-csv">CSVファイル（最大1MB）</FieldLabel>

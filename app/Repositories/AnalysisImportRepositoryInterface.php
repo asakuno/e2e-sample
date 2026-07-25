@@ -12,6 +12,12 @@ interface AnalysisImportRepositoryInterface
 {
     public function findByBatchFileHash(int $batchId, string $fileHash): ?AnalysisImport;
 
+    public function findOwnedByBatchAndId(
+        int $userId,
+        int $batchId,
+        int $importId,
+    ): ?AnalysisImport;
+
     public function rawStorageBytesForUser(int $userId): int;
 
     public function createUploaded(UploadAnalysisImportData $data): AnalysisImport;

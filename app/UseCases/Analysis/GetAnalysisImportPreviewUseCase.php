@@ -7,12 +7,14 @@ namespace App\UseCases\Analysis;
 use App\Models\AnalysisBatch;
 use App\Models\AnalysisImport;
 use App\Repositories\AnalysisBatchRepositoryInterface;
+use App\Repositories\AnalysisImportRepositoryInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class GetAnalysisImportPreviewUseCase
 {
     public function __construct(
         private readonly AnalysisBatchRepositoryInterface $analysisBatchRepository,
+        private readonly AnalysisImportRepositoryInterface $analysisImportRepository,
     ) {}
 
     /**
@@ -27,22 +29,37 @@ final class GetAnalysisImportPreviewUseCase
             $userId,
             $batchPublicId,
         );
-        $analysisImport = AnalysisImport::query()
-            ->where('analysis_batch_id', $batch?->id)
-            ->find($importId);
 
-        if ($batch === null || $analysisImport === null) {
+        if ($batch === null) {
+            throw new NotFoundHttpException('Analysis import not found.');
+        }
+
+        $analysisImport = $this->analysisImportRepository->findOwnedByBatchAndId(
+            $userId,
+            $batch->id,
+            $importId,
+        );
+
+        if ($analysisImport === null) {
             throw new NotFoundHttpException('Analysis import not found.');
         }
 
         $batch->loadMissing([
             'stock',
             'newsSnapshots',
-            'imports',
-            'currentImport',
+            'imports.baseCurrentImport',
+            'imports.analysisBatch.currentImport',
+            'imports.analysisBatch.imports',
+            'currentImport.baseCurrentImport',
+            'currentImport.analysisBatch.currentImport',
+            'currentImport.analysisBatch.imports',
             'result',
         ]);
-        $analysisImport->loadMissing('analysisBatch.stock');
+        $analysisImport->loadMissing([
+            'baseCurrentImport',
+            'analysisBatch.currentImport',
+            'analysisBatch.imports',
+        ]);
 
         return [
             'batch' => $batch,

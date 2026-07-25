@@ -136,4 +136,49 @@ final class AnalysisBatchRepositoryTest extends TestCase
         // Assert
         $this->assertSame($newer->id, $latest?->id);
     }
+
+    #[Test]
+    public function statusで所有batchだけを絞りpaginationへqueryを引き継ぐ(): void
+    {
+        // Arrange
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+        AnalysisBatch::factory()->for($owner)->create([
+            'status' => AnalysisBatchStatus::Prepared,
+        ]);
+        AnalysisBatch::factory()->for($owner)->count(2)->create([
+            'status' => AnalysisBatchStatus::Completed,
+        ]);
+        AnalysisBatch::factory()->for($otherUser)->create([
+            'status' => AnalysisBatchStatus::Completed,
+        ]);
+        request()->query->replace([
+            'status' => (string) AnalysisBatchStatus::Completed->value,
+        ]);
+        $repository = new AnalysisBatchRepository;
+
+        // Act
+        $paginator = $repository->paginateOwned(
+            $owner->id,
+            AnalysisBatchStatus::Completed,
+            1,
+        );
+
+        // Assert
+        $this->assertSame(2, $paginator->total());
+        $this->assertCount(1, $paginator->items());
+        $this->assertSame($owner->id, $paginator->items()[0]->user_id);
+        $this->assertSame(
+            AnalysisBatchStatus::Completed,
+            $paginator->items()[0]->status,
+        );
+        $nextUrl = $paginator->nextPageUrl();
+        $this->assertNotNull($nextUrl);
+        parse_str((string) parse_url($nextUrl, PHP_URL_QUERY), $query);
+        $this->assertSame('2', $query['page']);
+        $this->assertSame(
+            (string) AnalysisBatchStatus::Completed->value,
+            $query['status'],
+        );
+    }
 }

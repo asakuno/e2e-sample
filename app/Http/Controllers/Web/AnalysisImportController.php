@@ -12,6 +12,7 @@ use App\Http\Requests\Analysis\UploadAnalysisImportRequest;
 use App\Models\AnalysisBatch;
 use App\Models\AnalysisImport;
 use App\UseCases\Analysis\CommitAnalysisImportUseCase;
+use App\UseCases\Analysis\Exceptions\AnalysisImportStaleException;
 use App\UseCases\Analysis\ReplaceAnalysisImportUseCase;
 use App\UseCases\Analysis\ReprepareAnalysisImportUseCase;
 use App\UseCases\Analysis\UploadAnalysisImportUseCase;
@@ -69,11 +70,17 @@ final class AnalysisImportController extends Controller
         Gate::authorize('import', $analysisBatch);
         Gate::authorize('update', $analysisImport);
         abort_unless($analysisImport->analysis_batch_id === $analysisBatch->id, 404);
-        $useCase->execute(
-            (int) $request->user()->getAuthIdentifier(),
-            $analysisBatch->id,
-            $analysisImport->id,
-        );
+
+        try {
+            $useCase->execute(
+                (int) $request->user()->getAuthIdentifier(),
+                $analysisBatch->id,
+                $analysisImport->id,
+            );
+        } catch (AnalysisImportStaleException $exception) {
+            return to_route('analysis.imports.show', [$analysisBatch, $analysisImport])
+                ->with('error', $exception->getMessage());
+        }
 
         return to_route('analysis.show', $analysisBatch)
             ->with('success', '分析結果をrevision 1として確定しました。');
@@ -88,11 +95,17 @@ final class AnalysisImportController extends Controller
         Gate::authorize('replace', $analysisBatch);
         Gate::authorize('update', $analysisImport);
         abort_unless($analysisImport->analysis_batch_id === $analysisBatch->id, 404);
-        $import = $useCase->execute(
-            (int) $request->user()->getAuthIdentifier(),
-            $analysisBatch->id,
-            $analysisImport->id,
-        );
+
+        try {
+            $import = $useCase->execute(
+                (int) $request->user()->getAuthIdentifier(),
+                $analysisBatch->id,
+                $analysisImport->id,
+            );
+        } catch (AnalysisImportStaleException $exception) {
+            return to_route('analysis.imports.show', [$analysisBatch, $analysisImport])
+                ->with('error', $exception->getMessage());
+        }
 
         return to_route('analysis.show', $analysisBatch)
             ->with('success', "分析結果をrevision {$import->revision}へ置き換えました。");
