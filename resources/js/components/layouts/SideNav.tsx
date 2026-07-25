@@ -6,6 +6,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import { NavItem } from '@/components/layouts/NavItem';
 import { dashboard } from '@/routes';
+import { index as analysisIndex } from '@/routes/analysis';
 import { index as newsIndex } from '@/routes/news';
 import { index as stocksIndex } from '@/routes/stocks';
 import { index as watchlistIndex } from '@/routes/watchlist';
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { href: stocksIndex.url(), icon: 'query_stats', label: 'Stocks' },
   { href: watchlistIndex.url(), icon: 'visibility', label: 'Watchlist' },
   { href: newsIndex.url(), icon: 'newspaper', label: 'News' },
+  { href: analysisIndex.url(), icon: 'psychology', label: 'Analysis' },
 ] as const;
 
 type SideNavProps = {

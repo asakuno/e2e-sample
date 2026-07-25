@@ -132,3 +132,13 @@ deptrac:
   skip_violations:
     App\Http\Controllers\Web\WatchlistPageController:
       - App\Models\Watchlist
+    App\Http\Controllers\Web\AnalysisExportController:
+      - App\Models\AnalysisBatch
+    App\Http\Controllers\Web\AnalysisImportController:
+      - App\Models\AnalysisBatch
+      - App\Models\AnalysisImport
+    App\Http\Controllers\Web\AnalysisPageController:
+      - App\Models\AnalysisBatch
+      - App\Models\AnalysisImport
+    App\Http\Controllers\Web\AnalysisReplacementImportController:
+      - App\Models\AnalysisBatch

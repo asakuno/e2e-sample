@@ -4,14 +4,30 @@ import type { StockSignal } from '@/types/stocks';
 import { StockSignalList } from './StockSignalList';
 
 interface StockInsightsPanelProps {
+  periodAnalysis?: ReactNode;
   relatedNews: ReactNode;
   analyses: ReactNode;
   signals: StockSignal[];
 }
 
-export function StockInsightsPanel({ relatedNews, analyses, signals }: StockInsightsPanelProps) {
+export function StockInsightsPanel({
+  periodAnalysis,
+  relatedNews,
+  analyses,
+  signals,
+}: StockInsightsPanelProps) {
   return (
     <div className="flex flex-col gap-4">
+      {periodAnalysis != null && (
+        <section className="rounded-lg border border-primary/25 bg-card p-5 shadow-sm">
+          <SectionHeader
+            icon={<Sparkles aria-hidden="true" className="size-5" />}
+            title="Current期間ニュース分析"
+          />
+          {periodAnalysis}
+        </section>
+      )}
+
       <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
         <SectionHeader
           icon={<RadioTower aria-hidden="true" className="size-5" />}

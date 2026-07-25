@@ -6,7 +6,7 @@ namespace App\Repositories;
 
 use App\Enums\AnalysisSentiment;
 use App\Models\AnalysisResult;
-use App\Models\StockSignal;
+use App\Models\PeriodAnalysisSignal;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 
@@ -23,12 +23,12 @@ interface DashboardRepositoryInterface
     public function countUnanalysedNews(int $userId): int;
 
     /**
-     * @return Collection<int, StockSignal>
+     * @return Collection<int, PeriodAnalysisSignal>
      */
     public function findTopSignals(int $userId, int $limit): Collection;
 
     /**
-     * @return Collection<int, StockSignal>
+     * @return Collection<int, PeriodAnalysisSignal>
      */
     public function findAttentionSignals(int $userId, int $limit): Collection;
 

@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\Controllers\Web;
 
+use App\Enums\AnalysisBatchStatus;
+use App\Enums\AnalysisImportStatus;
 use App\Enums\AnalysisSentiment;
+use App\Models\AnalysisBatch;
+use App\Models\AnalysisImport;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
+use App\Models\PeriodAnalysisSignal;
 use App\Models\Stock;
 use App\Models\StockPrice;
-use App\Models\StockSignal;
 use App\Models\User;
 use App\Models\Watchlist;
 use Carbon\Carbon;
@@ -77,7 +81,28 @@ final class DashboardPageControllerTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        StockSignal::factory()->for($stock)->create([
+        $batch = AnalysisBatch::factory()->for($user)->for($stock)->create([
+            'status' => AnalysisBatchStatus::Completed,
+        ]);
+        $import = AnalysisImport::factory()->for($batch)->create([
+            'revision' => 1,
+            'status' => AnalysisImportStatus::Committed,
+            'committed_at' => '2026-06-15 12:00:00',
+        ]);
+        $batch->update(['current_import_id' => $import->id]);
+        AnalysisResult::factory()->for($stock)->create([
+            'source_import_id' => $import->id,
+            'analysable_type' => AnalysisBatch::class,
+            'analysable_id' => $batch->id,
+            'sentiment' => AnalysisSentiment::Positive,
+            'prompt_version' => $batch->prompt_version,
+            'analyzed_at' => '2026-06-15 12:00:00',
+        ]);
+        PeriodAnalysisSignal::factory()->create([
+            'user_id' => $user->id,
+            'stock_id' => $stock->id,
+            'source_analysis_import_id' => $import->id,
+            'prompt_version' => $batch->prompt_version,
             'signal_date' => '2026-06-15',
             'total_score' => 8.25,
             'positive_count' => 3,

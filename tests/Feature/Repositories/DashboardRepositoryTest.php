@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature\Repositories;
 
 use App\Enums\AnalysisSentiment;
+use App\Models\AnalysisBatch;
+use App\Models\AnalysisImport;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
+use App\Models\PeriodAnalysisSignal;
 use App\Models\Stock;
+use App\Models\StockPrice;
 use App\Models\StockSignal;
 use App\Models\User;
 use App\Models\Watchlist;
@@ -37,10 +41,11 @@ final class DashboardRepositoryTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_ランキングは銘柄ごとの最新シグナルだけを各スコア順で返す(): void
+    public function test_ランキングは認証ユーザーのactive銘柄に属する期間シグナルだけを返す(): void
     {
         // Arrange
         $user = User::factory()->create();
+        $otherUser = User::factory()->create();
         $positiveStock = Stock::factory()->create();
         $negativeStock = Stock::factory()->create();
         $inactiveStock = Stock::factory()->create();
@@ -49,24 +54,31 @@ final class DashboardRepositoryTest extends TestCase
         Watchlist::factory()->for($user)->for($negativeStock)->create(['is_active' => true]);
         Watchlist::factory()->for($user)->for($inactiveStock)->create(['is_active' => false]);
 
-        $historicalStrongSignal = StockSignal::factory()->for($positiveStock)->create([
+        $positiveSignal = PeriodAnalysisSignal::factory()->create([
+            'user_id' => $user->id,
+            'stock_id' => $positiveStock->id,
             'signal_date' => '2026-06-15',
-            'total_score' => 10,
+            'total_score' => 0.5,
             'generated_at' => '2026-06-15 12:00:00',
         ]);
-        $latestPositiveSignal = StockSignal::factory()->for($positiveStock)->create([
-            'signal_date' => '2026-06-16',
-            'total_score' => 0.5,
-            'generated_at' => '2026-06-16 09:00:00',
-        ]);
-        $negativeSignal = StockSignal::factory()->for($negativeStock)->create([
+        $negativeSignal = PeriodAnalysisSignal::factory()->create([
+            'user_id' => $user->id,
+            'stock_id' => $negativeStock->id,
             'signal_date' => '2026-06-16',
             'total_score' => -9,
             'generated_at' => '2026-06-16 10:00:00',
         ]);
-        $inactiveSignal = StockSignal::factory()->for($inactiveStock)->create([
+        $inactiveSignal = PeriodAnalysisSignal::factory()->create([
+            'user_id' => $user->id,
+            'stock_id' => $inactiveStock->id,
             'signal_date' => '2026-06-16',
             'total_score' => -10,
+        ]);
+        $otherUsersSignal = PeriodAnalysisSignal::factory()->create([
+            'user_id' => $otherUser->id,
+            'stock_id' => $positiveStock->id,
+            'signal_date' => '2026-06-16',
+            'total_score' => 10,
         ]);
 
         // Act
@@ -75,16 +87,16 @@ final class DashboardRepositoryTest extends TestCase
 
         // Assert
         $this->assertSame(
-            [$negativeSignal->id, $latestPositiveSignal->id],
+            [$negativeSignal->id, $positiveSignal->id],
             $attentionSignals->pluck('id')->all(),
         );
-        $this->assertNotContains($historicalStrongSignal->id, $attentionSignals->pluck('id')->all());
         $this->assertNotContains($inactiveSignal->id, $attentionSignals->pluck('id')->all());
+        $this->assertNotContains($otherUsersSignal->id, $attentionSignals->pluck('id')->all());
         $this->assertSame(
-            [$latestPositiveSignal->id, $negativeSignal->id],
+            [$positiveSignal->id, $negativeSignal->id],
             $topSignals->pluck('id')->all(),
         );
-        $this->assertNotContains($historicalStrongSignal->id, $topSignals->pluck('id')->all());
+        $this->assertNotContains($otherUsersSignal->id, $topSignals->pluck('id')->all());
     }
 
     public function test_確認候補は指定件数までに制限される(): void
@@ -95,7 +107,9 @@ final class DashboardRepositoryTest extends TestCase
         foreach (range(5, 10) as $score) {
             $stock = Stock::factory()->create();
             Watchlist::factory()->for($user)->for($stock)->create(['is_active' => true]);
-            StockSignal::factory()->for($stock)->create([
+            PeriodAnalysisSignal::factory()->create([
+                'user_id' => $user->id,
+                'stock_id' => $stock->id,
                 'signal_date' => '2026-06-16',
                 'total_score' => -$score,
             ]);
@@ -111,23 +125,22 @@ final class DashboardRepositoryTest extends TestCase
         $this->assertSame([-10.0, -9.0, -8.0, -7.0, -6.0], $result->pluck('total_score')->map(
             fn ($score): float => (float) $score,
         )->all());
-        $this->assertRankedSelectionUsesSqlLimit(5);
+        $this->assertSelectionUsesSqlLimit('period_analysis_signals', 5);
     }
 
-    public function test_ランキングは現行prompt_versionのシグナルだけを使用する(): void
+    public function test_ランキングはlegacyシグナルを使用しない(): void
     {
         // Arrange
-        config()->set('services.openai.prompt_version', 'v2');
         $user = User::factory()->create();
         $stock = Stock::factory()->create();
         Watchlist::factory()->for($user)->for($stock)->create(['is_active' => true]);
         $legacySignal = StockSignal::factory()->for($stock)->create([
-            'prompt_version' => 'v1',
             'signal_date' => '2026-06-16',
             'total_score' => 10,
         ]);
-        $currentSignal = StockSignal::factory()->for($stock)->create([
-            'prompt_version' => 'v2',
+        $periodSignal = PeriodAnalysisSignal::factory()->create([
+            'user_id' => $user->id,
+            'stock_id' => $stock->id,
             'signal_date' => '2026-06-16',
             'total_score' => 2,
         ]);
@@ -137,9 +150,9 @@ final class DashboardRepositoryTest extends TestCase
         $attentionSignals = $this->repository->findAttentionSignals($user->id, 5);
 
         // Assert
-        $this->assertSame([$currentSignal->id], $topSignals->pluck('id')->all());
-        $this->assertSame([$currentSignal->id], $attentionSignals->pluck('id')->all());
-        $this->assertNotContains($legacySignal->id, $topSignals->pluck('id')->all());
+        $this->assertSame([$periodSignal->id], $topSignals->pluck('id')->all());
+        $this->assertSame([$periodSignal->id], $attentionSignals->pluck('id')->all());
+        $this->assertDatabaseHas('stock_signals', ['id' => $legacySignal->id]);
     }
 
     public function test_重要ニュースは直近7日の現行prompt分析を記事ごとに一件返す(): void
@@ -220,7 +233,7 @@ final class DashboardRepositoryTest extends TestCase
             [$sharedArticle->id, $secondArticle->id],
             $result->pluck('analysable_id')->all(),
         );
-        $this->assertRankedSelectionUsesSqlLimit(2);
+        $this->assertSelectionUsesSqlLimit('row_number() over', 2);
     }
 
     public function test_未分析件数はactiveウォッチリストの記事と銘柄の組み合わせで数える(): void
@@ -310,7 +323,7 @@ final class DashboardRepositoryTest extends TestCase
         $user = User::factory()->create();
         $stock = Stock::factory()->create();
         Watchlist::factory()->for($user)->for($stock)->create(['is_active' => true]);
-        $currentAnalysis = AnalysisResult::factory()->for($stock)->create([
+        AnalysisResult::factory()->for($stock)->create([
             'sentiment' => 1,
             'prompt_version' => 'v2',
             'analyzed_at' => '2026-06-15 09:00:00',
@@ -320,19 +333,13 @@ final class DashboardRepositoryTest extends TestCase
             'prompt_version' => 'v1',
             'analyzed_at' => '2026-06-16 11:59:00',
         ]);
-        StockSignal::factory()->for($stock)->create([
-            'signal_date' => '2026-06-16',
-            'generated_at' => '2026-06-16 12:00:00',
-        ]);
         $expected = [
             'positive_count' => 1,
             'latest_at' => '2026-06-15 09:00:00',
             'trend' => ['2026-06-15' => 1],
-            'eager_analysis_ids' => [$currentAnalysis->id],
         ];
 
         // Act
-        $topSignal = $this->repository->findTopSignals($user->id, 1)->firstOrFail();
         $actual = [
             'positive_count' => $this->repository->countRecentAnalysesBySentiment(
                 $user->id,
@@ -345,11 +352,62 @@ final class DashboardRepositoryTest extends TestCase
                 Carbon::parse('2026-06-14'),
                 Carbon::parse('2026-06-16'),
             ),
-            'eager_analysis_ids' => $topSignal->stock->analysisResults->pluck('id')->all(),
         ];
 
         // Assert
         $this->assertSame($expected, $actual);
+    }
+
+    public function test_期間シグナルは価格と出所batchの分析resultをeager_loadする(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $stock = Stock::factory()->create();
+        Watchlist::factory()->for($user)->for($stock)->create(['is_active' => true]);
+        $batch = AnalysisBatch::factory()->for($user)->for($stock)->create();
+        $import = AnalysisImport::factory()->for($batch)->create();
+        $periodResult = AnalysisResult::factory()->for($stock)->create([
+            'source_import_id' => $import->id,
+            'analysable_type' => AnalysisBatch::class,
+            'analysable_id' => $batch->id,
+            'sentiment' => AnalysisSentiment::Negative,
+            'prompt_version' => $batch->prompt_version,
+        ]);
+        $signal = PeriodAnalysisSignal::factory()->create([
+            'user_id' => $user->id,
+            'stock_id' => $stock->id,
+            'source_analysis_import_id' => $import->id,
+        ]);
+        StockPrice::factory()->for($stock)->create([
+            'source' => 'alpha_vantage',
+            'price_date' => '2026-06-16',
+            'adjusted_close' => 120,
+        ]);
+        StockPrice::factory()->for($stock)->create([
+            'source' => 'alpha_vantage',
+            'price_date' => '2026-06-15',
+            'adjusted_close' => 100,
+        ]);
+        StockPrice::factory()->for($stock)->create([
+            'source' => 'demo',
+            'price_date' => '2026-06-17',
+            'adjusted_close' => 999,
+        ]);
+
+        // Act
+        $found = $this->repository->findTopSignals($user->id, 1)->firstOrFail();
+
+        // Assert
+        $this->assertSame($signal->id, $found->id);
+        $this->assertTrue($found->relationLoaded('stock'));
+        $this->assertTrue($found->stock->relationLoaded('prices'));
+        $this->assertSame([120.0, 100.0], $found->stock->prices->pluck('adjusted_close')->map(
+            fn ($price): float => (float) $price,
+        )->all());
+        $this->assertTrue($found->relationLoaded('sourceAnalysisImport'));
+        $this->assertTrue($found->sourceAnalysisImport->relationLoaded('analysisBatch'));
+        $this->assertTrue($found->sourceAnalysisImport->analysisBatch->relationLoaded('result'));
+        $this->assertSame($periodResult->id, $found->sourceAnalysisImport->analysisBatch->result?->id);
     }
 
     public function test_日別分析件数は日本標準時の日付境界で集計する(): void
@@ -377,12 +435,13 @@ final class DashboardRepositoryTest extends TestCase
         $this->assertSame(['2026-07-12' => 2], $counts);
     }
 
-    private function assertRankedSelectionUsesSqlLimit(int $limit): void
+    private function assertSelectionUsesSqlLimit(string $needle, int $limit): void
     {
         $selectionSql = collect(DB::getQueryLog())
             ->pluck('query')
             ->first(fn ($query): bool => is_string($query)
-                && str_contains(strtolower($query), 'row_number() over'));
+                && str_contains(strtolower($query), $needle)
+                && str_contains(strtolower($query), "limit {$limit}"));
 
         DB::disableQueryLog();
 

@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Tests\Unit\UseCases\Dashboard;
 
 use App\Enums\AnalysisSentiment;
+use App\Models\AnalysisBatch;
+use App\Models\AnalysisImport;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
+use App\Models\PeriodAnalysisSignal;
 use App\Models\Stock;
 use App\Models\StockPrice;
-use App\Models\StockSignal;
 use App\Repositories\DashboardRepositoryInterface;
 use App\Services\Dashboard\DashboardSummaryAssembler;
 use App\UseCases\Dashboard\GetDashboardDetailsUseCase;
@@ -96,7 +98,7 @@ final class GetDashboardDetailsUseCaseTest extends TestCase
     }
 
     /**
-     * @return array{StockSignal, AnalysisResult}
+     * @return array{PeriodAnalysisSignal, AnalysisResult}
      */
     private function dashboardModels(): array
     {
@@ -107,7 +109,7 @@ final class GetDashboardDetailsUseCaseTest extends TestCase
         ]);
         $stock->id = 10;
 
-        $signal = new StockSignal([
+        $signal = new PeriodAnalysisSignal([
             'stock_id' => 10,
             'signal_date' => '2026-06-15',
             'total_score' => 8.25,
@@ -139,6 +141,22 @@ final class GetDashboardDetailsUseCaseTest extends TestCase
         $analysis->setRelation('stock', $stock);
         $analysis->setRelation('analysable', $article);
 
+        $periodAnalysis = new AnalysisResult([
+            'stock_id' => 10,
+            'summary' => '期間分析はポジティブ',
+            'sentiment' => AnalysisSentiment::Positive,
+            'impact_score' => 8,
+            'analyzed_at' => '2026-06-15 12:00:00',
+        ]);
+        $periodAnalysis->id = 41;
+        $batch = new AnalysisBatch;
+        $batch->id = 42;
+        $batch->setRelation('result', $periodAnalysis);
+        $import = new AnalysisImport;
+        $import->id = 43;
+        $import->setRelation('analysisBatch', $batch);
+        $signal->setRelation('sourceAnalysisImport', $import);
+
         $latestPrice = new StockPrice([
             'price_date' => '2026-06-15',
             'adjusted_close' => 120,
@@ -150,7 +168,6 @@ final class GetDashboardDetailsUseCaseTest extends TestCase
         ]);
         $previousPrice->id = 50;
         $stock->setRelation('prices', new Collection([$latestPrice, $previousPrice]));
-        $stock->setRelation('analysisResults', new Collection([$analysis]));
 
         return [$signal, $analysis];
     }

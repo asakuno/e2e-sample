@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Bell,
+  BrainCircuit,
   Clock3,
   Eye,
   FileText,
@@ -22,6 +23,7 @@ const ICONS = {
   logout: LogOut,
   newspaper: Newspaper,
   notifications: Bell,
+  psychology: BrainCircuit,
   query_stats: BarChart3,
   schedule: Clock3,
   search: Search,
