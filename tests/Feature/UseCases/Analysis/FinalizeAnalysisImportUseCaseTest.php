@@ -188,6 +188,41 @@ final class FinalizeAnalysisImportUseCaseTest extends TestCase
         ]);
     }
 
+    #[Test]
+    public function raw保持期限ちょうどのimportを確定せずstaleにする(): void
+    {
+        // Arrange
+        Storage::fake('local');
+        $now = now()->startOfSecond();
+        $this->travelTo($now);
+        [$user, $batch] = $this->batch();
+        $import = $this->upload($user, $batch, $this->csv($batch, 6, 78, 'expired'));
+        $import->update([
+            'raw_stored_at' => $now->copy()->subDays(
+                (int) config('stock_analysis.raw_uncommitted_retention_days'),
+            ),
+        ]);
+
+        // Act
+        try {
+            app(CommitAnalysisImportUseCase::class)->execute(
+                $user->id,
+                $batch->id,
+                $import->id,
+            );
+            $this->fail('保持期限ちょうどのraw CSVは確定できない必要があります。');
+        } catch (HttpException $exception) {
+            $this->assertSame(409, $exception->getStatusCode());
+        }
+
+        // Assert
+        $import->refresh();
+        $this->assertSame(AnalysisImportStatus::Stale, $import->status);
+        $this->assertSame('raw_expired', $import->stale_history[0]['reason']);
+        $this->assertDatabaseCount('analysis_results', 0);
+        $this->assertDatabaseCount('period_analysis_signals', 0);
+    }
+
     /**
      * @return array{User, AnalysisBatch}
      */

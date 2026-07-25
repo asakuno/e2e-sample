@@ -73,6 +73,7 @@ final class AnalysisBatchRepositoryTest extends TestCase
                 'market' => $stock->market,
             ],
             promptVersion: 'stock-news-period-v1',
+            resultSchemaVersion: 'stock-news-period-result-v1',
             promptText: $prompt,
             promptHash: hash('sha256', $prompt),
             status: AnalysisBatchStatus::Prepared,
@@ -96,6 +97,7 @@ final class AnalysisBatchRepositoryTest extends TestCase
 
         // Assert
         $this->assertSame($publicId, $batch->public_id);
+        $this->assertSame('stock-news-period-result-v1', $batch->result_schema_version);
         $this->assertCount(1, $batch->newsSnapshots);
         $this->assertSame($snapshotHash, $batch->newsSnapshots->first()?->snapshot_hash);
     }

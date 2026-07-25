@@ -117,6 +117,7 @@ final class CreateAnalysisBatchUseCase
                 'market' => $stock->market,
             ];
             $promptVersion = (string) config('stock_analysis.manual_prompt_version');
+            $resultSchemaVersion = (string) config('stock_analysis.result_schema_version');
             $publicId = (string) Str::ulid();
             $periodStartJst = $periodStart->setTimezone(self::JST);
             $periodEndJst = $periodEnd->setTimezone(self::JST);
@@ -127,6 +128,7 @@ final class CreateAnalysisBatchUseCase
                     'end_at_exclusive' => $periodEndJst->format('Y-m-d\TH:i:sP'),
                 ],
                 'prompt_version' => $promptVersion,
+                'result_schema_version' => $resultSchemaVersion,
                 'news' => array_map(
                     fn (array $snapshot): array => array_diff_key(
                         $snapshot,
@@ -147,7 +149,7 @@ final class CreateAnalysisBatchUseCase
             $promptText = $this->promptBuilder->build(
                 batchKey: $publicId,
                 promptVersion: $promptVersion,
-                schemaVersion: (string) config('stock_analysis.result_schema_version'),
+                schemaVersion: $resultSchemaVersion,
                 stock: $stockSnapshot,
                 periodStart: $periodStartJst->toDateString(),
                 periodEndInclusive: $periodEndJst->subDay()->toDateString(),
@@ -163,6 +165,7 @@ final class CreateAnalysisBatchUseCase
                     periodEndAt: $periodEnd,
                     stockSnapshot: $stockSnapshot,
                     promptVersion: $promptVersion,
+                    resultSchemaVersion: $resultSchemaVersion,
                     promptText: $promptText,
                     promptHash: hash('sha256', $promptText),
                     status: AnalysisBatchStatus::Prepared,

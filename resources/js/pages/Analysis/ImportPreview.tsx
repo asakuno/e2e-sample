@@ -193,7 +193,10 @@ export default function AnalysisImportPreview({
                   <input
                     type="checkbox"
                     checked={form.data.model_unknown}
-                    onChange={(event) => form.setData('model_unknown', event.target.checked)}
+                    onChange={(event) => {
+                      form.setData('model_unknown', event.target.checked);
+                      if (event.target.checked) form.setData('model_name', '');
+                    }}
                   />
                   モデル名を特定できない
                 </label>

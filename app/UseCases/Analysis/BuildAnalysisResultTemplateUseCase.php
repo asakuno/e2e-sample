@@ -22,7 +22,7 @@ final class BuildAnalysisResultTemplateUseCase
 
         return [
             'contents' => $this->builder->build(
-                (string) config('stock_analysis.result_schema_version'),
+                $batch->result_schema_version,
                 $batch->public_id,
                 $batch->prompt_version,
             ),

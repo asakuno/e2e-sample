@@ -15,6 +15,7 @@ use App\Models\Stock;
 use App\Repositories\AnalysisBatchRepositoryInterface;
 use App\Repositories\AnalysisImportRepositoryInterface;
 use App\Repositories\PeriodAnalysisSignalRepositoryInterface;
+use App\Services\Analysis\AnalysisImportRawFileRetentionService;
 use App\Services\Analysis\AnalysisResultCsvParser;
 use App\Services\Analysis\AnalysisResultValidator;
 use App\Services\Analysis\PeriodAnalysisSignalCalculator;
@@ -33,6 +34,7 @@ final class FinalizeAnalysisImportUseCase
         private readonly AnalysisResultCsvParser $parser,
         private readonly AnalysisResultValidator $validator,
         private readonly PeriodAnalysisSignalCalculator $signalCalculator,
+        private readonly AnalysisImportRawFileRetentionService $retention,
     ) {}
 
     public function execute(
@@ -41,11 +43,13 @@ final class FinalizeAnalysisImportUseCase
         int $importId,
         AnalysisImportMode $expectedMode,
     ): AnalysisImport {
+        $now = now();
         $result = DB::transaction(function () use (
             $userId,
             $batchId,
             $importId,
             $expectedMode,
+            $now,
         ): AnalysisImport {
             $batch = $this->analysisBatchRepository->lockOwnedById($userId, $batchId);
             $import = $this->analysisImportRepository->lockOwnedByBatchAndId(
@@ -75,24 +79,24 @@ final class FinalizeAnalysisImportUseCase
             }
 
             if ($import->base_current_import_id !== $batch->current_import_id) {
-                return $this->stale($import, $batch, 'current_import_changed');
+                return $this->stale($import, $batch, 'current_import_changed', $now);
             }
 
             if (
                 $expectedMode === AnalysisImportMode::Initial
                 && $batch->current_import_id !== null
             ) {
-                return $this->stale($import, $batch, 'initial_current_exists');
+                return $this->stale($import, $batch, 'initial_current_exists', $now);
             }
 
             if (
                 $expectedMode === AnalysisImportMode::Replace
                 && $batch->current_import_id === null
             ) {
-                return $this->stale($import, $batch, 'replace_current_missing');
+                return $this->stale($import, $batch, 'replace_current_missing', $now);
             }
 
-            $payload = $this->revalidate($batch, $import);
+            $payload = $this->revalidate($batch, $import, $now);
 
             if ($payload === null) {
                 return $import->refresh();
@@ -106,14 +110,14 @@ final class FinalizeAnalysisImportUseCase
                 $current = $batch->currentImport;
 
                 if ($current === null || $current->analysis_batch_id !== $batch->id) {
-                    return $this->stale($import, $batch, 'current_import_inconsistent');
+                    return $this->stale($import, $batch, 'current_import_inconsistent', $now);
                 }
 
                 $this->analysisImportRepository->markSuperseded($current->id);
             }
 
             $committed = $this->analysisImportRepository->markCommitted($import->id, $revision);
-            $committedAt = $committed->committed_at ?? now();
+            $committedAt = $committed->committed_at ?? $now;
             AnalysisResult::query()->updateOrCreate(
                 [
                     'stock_id' => $batch->stock_id,
@@ -195,24 +199,19 @@ final class FinalizeAnalysisImportUseCase
     private function revalidate(
         AnalysisBatch $batch,
         AnalysisImport $import,
+        CarbonInterface $now,
     ): ?AnalysisResultImportData {
         $path = $import->private_file_path;
         $disk = Storage::disk((string) config('stock_analysis.disk'));
-        $rawStoredAt = $import->getAttribute('raw_stored_at');
 
-        if (
-            ! $rawStoredAt instanceof CarbonInterface
-            || $rawStoredAt->lte(
-                now()->subDays((int) config('stock_analysis.raw_uncommitted_retention_days')),
-            )
-        ) {
-            $this->stale($import, $batch, 'raw_expired');
+        if ($this->retention->isExpired($import, $now)) {
+            $this->stale($import, $batch, 'raw_expired', $now);
 
             return null;
         }
 
         if ($path === null || ! $disk->exists($path)) {
-            $this->stale($import, $batch, 'raw_missing');
+            $this->stale($import, $batch, 'raw_missing', $now);
 
             return null;
         }
@@ -220,7 +219,7 @@ final class FinalizeAnalysisImportUseCase
         $bytes = $disk->get($path);
 
         if (hash('sha256', $bytes) !== $import->file_hash) {
-            $this->stale($import, $batch, 'raw_hash_changed');
+            $this->stale($import, $batch, 'raw_hash_changed', $now);
 
             return null;
         }
@@ -228,7 +227,7 @@ final class FinalizeAnalysisImportUseCase
         $parsed = $this->parser->parse($bytes);
 
         if ($parsed['row'] === null) {
-            $this->stale($import, $batch, 'raw_validation_failed');
+            $this->stale($import, $batch, 'raw_validation_failed', $now);
 
             return null;
         }
@@ -239,7 +238,7 @@ final class FinalizeAnalysisImportUseCase
         );
 
         if ($validated['data'] === null) {
-            $this->stale($import, $batch, 'raw_validation_failed');
+            $this->stale($import, $batch, 'raw_validation_failed', $now);
 
             return null;
         }
@@ -251,12 +250,13 @@ final class FinalizeAnalysisImportUseCase
         AnalysisImport $import,
         AnalysisBatch $batch,
         string $reason,
+        CarbonInterface $now,
     ): AnalysisImport {
         return $this->analysisImportRepository->markStale($import->id, [
             'reason' => $reason,
             'base_current_import_id' => $import->base_current_import_id,
             'current_import_id' => $batch->current_import_id,
-            'detected_at' => now()->utc()->toIso8601String(),
+            'detected_at' => $now->copy()->utc()->toIso8601String(),
         ]);
     }
 }

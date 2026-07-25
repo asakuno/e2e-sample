@@ -10,6 +10,7 @@ use App\Models\AnalysisBatch;
 use App\Models\AnalysisBatchNews;
 use App\Services\Analysis\AnalysisResultValidator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -31,6 +32,24 @@ final class AnalysisResultValidatorTest extends TestCase
         $this->assertSame(AnalysisSentiment::Positive, $result['data']['sentiment'] ?? null);
         $this->assertSame(AnalysisTimeHorizon::ShortTerm, $result['data']['time_horizon'] ?? null);
         $this->assertSame('N001', $result['data']['evidence_items'][0]['news_key'] ?? null);
+    }
+
+    #[Test]
+    public function 作成後にcurrent_schemaが変わってもbatch固定schemaで検証できる(): void
+    {
+        // Arrange
+        $batch = $this->batch();
+        Config::set('stock_analysis.result_schema_version', 'stock-news-period-result-v2');
+
+        // Act
+        $result = (new AnalysisResultValidator)->validate($this->validRow($batch), $batch);
+
+        // Assert
+        $this->assertSame([], $result['errors']);
+        $this->assertSame(
+            'stock-news-period-result-v1',
+            $result['data']['schema_version'] ?? null,
+        );
     }
 
     #[Test]
@@ -77,7 +96,7 @@ final class AnalysisResultValidatorTest extends TestCase
     private function validRow(AnalysisBatch $batch): array
     {
         return [
-            'schema_version' => 'stock-news-period-result-v1',
+            'schema_version' => $batch->result_schema_version,
             'batch_key' => $batch->public_id,
             'prompt_version' => $batch->prompt_version,
             'summary' => '対象期間のニュースを総合した要約です。',

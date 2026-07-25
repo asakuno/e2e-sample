@@ -142,6 +142,7 @@ erDiagram
 | period_end_at | timestamp | NO | 分析期間終了、UTC、排他的上限 |
 | stock_snapshot | json | NO | id、symbol、name、marketの作成時点値 |
 | prompt_version | varchar(32) | NO | プロンプト契約版 |
+| result_schema_version | varchar(64) | NO | バッチ作成時に固定したCSV schema版 |
 | prompt_text | longtext | NO | 作成時に固定したプロンプト本文 |
 | prompt_hash | char(64) | NO | prompt_textのSHA-256 |
 | status | tinyint unsigned | NO | prepared / exported / completed |
@@ -439,6 +440,7 @@ published_at ASC, news_article_id ASC
     "end_at_exclusive": "2026-07-08T00:00:00+09:00"
   },
   "prompt_version": "stock-news-period-v1",
+  "result_schema_version": "stock-news-period-result-v1",
   "news": [
     {
       "news_key": "N001",
@@ -457,7 +459,7 @@ published_at ASC, news_article_id ASC
 
 正規化JSONへSHA-256を適用して `input_hash` を生成する。
 
-`public_id` は受け渡し識別子であり入力内容そのものではないため、`input_hash` の対象へ含めない。同じ銘柄、期間、prompt version、ニューススナップショットから作成した別バッチは同じ `input_hash` になる。
+`public_id` は受け渡し識別子であり入力内容そのものではないため、`input_hash` の対象へ含めない。同じ銘柄、期間、prompt version、CSV schema version、ニューススナップショットから作成した別バッチは同じ `input_hash` になる。
 
 DBの `user_id, input_hash` unique制約により、その別バッチ作成は拒否し、既存バッチへ誘導する。
 
@@ -552,6 +554,8 @@ prompt_version
 ```
 
 その他の分析結果列は空欄とする。ChatGPTへ最終CSVを依頼するときは、この列順と事前入力値を変更しないようプロンプトで指示する。
+
+`schema_version` は現在のconfigを再参照せず、`analysis_batches.result_schema_version` にバッチ作成時から固定した値を使用する。CSV検証も同じバッチ固定値との一致を確認する。
 
 ### 10.4 データ行例
 

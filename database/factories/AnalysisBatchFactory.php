@@ -37,6 +37,7 @@ class AnalysisBatchFactory extends Factory
                 'market' => 'us',
             ],
             'prompt_version' => 'stock-news-period-v1',
+            'result_schema_version' => 'stock-news-period-result-v1',
             'prompt_text' => $prompt,
             'prompt_hash' => hash('sha256', $prompt),
             'status' => AnalysisBatchStatus::Prepared,

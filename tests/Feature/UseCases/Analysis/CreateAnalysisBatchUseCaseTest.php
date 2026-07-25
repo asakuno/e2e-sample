@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Watchlist;
 use App\UseCases\Analysis\CreateAnalysisBatchUseCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -41,11 +42,40 @@ final class CreateAnalysisBatchUseCaseTest extends TestCase
         $this->assertSame(hash('sha256', $batch->prompt_text), $batch->prompt_hash);
         $this->assertStringContainsString($batch->public_id, $batch->prompt_text);
         $this->assertStringContainsString('N001', $batch->prompt_text);
+        $this->assertSame('stock-news-period-result-v1', $batch->result_schema_version);
+        $this->assertStringContainsString($batch->result_schema_version, $batch->prompt_text);
         $this->assertSame($stock->symbol, $batch->stock_snapshot['symbol']);
 
         $originalTitle = $batch->newsSnapshots->first()?->title;
         $articles[0]->update(['title' => '変更後']);
         $this->assertSame($originalTitle, $batch->newsSnapshots()->first()?->title);
+    }
+
+    #[Test]
+    public function result_schema_versionが変わると同じニュースでも別input_hashでbatchを作成する(): void
+    {
+        // Arrange
+        [$user, $stock, $articles] = $this->analysisSource();
+        $data = new CreateAnalysisBatchData(
+            userId: $user->id,
+            stockId: $stock->id,
+            fromDate: now('Asia/Tokyo')->subDays(3)->toDateString(),
+            toDate: now('Asia/Tokyo')->toDateString(),
+            newsArticleIds: array_column($articles, 'id'),
+        );
+        $useCase = app(CreateAnalysisBatchUseCase::class);
+        Config::set('stock_analysis.result_schema_version', 'stock-news-period-result-v1');
+        $v1Batch = $useCase->execute($data);
+
+        // Act
+        Config::set('stock_analysis.result_schema_version', 'stock-news-period-result-v2');
+        $v2Batch = $useCase->execute($data);
+
+        // Assert
+        $this->assertNotSame($v1Batch->input_hash, $v2Batch->input_hash);
+        $this->assertSame('stock-news-period-result-v1', $v1Batch->result_schema_version);
+        $this->assertSame('stock-news-period-result-v2', $v2Batch->result_schema_version);
+        $this->assertDatabaseCount('analysis_batches', 2);
     }
 
     #[Test]

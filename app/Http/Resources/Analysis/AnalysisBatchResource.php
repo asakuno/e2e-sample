@@ -32,6 +32,7 @@ final class AnalysisBatchResource extends JsonResource
                 ->subDay()
                 ->toDateString(),
             'prompt_version' => $batch->prompt_version,
+            'result_schema_version' => $batch->result_schema_version,
             'prompt_text' => $batch->prompt_text,
             'prompt_hash' => $batch->prompt_hash,
             'input_hash' => $batch->input_hash,

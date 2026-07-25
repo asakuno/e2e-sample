@@ -307,7 +307,7 @@ reason
 - UTF-8として解釈できること
 - ヘッダー名、列数、列順が完全一致すること
 - データ行が1行だけであること
-- `schema_version` がアプリの対応版と一致すること
+- `schema_version` が対象バッチ作成時に固定したCSV schema versionと一致すること
 - `batch_key` が対象バッチと一致すること
 - `prompt_version` が対象バッチと一致すること
 - `summary` と `reason` が空でないこと

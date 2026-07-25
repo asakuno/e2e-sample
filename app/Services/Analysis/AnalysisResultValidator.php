@@ -145,7 +145,7 @@ final class AnalysisResultValidator
      */
     private function validateFixed(array $row, AnalysisBatch $batch, callable $add): void
     {
-        if (($row['schema_version'] ?? '') !== (string) config('stock_analysis.result_schema_version')) {
+        if (($row['schema_version'] ?? '') !== $batch->result_schema_version) {
             $add('schema_version', 'CSV schema versionが一致しません。');
         }
 

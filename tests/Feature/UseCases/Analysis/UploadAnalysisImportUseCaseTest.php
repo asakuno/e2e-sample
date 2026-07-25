@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\UseCases\Analysis;
 
+use App\Data\Analysis\AnalysisResultImportData;
+use App\Data\Analysis\UploadAnalysisImportData;
 use App\Enums\AnalysisBatchStatus;
 use App\Enums\AnalysisImportMode;
 use App\Enums\AnalysisImportStatus;
@@ -11,12 +13,15 @@ use App\Models\AnalysisBatch;
 use App\Models\AnalysisBatchNews;
 use App\Models\AnalysisImport;
 use App\Models\User;
+use App\Repositories\AnalysisImportRepositoryInterface;
 use App\Services\Analysis\AnalysisResultCsvTemplateBuilder;
 use App\UseCases\Analysis\UploadAnalysisImportUseCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use PDOException;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -168,6 +173,85 @@ final class UploadAnalysisImportUseCaseTest extends TestCase
             );
         } finally {
             $this->assertSame([], Storage::disk('local')->allFiles());
+        }
+    }
+
+    #[Test]
+    public function deadlockリトライ後もrawファイルを1つだけ保存する(): void
+    {
+        // Arrange
+        Storage::fake('local');
+        $connection = DB::connection();
+        $this->assertSame(1, $connection->transactionLevel());
+        $connection->rollBack();
+        $user = null;
+        $batch = null;
+        $stock = null;
+
+        try {
+            [$user, $batch] = $this->exportedBatch();
+            $stock = $batch->stock()->firstOrFail();
+            $realRepository = app(AnalysisImportRepositoryInterface::class);
+            $repository = $this->createMock(AnalysisImportRepositoryInterface::class);
+            $repository->expects($this->exactly(2))
+                ->method('findByBatchFileHash')
+                ->willReturnCallback(
+                    fn (int $batchId, string $fileHash): ?AnalysisImport => $realRepository
+                        ->findByBatchFileHash($batchId, $fileHash),
+                );
+            $repository->expects($this->exactly(2))
+                ->method('rawStorageBytesForUser')
+                ->willReturnCallback(
+                    fn (int $userId): int => $realRepository->rawStorageBytesForUser($userId),
+                );
+            $attempts = 0;
+            $repository->expects($this->exactly(2))
+                ->method('createUploaded')
+                ->willReturnCallback(
+                    function (UploadAnalysisImportData $data) use ($realRepository, &$attempts): AnalysisImport {
+                        $import = $realRepository->createUploaded($data);
+                        $attempts++;
+
+                        if ($attempts === 1) {
+                            throw new PDOException('deadlock detected', 40001);
+                        }
+
+                        return $import;
+                    },
+                );
+            $repository->expects($this->once())
+                ->method('markValidated')
+                ->willReturnCallback(
+                    fn (int $importId, AnalysisResultImportData $payload): AnalysisImport => $realRepository
+                        ->markValidated($importId, $payload),
+                );
+            $this->app->instance(AnalysisImportRepositoryInterface::class, $repository);
+
+            // Act
+            $import = app(UploadAnalysisImportUseCase::class)->execute(
+                userId: $user->id,
+                batchId: $batch->id,
+                file: UploadedFile::fake()->createWithContent('chatgpt.csv', $this->validCsv($batch)),
+                modelName: 'gpt-5',
+                mode: AnalysisImportMode::Initial,
+            );
+
+            // Assert
+            $this->assertSame(2, $attempts);
+            $this->assertStringStartsWith(
+                "analysis-imports/{$batch->public_id}/",
+                $import->private_file_path,
+            );
+            $this->assertSame([$import->private_file_path], Storage::disk('local')->allFiles());
+            $this->assertSame(1, $batch->imports()->count());
+        } finally {
+            $batch?->delete();
+            $user?->delete();
+            $stock?->delete();
+
+            if ($connection->transactionLevel() === 0) {
+                $connection->beginTransaction();
+            }
         }
     }
 

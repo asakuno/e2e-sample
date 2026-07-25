@@ -79,6 +79,7 @@ final class AnalysisBatchRepository implements AnalysisBatchRepositoryInterface
             'period_end_at' => $data->periodEndAt,
             'stock_snapshot' => $data->stockSnapshot,
             'prompt_version' => $data->promptVersion,
+            'result_schema_version' => $data->resultSchemaVersion,
             'prompt_text' => $data->promptText,
             'prompt_hash' => $data->promptHash,
             'status' => $data->status,

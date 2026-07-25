@@ -44,7 +44,10 @@ final class UploadAnalysisImportUseCase
         AnalysisImportMode $mode,
         ?string $replacementReason = null,
     ): AnalysisImport {
+        $storageFilename = Str::ulid().'.csv';
         $path = null;
+        $storedAt = now();
+        $createdNewFile = false;
 
         try {
             return DB::transaction(function () use (
@@ -54,6 +57,9 @@ final class UploadAnalysisImportUseCase
                 $modelName,
                 $mode,
                 $replacementReason,
+                $storageFilename,
+                $storedAt,
+                &$createdNewFile,
                 &$path,
             ): AnalysisImport {
                 User::query()->whereKey($userId)->lockForUpdate()->firstOrFail();
@@ -74,6 +80,7 @@ final class UploadAnalysisImportUseCase
                 }
 
                 $fileHash = hash('sha256', $bytes);
+                $fileSize = strlen($bytes);
 
                 if ($this->analysisImportRepository->findByBatchFileHash($batch->id, $fileHash) !== null) {
                     throw ValidationException::withMessages([
@@ -84,20 +91,20 @@ final class UploadAnalysisImportUseCase
                 $currentBytes = $this->analysisImportRepository->rawStorageBytesForUser($userId);
                 $quota = (int) config('stock_analysis.raw_storage_quota_bytes');
 
-                if ($currentBytes + strlen($bytes) > $quota) {
+                if ($currentBytes + $fileSize > $quota) {
                     throw ValidationException::withMessages([
                         'csv_file' => ["raw CSVの保存量が上限を超えます（現在{$currentBytes} bytes／上限{$quota} bytes）。"],
                     ]);
                 }
 
                 $disk = (string) config('stock_analysis.disk');
-                $path = "analysis-imports/{$batch->public_id}/".Str::ulid().'.csv';
+                $path ??= "analysis-imports/{$batch->public_id}/{$storageFilename}";
+                $createdNewFile = true;
 
                 if (! Storage::disk($disk)->put($path, $bytes)) {
                     throw new RuntimeException('CSVをprivate storageへ保存できませんでした。');
                 }
 
-                $storedAt = now();
                 $import = $this->analysisImportRepository->createUploaded(
                     new UploadAnalysisImportData(
                         analysisBatchId: $batch->id,
@@ -106,7 +113,7 @@ final class UploadAnalysisImportUseCase
                         modelName: $modelName,
                         originalFilename: $this->safeFilename($file->getClientOriginalName()),
                         privateFilePath: $path,
-                        fileSize: strlen($bytes),
+                        fileSize: $fileSize,
                         fileHash: $fileHash,
                         replacementReason: $replacementReason,
                         storedAt: $storedAt,
@@ -136,7 +143,7 @@ final class UploadAnalysisImportUseCase
                 );
             }, 3);
         } catch (Throwable $exception) {
-            if ($path !== null) {
+            if ($createdNewFile && $path !== null) {
                 Storage::disk((string) config('stock_analysis.disk'))->delete($path);
             }
 

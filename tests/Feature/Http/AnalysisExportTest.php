@@ -8,6 +8,7 @@ use App\Enums\AnalysisBatchStatus;
 use App\Models\AnalysisBatch;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -42,11 +43,12 @@ final class AnalysisExportTest extends TestCase
     }
 
     #[Test]
-    public function templateは固定列とbatch固有値を返す(): void
+    public function templateはcurrent_schema変更後もbatch作成時のschemaを返す(): void
     {
         // Arrange
         $user = User::factory()->create();
         $batch = AnalysisBatch::factory()->for($user)->create();
+        Config::set('stock_analysis.result_schema_version', 'stock-news-period-result-v2');
 
         // Act
         $response = $this->actingAs($user)->post(
@@ -61,6 +63,14 @@ final class AnalysisExportTest extends TestCase
             (string) $response->getContent(),
         );
         $this->assertStringContainsString($batch->public_id, (string) $response->getContent());
+        $this->assertStringContainsString(
+            "stock-news-period-result-v1,{$batch->public_id}",
+            (string) $response->getContent(),
+        );
+        $this->assertStringNotContainsString(
+            'stock-news-period-result-v2',
+            (string) $response->getContent(),
+        );
     }
 
     #[Test]

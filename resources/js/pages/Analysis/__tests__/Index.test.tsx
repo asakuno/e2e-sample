@@ -35,6 +35,7 @@ describe('Analysis index', () => {
             period_start: '2026-07-01',
             period_end: '2026-07-07',
             prompt_version: 'stock-news-period-v1',
+            result_schema_version: 'stock-news-period-result-v1',
             status: 3,
             status_label: '分析取込済み',
             news_count: 3,

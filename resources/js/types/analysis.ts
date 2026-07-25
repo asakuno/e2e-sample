@@ -13,6 +13,7 @@ export interface AnalysisBatchListItem {
   period_start: string;
   period_end: string;
   prompt_version: string;
+  result_schema_version: string;
   status: number;
   status_label: string;
   news_count: number;
@@ -90,6 +91,7 @@ export interface AnalysisBatch {
   period_start: string;
   period_end: string;
   prompt_version: string;
+  result_schema_version: string;
   prompt_text: string;
   prompt_hash: string;
   input_hash: string;

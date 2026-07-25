@@ -34,6 +34,7 @@ final class PersistAnalysisBatchData extends Data
         public readonly CarbonInterface $periodEndAt,
         public readonly array $stockSnapshot,
         public readonly string $promptVersion,
+        public readonly string $resultSchemaVersion,
         public readonly string $promptText,
         public readonly string $promptHash,
         public readonly AnalysisBatchStatus $status,

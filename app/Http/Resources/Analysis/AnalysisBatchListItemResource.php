@@ -37,6 +37,7 @@ final class AnalysisBatchListItemResource extends JsonResource
                 ->subDay()
                 ->toDateString(),
             'prompt_version' => $batch->prompt_version,
+            'result_schema_version' => $batch->result_schema_version,
             'status' => $status instanceof AnalysisBatchStatus ? $status->value : $status,
             'status_label' => $status instanceof AnalysisBatchStatus ? $status->label() : '',
             'news_count' => $batch->news_count,

@@ -28,6 +28,7 @@ class AnalysisBatch extends Model
         'period_end_at',
         'stock_snapshot',
         'prompt_version',
+        'result_schema_version',
         'prompt_text',
         'prompt_hash',
         'status',
