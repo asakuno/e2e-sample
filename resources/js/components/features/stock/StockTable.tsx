@@ -1,7 +1,7 @@
 import type React from 'react';
 import { ArrowRight, Check, Eye } from 'lucide-react';
 import { ActionButton } from '@/components/ui/ActionButton';
-import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
+import { Link } from '@inertiajs/react';
 import { show } from '@/routes/stocks';
 import type { StockListItem, StockMarketOption } from '@/types/stocks';
 
@@ -110,14 +110,13 @@ function StockTableRow({
               {isInWatchlist ? '追加済み' : '追加'}
             </ActionButton>
           )}
-          <InertiaActionLink
+          <Link
             href={show.url(stock.id)}
-            pendingClassName="opacity-70"
-            className="inline-flex min-h-11 items-center gap-1 rounded-md px-3 py-2 font-medium text-foreground text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-muted active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:active:translate-y-0"
+            className="inline-flex min-h-11 items-center gap-1 rounded-md px-3 py-2 font-medium text-foreground text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-muted active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:active:translate-y-0 data-[loading]:opacity-70"
           >
             開く
             <ArrowRight aria-hidden="true" className="size-4" />
-          </InertiaActionLink>
+          </Link>
         </div>
       </td>
     </tr>

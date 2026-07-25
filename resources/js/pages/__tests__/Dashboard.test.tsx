@@ -2,9 +2,14 @@
  * Dashboard ページテスト
  */
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+
+const deferredState = vi.hoisted(() => ({ loaded: true }));
 
 vi.mock('@inertiajs/react', () => ({
+  Deferred: ({ children, fallback }: { children: React.ReactNode; fallback: React.ReactNode }) => (
+    <>{deferredState.loaded ? children : fallback}</>
+  ),
   Head: ({ title }: { title: string }) => <title>{title}</title>,
   Link: ({ href, children, ...props }: Record<string, unknown>) => (
     <a href={href as string} {...props}>
@@ -127,14 +132,20 @@ const defaultProps = {
   flash: {},
   errors: {},
   stats,
-  recentTrend,
-  topStocks,
-  attentionStocks,
-  importantNews,
+  dashboardDetails: {
+    recentTrend,
+    topStocks,
+    attentionStocks,
+    importantNews,
+  },
   latestAnalysisAt: '2026-06-15T11:00:00+00:00',
 };
 
 describe('Dashboard', () => {
+  beforeEach(() => {
+    deferredState.loaded = true;
+  });
+
   it('Head title が「ダッシュボード」であること', () => {
     render(<Dashboard {...defaultProps} />);
     expect(document.querySelector('title')).toHaveTextContent('ダッシュボード');
@@ -207,9 +218,12 @@ describe('Dashboard', () => {
       <Dashboard
         {...defaultProps}
         stats={statsWithoutPriorityItems}
-        importantNews={[]}
-        topStocks={[]}
-        attentionStocks={[]}
+        dashboardDetails={{
+          recentTrend,
+          importantNews: [],
+          topStocks: [],
+          attentionStocks: [],
+        }}
         latestAnalysisAt={null}
       />,
     );
@@ -239,8 +253,21 @@ describe('Dashboard', () => {
     }
   });
 
-  it('main 要素が存在すること', () => {
-    render(<Dashboard {...defaultProps} />);
-    expect(screen.getByRole('main')).toBeInTheDocument();
+  it('詳細を読み込む間も概要を表示し、各領域にスケルトンを表示すること', () => {
+    deferredState.loaded = false;
+
+    render(<Dashboard {...defaultProps} dashboardDetails={undefined} />);
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'マーケットダッシュボード' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('ウォッチリスト銘柄数')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: '確認候補を読み込み中' })).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
+    expect(screen.getByRole('status', { name: '注目銘柄を読み込み中' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: '分析推移を読み込み中' })).toBeInTheDocument();
+    expect(screen.queryByText('Apple announces new product')).not.toBeInTheDocument();
   });
 });

@@ -8,20 +8,17 @@ use Spatie\LaravelData\Data;
 use Spatie\TypeScriptTransformer\Attributes\TypeScript;
 
 #[TypeScript()]
-final class DashboardSummaryData extends Data
+final class DashboardDetailsData extends Data
 {
     /**
-     * @param  array<int, DashboardStatData>  $stats
      * @param  array<int, DashboardTopStockData>  $topStocks
      * @param  array<int, DashboardTopStockData>  $attentionStocks
      * @param  array<int, DashboardActivityItemData>  $importantNews
      */
     public function __construct(
-        public readonly array $stats,
         public readonly DashboardTrendData $recentTrend,
         public readonly array $topStocks,
         public readonly array $attentionStocks,
         public readonly array $importantNews,
-        public readonly ?string $latestAnalysisAt,
     ) {}
 }

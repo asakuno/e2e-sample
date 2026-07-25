@@ -1,5 +1,5 @@
 import { ArrowRight, CircleCheck } from 'lucide-react';
-import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
+import { Link } from '@inertiajs/react';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Surface } from '@/components/ui/surface';
 import { index as newsIndex } from '@/routes/news';
@@ -37,14 +37,13 @@ function DashboardPriorityFeedRow({ item }: DashboardPriorityFeedRowProps) {
   }
 
   return (
-    <InertiaActionLink
+    <Link
       href={item.href}
-      pendingClassName="opacity-70"
-      className="grid min-h-11 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-lg border border-transparent p-3 text-card-foreground transition-[background-color,border-color,transform] duration-motion-fast ease-standard hover:border-border hover:bg-muted/60 active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none motion-reduce:active:translate-y-0 sm:p-4"
+      className="grid min-h-11 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-lg border border-transparent p-3 text-card-foreground transition-[background-color,border-color,transform] duration-motion-fast ease-standard hover:border-border hover:bg-muted/60 active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none motion-reduce:active:translate-y-0 sm:p-4 data-[loading]:opacity-70"
     >
       {content}
       <ArrowRight aria-hidden="true" className="mt-1 size-5 text-muted-foreground" />
-    </InertiaActionLink>
+    </Link>
   );
 }
 
@@ -76,14 +75,13 @@ export function DashboardPriorityFeed({ items }: DashboardPriorityFeedProps) {
               <p className="mt-1 text-muted-foreground text-sm">
                 新しい確認項目があると、ここに表示されます。
               </p>
-              <InertiaActionLink
+              <Link
                 href={stocksIndex.url()}
-                pendingClassName="opacity-70"
-                className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-border bg-card px-4 py-2 font-medium text-card-foreground text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none motion-reduce:active:translate-y-0"
+                className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-border bg-card px-4 py-2 font-medium text-card-foreground text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none motion-reduce:active:translate-y-0 data-[loading]:opacity-70"
               >
                 銘柄を探す
                 <ArrowRight aria-hidden="true" className="size-4" />
-              </InertiaActionLink>
+              </Link>
             </div>
           </div>
         ) : (
@@ -97,22 +95,20 @@ export function DashboardPriorityFeed({ items }: DashboardPriorityFeedProps) {
             </ul>
 
             <footer className="flex flex-wrap justify-end gap-1 border-border border-t px-5 py-3 sm:px-6">
-              <InertiaActionLink
+              <Link
                 href={newsIndex.url()}
-                pendingClassName="opacity-70"
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-3 py-2 font-medium text-primary text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none motion-reduce:active:translate-y-0"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-3 py-2 font-medium text-primary text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none motion-reduce:active:translate-y-0 data-[loading]:opacity-70"
               >
                 ニュース一覧
                 <ArrowRight aria-hidden="true" className="size-4" />
-              </InertiaActionLink>
-              <InertiaActionLink
+              </Link>
+              <Link
                 href={stocksIndex.url()}
-                pendingClassName="opacity-70"
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-3 py-2 font-medium text-primary text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none motion-reduce:active:translate-y-0"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-3 py-2 font-medium text-primary text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none motion-reduce:active:translate-y-0 data-[loading]:opacity-70"
               >
                 銘柄一覧
                 <ArrowRight aria-hidden="true" className="size-4" />
-              </InertiaActionLink>
+              </Link>
             </footer>
           </>
         )}

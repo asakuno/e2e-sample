@@ -1,5 +1,5 @@
+import { Link } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
 import type { PaginatedData } from '@/types/index.d.ts';
 
 interface PaginationProps {
@@ -9,7 +9,7 @@ interface PaginationProps {
 }
 
 const navigationClassName =
-  'inline-flex min-h-11 items-center justify-center gap-1 rounded-md border border-border bg-card px-3 py-2 font-medium text-foreground text-sm transition-colors hover:border-ring hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+  'inline-flex min-h-11 items-center justify-center gap-1 rounded-md border border-border bg-card px-3 py-2 font-medium text-foreground text-sm transition-[background-color,border-color,opacity] hover:border-ring hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-[loading]:opacity-70';
 
 const disabledClassName =
   'inline-flex min-h-11 items-center justify-center gap-1 rounded-md border border-border bg-muted px-3 py-2 font-medium text-muted-foreground text-sm opacity-60';
@@ -67,15 +67,10 @@ function PaginationLink({ direction, href }: PaginationLinkProps) {
   }
 
   return (
-    <InertiaActionLink
-      href={href}
-      aria-label={label}
-      className={navigationClassName}
-      pendingClassName="opacity-70"
-    >
+    <Link href={href} aria-label={label} className={navigationClassName}>
       {isPrevious ? icon : null}
       {label}
       {isPrevious ? null : icon}
-    </InertiaActionLink>
+    </Link>
   );
 }

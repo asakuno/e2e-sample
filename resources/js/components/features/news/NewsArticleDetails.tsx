@@ -1,5 +1,5 @@
 import { ExternalLink } from 'lucide-react';
-import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
+import { Link } from '@inertiajs/react';
 import { show as stockShow } from '@/routes/stocks';
 import type { NewsAnalysis, NewsArticle, NewsArticleStock } from '@/types/news';
 import { NewsAnalysisCard } from './NewsAnalysisCard';
@@ -52,10 +52,9 @@ function RelatedStocks({ stocks }: { stocks: NewsArticleStock[] }) {
         <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {stocks.map((stock) => (
             <li key={stock.id}>
-              <InertiaActionLink
+              <Link
                 href={stockShow.url(stock.id)}
-                pendingClassName="opacity-70"
-                className="block min-h-11 rounded-md border border-border bg-muted/55 p-3 transition-[background-color,border-color] duration-motion-fast ease-standard hover:border-ring hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none"
+                className="block min-h-11 rounded-md border border-border bg-muted/55 p-3 transition-[background-color,border-color] duration-motion-fast ease-standard hover:border-ring hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none data-[loading]:opacity-70"
               >
                 <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
                   <span className="font-semibold text-foreground text-sm">{stock.symbol}</span>
@@ -64,7 +63,7 @@ function RelatedStocks({ stocks }: { stocks: NewsArticleStock[] }) {
                 <span className="mt-1 block text-muted-foreground text-xs tabular-nums">
                   関連度 {stock.relevance_score ?? '未算出'}
                 </span>
-              </InertiaActionLink>
+              </Link>
             </li>
           ))}
         </ul>

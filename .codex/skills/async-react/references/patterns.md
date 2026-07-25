@@ -1,592 +1,275 @@
-# Async React Patterns Reference
+# Async React Patterns for Inertia
 
-## 1. Transitions (useTransition / startTransition)
+## 1. 最初に所有者を決める
 
-トランジションは、ステート更新を「緊急でない」とマークする仕組み。トランジション中にSuspenseが発生しても、**既存のUIを維持しつつバックグラウンドで新しいUIを準備**する。データ変更や検索などの非緊急なアプリケーションactionに使用し、即時反映が必要なローカルUI更新には使用しない。
+非同期APIを選ぶ前に、更新対象を分類する。
 
-### useTransition - コンポーネント内で使う場合
+| 更新対象 | 所有者 | 主なAPI |
+| --- | --- | --- |
+| Laravelが返すページデータ | Inertia | props、Partial Reload、Deferred Props |
+| URL・ページ遷移 | Inertia | `Link`、`router.visit` |
+| フォーム送信・検証 | Inertia | `useForm().withPrecognition()` |
+| サーバーmutationの局所pending | Inertia + React adapter | `ActionButton`、`runInertiaAction` |
+| controlled input・モーダル・focus | Reactの即時state | `useState`、通常イベント |
+| 非緊急な局所レンダー | React | `useTransition` |
+| optimistic UI | React | `useOptimistic` |
+| コード分割・Suspense対応source | React | `Suspense`、`use()` |
+
+## 2. Laravelページデータ
+
+### 通常props
+
+初期操作に必要なデータはControllerから通常propsで渡す。
+
+```php
+return Inertia::render('Stocks', [
+    'stocks' => $listStocks->execute($filters),
+    'filters' => $filters,
+]);
+```
 
 ```tsx
-import { useTransition } from "react";
-
-interface ButtonProps {
-  action: () => Promise<void>;
-  children: React.ReactNode;
-}
-
-function Button({ action, children }: ButtonProps) {
-  const [isPending, startTransition] = useTransition();
-
-  return (
-    <button
-      onClick={() =>
-        startTransition(async () => {
-          await action();
-        })
-      }
-      disabled={isPending}
-    >
-      {isPending ? <Spinner /> : children}
-    </button>
-  );
+export default function Stocks({ stocks, filters }: StocksPageProps) {
+  return <StockResults stocks={stocks} filters={filters} />;
 }
 ```
 
-**ポイント**:
+通常propsをPromiseへ包み直して `use()` で読む必要はない。Inertiaがページpropsの
+取得、キャンセル、ページ交換、progressを所有している。
 
-- `isPending` でローディング状態を取得できる
-- `startTransition` のコールバックは `async` 関数にできる（React 19以降）
-- トランジション中でもUIはインタラクティブなまま
-- `e.stopPropagation()` は不要。イベントバブリングを不必要に止めない
+### Deferred Props
 
-### startTransition - コンポーネント外で使う場合
+初期表示に不要で重いデータは、バックエンドで集約単位を分ける。
 
-```tsx
-import { startTransition } from "react";
+```php
+$overview = $overviewUseCase->execute($userId);
 
-function navigate(url: string) {
-  startTransition(() => {
-    setRouterState({ url });
-  });
-}
+return Inertia::render('Dashboard', [
+    ...$overview->toArray(),
+    'dashboardDetails' => Inertia::defer(
+        fn (): array => $detailsUseCase->execute($userId)->toArray(),
+        'dashboard-details',
+    ),
+]);
 ```
 
-**使い分け**:
-
-- `isPending` が必要 → `useTransition()`
-- 単にトランジションにしたいだけ → `startTransition()`
-- controlled input、モーダル・メニュー・ポップオーバー、focus・selection、PrimitiveのDOMイベント、即時ローカルUI更新 → 通常の `onClick` / `onChange`
-
-## 2. Suspense
-
-Suspenseバウンダリを作り、非同期処理の完了を待つ間のフォールバックUIを宣言的に定義する。
-
-### 基本パターン
-
 ```tsx
-import { Suspense } from "react";
+import { Deferred } from "@inertiajs/react";
 
-function App() {
-  return (
-    <Suspense fallback={<SkeletonList />}>
-      <DataList />
-    </Suspense>
-  );
-}
-```
-
-### ネストしたSuspense
-
-```tsx
-function Dashboard() {
-  return (
-    <div>
-      {/* ヘッダーは即座に表示 */}
-      <Header />
-      <Suspense fallback={<SidebarSkeleton />}>
-        <Sidebar />
-      </Suspense>
-      <Suspense fallback={<ContentSkeleton />}>
-        <MainContent />
-      </Suspense>
-    </div>
-  );
-}
-```
-
-### Suspense + Transition の相互作用
-
-トランジション中にSuspenseが発生した場合:
-
-- **トランジションなし**: 即座にフォールバックを表示
-- **トランジションあり**: 既存のUIを表示し続け、準備ができたら切り替え
-
-```tsx
-// トランジション中はフォールバックが表示されず、既存のリストが維持される
-function Home() {
-  return (
-    <Suspense fallback={<FallbackList />}>
-      <LessonList tab={tab} search={search} />
-    </Suspense>
-  );
-}
-```
-
-## 3. Optimistic Updates (useOptimistic)
-
-非同期処理の完了を待たず、UIを即座に更新する。処理が完了すると実際の値で置き換わる。
-
-### トグルボタン
-
-```tsx
-import { startTransition, useOptimistic } from "react";
-
-interface CompleteButtonProps {
-  complete: boolean;
-  action: () => Promise<void>;
-}
-
-function CompleteButton({ complete, action }: CompleteButtonProps) {
-  const [optimisticComplete, setOptimisticComplete] = useOptimistic(complete);
-
-  function clickAction() {
-    startTransition(async () => {
-      setOptimisticComplete(!optimisticComplete);
-      await action();
-    });
-  }
-
-  return <Button action={clickAction}>{optimisticComplete ? <CheckIcon /> : <EmptyIcon />}</Button>;
-}
-```
-
-**ポイント**:
-
-- `useOptimistic(actualValue)` は現在の楽観値を返す
-- トランジション中は楽観値が表示される
-- トランジション完了後、`actualValue` が更新されると楽観値はリセットされる
-- `optimisticValue !== actualValue` でpending状態を検出できる
-
-### 検索入力
-
-```tsx
-import { startTransition, useOptimistic } from "react";
-
-interface SearchInputProps {
-  value: string;
-  changeAction: (value: string) => void;
-}
-
-function SearchInput({ value, changeAction }: SearchInputProps) {
-  const [inputValue, setInputValue] = useOptimistic(value);
-  const isPending = inputValue !== value;
-
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const newValue = e.target.value;
-    startTransition(async () => {
-      setInputValue(newValue);
-      await changeAction(newValue);
-    });
-  }
-
-  return (
-    <div>
-      <input value={inputValue} onChange={handleChange} />
-      {isPending && <Spinner />}
-    </div>
-  );
-}
-```
-
-### タブ切り替え
-
-```tsx
-import { startTransition, useOptimistic } from "react";
-
-interface TabListProps {
-  activeTab: string;
-  changeAction: (value: string) => void;
-  children: React.ReactNode;
-}
-
-function TabList({ activeTab, changeAction, children }: TabListProps) {
-  const [optimisticTab, setActiveTab] = useOptimistic(activeTab);
-  const isPending = optimisticTab !== activeTab;
-
-  function onTabClick(newValue: string) {
-    startTransition(async () => {
-      setActiveTab(newValue);
-      await changeAction(newValue);
-    });
-  }
-
-  return (
-    <div>
-      <div role="tablist">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            role="tab"
-            aria-selected={optimisticTab === tab}
-            onClick={() => onTabClick(tab)}
-            className={isPending ? "opacity-70" : ""}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-      {children}
-    </div>
-  );
-}
-```
-
-## 4. Action Props Pattern
-
-非緊急なアプリケーション操作を受けるコンポーネントが `action` propを受け取り、内部でトランジションを管理するパターン。
-
-### 従来のパターン vs Action Propsパターン
-
-```tsx
-// ❌ 非緊急なアプリケーションactionを通常のonClickとして受け取る
-interface ButtonOldProps {
-  onClick: () => void;
-  children: React.ReactNode;
-}
-
-function Button({ onClick, children }: ButtonOldProps) {
-  return <button onClick={onClick}>{children}</button>;
-}
-// 使う側が startTransition を意識する必要がある
-<Button onClick={() => startTransition(() => doSomething())} />;
-
-// ✅ Action Props: action を受け取り内部でトランジション化
-type ActionContext = {
-  transition: (callback: () => void) => void;
-};
-
-type ActionCallback = (context: ActionContext) => void | Promise<void>;
-
-interface ButtonProps {
-  action: ActionCallback;
-  children: React.ReactNode;
-}
-
-function Button({ action, children }: ButtonProps) {
-  const [isPending, startTransition] = useTransition();
-  const transition: ActionContext["transition"] = (callback) => {
-    startTransition(callback);
-  };
-
-  return (
-    <button
-      onClick={() =>
-        startTransition(async () => {
-          await action({ transition });
-        })
-      }
-      disabled={isPending}
-    >
-      {isPending ? <Spinner /> : children}
-    </button>
-  );
-}
-// 使う側はトランジションを意識しなくてよい
-<Button action={doSomething}>Save</Button>;
-```
-
-**設計のポイント**:
-
-- **汎用コンポーネント**にトランジションを組み込むことで、使う側は意識せず自動的にAsync Reactの恩恵を受ける
-- ローディング表示もコンポーネント内で完結する
-- Action propの命名: `action`, `changeAction`, `submitAction` 等
-- action内で `await` 後にstate更新する場合は、action context の `transition` helperで追加のトランジションに包む
-- `action` propは全てのボタンに必須ではない。controlled input、モーダル・メニュー・ポップオーバー、focus・selection、PrimitiveのDOMイベント、即時ローカルUI更新には通常の `onClick` / `onChange` を使う
-
-### Action context と ActionScope
-
-`await` 後のstate更新はReact公式の制約により追加の `startTransition` が必要になるため、actionには `transition` helperを渡す。toast / Sentry / 共通ログなど操作横断のエラー通知は `ActionScope onError` に集約し、個別のバリデーションや業務エラーはaction内で処理する。
-
-```tsx
-type ActionContext = {
-  transition: (callback: () => void) => void;
-};
-
-type ActionCallback = (context: ActionContext) => void | Promise<void>;
-
-function SaveSection() {
-  const [saved, setSaved] = useState(false);
-
-  return (
-    <ActionScope onError={(error) => reportActionError(error)}>
-      <ActionButton
-        action={async ({ transition }) => {
-          await save();
-
-          transition(() => {
-            setSaved(true);
-          });
-        }}
-      >
-        Save
-      </ActionButton>
-      {saved && <p>Saved</p>}
-    </ActionScope>
-  );
-}
-```
-
-## 5. Data Fetching (Suspense + use())
-
-### Suspense対応のキャッシュ付きデータフェッチ
-
-```tsx
-const cache = new Map<string, Promise<unknown>>();
-
-function getData<T>(query: string): Promise<T> {
-  const key = JSON.stringify(query);
-  if (cache.has(key)) {
-    return cache.get(key) as Promise<T>;
-  }
-  const promise = fetch(`/api/data?q=${query}`).then((r) => r.json());
-  cache.set(key, promise);
-  return promise;
-}
-
-function revalidate() {
-  cache.clear();
-}
-```
-
-### use() フックでデータを読む
-
-```tsx
-import { use } from "react";
-
-interface Item {
-  id: string;
-  name: string;
-}
-
-interface DataListProps {
-  query: string;
-}
-
-function DataList({ query }: DataListProps) {
-  const data = use(getData<Item[]>(query));
-
-  if (data.length === 0) {
-    return <EmptyState />;
-  }
-
-  return (
-    <ul>
-      {data.map((item) => (
-        <li key={item.id}>{item.name}</li>
-      ))}
-    </ul>
-  );
-}
-```
-
-### ミューテーション後のキャッシュ無効化
-
-```tsx
-async function updateItem(id: string, data: Record<string, unknown>) {
-  await fetch(`/api/items/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(data),
-  });
-  revalidate(); // キャッシュをクリア
-}
-```
-
-## 6. InertiaナビゲーションとView Transition
-
-`ActionLink` / `visitAction` を `useTransition` に接続する構成では、Inertiaリクエストの完了まで `isPending` を提供できる。pending表示、`aria-busy`、pending class、二重操作の制御に利用する。
-
-ただし、呼び出し側で `visitAction` をTransitionに包んでも、`@inertiajs/react` 内部のpage swap自体はConcurrent Transitionにならない。次の挙動は保証しない。
-
-- ページ交換自体のinterruptible rendering
-- Suspenseによる旧画面の保持
-- React TransitionとしてのInertia page swap
-- 古いページを表示したまま新しいページをバックグラウンドレンダーする挙動
-
-page swapをConcurrent Transition化するには、そのstate更新を所有するInertiaアダプター側での統合が必要になる。
-
-Reactの `<ViewTransition>` はcanary / experimental限定であり、React 19.2系stableでは利用しない。stable向けコードで `react` からimportせず、`react@canary` を明示的に採用したプロジェクトでのみ検討する。ブラウザのView Transition APIやInertiaのView Transition機能は視覚的な遷移の仕組みであり、Reactの `startTransition` / Concurrent Transitionとは別物である。
-
-## 7. Prefetching
-
-ナビゲーション前にデータをプリロードすることで、遷移時のローディングを最小化する。
-
-```tsx
-async function submitAction() {
-  await login(username, password);
-  await prefetchData(); // ナビゲーション前にデータを取得
-  router.navigate("/");
-}
-
-function prefetchData() {
-  // キャッシュにデータをプリロード
-  return getData("initial");
-}
-```
-
-## 8. Loading States (isPending)
-
-### isPending による状態表示
-
-```tsx
-interface ButtonProps {
-  action: () => Promise<void>;
-  children: React.ReactNode;
-}
-
-function Button({ action, children }: ButtonProps) {
-  const [isPending, startTransition] = useTransition();
-
-  return (
-    <button
-      onClick={() =>
-        startTransition(async () => {
-          await action();
-        })
-      }
-      className={isPending ? "opacity-50" : ""}
-      disabled={isPending}
-    >
-      {isPending ? <Spinner /> : children}
-    </button>
-  );
-}
-```
-
-### optimistic !== actual による状態検出
-
-```tsx
-interface SearchInputProps {
-  value: string;
-  changeAction: (value: string) => void;
-}
-
-function SearchInput({ value, changeAction }: SearchInputProps) {
-  const [inputValue, setInputValue] = useOptimistic(value);
-  const isPending = inputValue !== value;
-
-  return (
-    <div className="relative">
-      <input value={inputValue} onChange={handleChange} />
-      {isPending && <Spinner className="absolute right-2 top-2" />}
-    </div>
-  );
-}
-```
-
-### shimmer/skeleton エフェクト
-
-```tsx
-interface ButtonShimmerProps {
-  isPending: boolean;
-  children: React.ReactNode;
-}
-
-function ButtonShimmer({ isPending, children }: ButtonShimmerProps) {
-  return <div className={isPending ? "animate-pulse opacity-70" : ""}>{children}</div>;
-}
-```
-
-## 9. useActionState (フォーム)
-
-```tsx
-import { useActionState } from "react";
-
-interface ContactFormState {
-  error: string | null;
-  success: boolean;
-}
-
-function ContactForm() {
-  const [state, submitAction, isPending] = useActionState<ContactFormState, FormData>(
-    async (previousState, formData) => {
-      const name = formData.get("name") as string;
-      const email = formData.get("email") as string;
-      const result = await submitContact({ name, email });
-      if (result.error) {
-        return { error: result.error, success: false };
-      }
-      return { success: true, error: null };
-    },
-    { error: null, success: false },
-  );
-
-  return (
-    <form action={submitAction}>
-      <input name="name" required />
-      <input name="email" type="email" required />
-      {state.error && <p className="text-red-500">{state.error}</p>}
-      {state.success && <p className="text-green-500">Sent!</p>}
-      <button type="submit" disabled={isPending}>
-        {isPending ? <Spinner /> : "Submit"}
-      </button>
-    </form>
-  );
-}
-```
-
-## 10. Error Handling
-
-### ErrorBoundary + Suspense パターン
-
-データフェッチのエラー（`use()` のPromiseリジェクト）を宣言的にハンドリングする。
-
-```tsx
-import { Suspense } from "react";
-import { ErrorBoundary } from "react-error-boundary";
-
-interface DataSectionProps {
-  query: string;
-}
-
-function DataSection({ query }: DataSectionProps) {
-  return (
-    <ErrorBoundary
-      fallback={<div className="text-red-500">データの取得に失敗しました</div>}
-      resetKeys={[query]}
-    >
-      <Suspense fallback={<SkeletonList />}>
-        <DataList query={query} />
-      </Suspense>
-    </ErrorBoundary>
-  );
-}
-```
-
-**ポイント**:
-
-- `ErrorBoundary` は `Suspense` の外側に配置する
-- `resetKeys` でプロップ変更時にエラー状態を自動リセットする
-- `react-error-boundary` ライブラリが便利だが、クラスコンポーネントで自作も可
-
-### action内のtry/catch パターン
-
-ミューテーション系のエラーは `useActionState` やaction prop内で `try/catch` を使う。
-
-```tsx
-interface SaveButtonProps {
-  action: () => Promise<void>;
-  children: React.ReactNode;
-}
-
-function SaveButton({ action, children }: SaveButtonProps) {
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
+function Dashboard({ stats, dashboardDetails }: DashboardPageProps) {
   return (
     <>
-      <button
-        onClick={() =>
-          startTransition(async () => {
-            try {
-              await action();
-              setError(null);
-            } catch (e) {
-              setError((e as Error).message);
-            }
-          })
-        }
-        disabled={isPending}
-      >
-        {isPending ? <Spinner /> : children}
-      </button>
-      {error && <p className="text-red-500">{error}</p>}
+      <Stats stats={stats} />
+      <Deferred data="dashboardDetails" fallback={<DashboardDetailsSkeleton />}>
+        {dashboardDetails ? <DashboardDetails details={dashboardDetails} /> : null}
+      </Deferred>
     </>
   );
 }
 ```
 
-**使い分け**:
+ルール:
 
-- **データ読み取り（`use()`）のエラー** → `ErrorBoundary` で宣言的にキャッチ
-- **個別ミューテーション（action）のエラー** → action内の `try/catch` でフォームエラーや業務エラーをステート管理
-- **操作横断のエラー通知** → `ActionScope onError` でtoast / Sentry / 共通ログを集約
+- 初期画面の判断・操作に必要なデータは通常propsに残す。
+- 同じ集約UseCaseを複数のDeferred closureから実行しない。
+- Deferred未取得はoptionalまたはnullableなTypeScript型で表す。
+- fallbackは実レイアウトに近い寸法と、`role="status"` などの読み込み状態を持つ。
+
+## 3. Partial Reload
+
+検索、フィルタ、ページネーションではページ全体の独自fetchを作らず、
+InertiaのPartial Reloadを優先する。
+
+```tsx
+router.get(
+  stocksIndex.url(),
+  { q, market },
+  {
+    only: ["stocks", "filters"],
+    preserveState: true,
+    replace: true,
+  },
+);
+```
+
+送信中表示は、フォームなら `processing`、標準Linkなら `data-loading`、
+独立した複数操作なら操作ごとのstateを使用する。1つの共有pending flagで
+検索とクリアなど別操作のラベルを混在させない。
+
+## 4. InertiaフォームとPrecognition
+
+```tsx
+const form = useForm({
+  email: "",
+  password: "",
+}).withPrecognition(login().method, login.url());
+
+function submit(event: React.FormEvent) {
+  event.preventDefault();
+  form.submit({
+    preserveScroll: true,
+  });
+}
+
+return (
+  <form onSubmit={submit}>
+    <Input
+      value={form.data.email}
+      onChange={(event) => form.setData("email", event.target.value)}
+      onBlur={() => form.validate("email")}
+      aria-invalid={form.errors.email ? "true" : undefined}
+    />
+    {form.errors.email ? <p role="alert">{form.errors.email}</p> : null}
+    <button type="submit" disabled={form.processing}>
+      {form.processing ? "送信中..." : "送信"}
+    </button>
+  </form>
+);
+```
+
+`form.submit()` を `startTransition` で包まない。Inertiaが提供する
+`processing`、`errors`、`wasSuccessful`、キャンセル処理を正として扱う。
+`useActionState` は、Inertiaを使わないReact-owned formに限って検討する。
+
+## 5. 通常GETナビゲーション
+
+```tsx
+import { Link } from "@inertiajs/react";
+
+<Link
+  href={stockShow.url(stock.id)}
+  className="transition-opacity data-[loading]:opacity-70"
+>
+  詳細
+</Link>;
+```
+
+標準 `Link` はSPA visit、修飾キー、prefetch、Partial Reload、progress、
+`data-loading` を備える。単純なGETのopacity表示だけを理由に
+`InertiaActionLink` を使わない。
+
+`InertiaActionLink` を使えるのは次の場合だけ。
+
+- Reactから `isPending` を参照する。
+- `ActionScope` 配下でpendingを共有する。
+- pending中の再操作を明示的に抑止する。
+- `ActionScope onError` へ例外を流す。
+- 標準Linkでは表せないaction契約がある。
+
+## 6. mutation
+
+サーバー状態を変更する操作は `ActionButton` とInertia action adapterを使う。
+
+```tsx
+const removeAction = inertiaAction((visitOptions) => {
+  router.delete(destroy.url(item.id), {
+    ...visitOptions,
+    preserveScroll: true,
+  });
+});
+
+<ActionButton action={removeAction} pendingLabel="削除中...">
+  削除
+</ActionButton>;
+```
+
+adapterはvisitの完了、失敗、キャンセルまでPromiseを維持し、局所的な
+`isPending` と接続する。ただしInertiaのpage swap自体をConcurrent Transitionに
+するものではない。
+
+### await後のReact state更新
+
+```tsx
+<ActionButton
+  action={async ({ transition }) => {
+    await save();
+    transition(() => setSaved(true));
+  }}
+>
+  保存
+</ActionButton>
+```
+
+`await` 後のstate更新だけを追加のTransitionへ包む。Inertia送信そのものを
+二重にTransition化しない。
+
+## 7. 即時ローカルUI
+
+モーダル、メニュー、controlled input、focus、selectionは即時更新する。
+
+```tsx
+<Button type="button" onClick={() => setOpen(true)}>
+  ダイアログを開く
+</Button>
+
+<Input value={query} onChange={(event) => setQuery(event.target.value)} />
+```
+
+これらをaction propやTransitionへ一律に変換しない。
+
+## 8. React-owned Transitionとoptimistic UI
+
+React内だけで完結し、結果を待つ間も現在のUIを操作可能にしたい非緊急更新には
+`useTransition` を使える。
+
+```tsx
+const [isPending, startTransition] = useTransition();
+
+function selectTab(tab: Tab) {
+  startTransition(() => {
+    setSelectedTab(tab);
+  });
+}
+```
+
+サーバーmutationの結果を先に見せ、失敗時に元へ戻せる操作では
+`useOptimistic` を検討する。
+
+```tsx
+const [optimisticItems, removeOptimistic] = useOptimistic(
+  items,
+  (current, removedId: number) => current.filter((item) => item.id !== removedId),
+);
+
+const removeAction = async () => {
+  removeOptimistic(item.id);
+  await destroyItem(item.id);
+};
+```
+
+業務上の不可逆操作や、成功が不確実で誤表示の影響が大きい操作には使わない。
+
+## 9. Suspense
+
+Suspenseを使う対象:
+
+- `React.lazy` によるコード分割
+- 安定したPromiseキャッシュを持つSuspense対応データソース
+- Reactが所有する非同期レンダー境界
+
+```tsx
+const AnalyticsPanel = lazy(() => import("./AnalyticsPanel"));
+
+<Suspense fallback={<AnalyticsPanelSkeleton />}>
+  <AnalyticsPanel />
+</Suspense>;
+```
+
+`use()` で読むPromiseはレンダーごとに生成しない。キャッシュの所有者、無効化、
+失敗時の再試行が明確な場合に限る。Laravel由来データにはInertia Deferred Propsを
+優先する。
+
+## 10. loadingとerror
+
+`isPending` はTransitionの進行状態だけを示し、errorを表さない。
+
+| 状況 | loading | error |
+| --- | --- | --- |
+| Inertiaフォーム | `form.processing` | `form.errors` |
+| Inertia Link | `data-loading` | visit callback / flash |
+| Action adapter | `isPending` | action内 / `ActionScope onError` |
+| Deferred Props | `<Deferred fallback>` | 局所Error Boundary、再試行UI |
+| React Suspense source | `<Suspense fallback>` | Error Boundary |
+
+共通エラー処理のためにアプリ全体を1つの `ActionScope` で囲まない。
+関連する操作だけを最小のscopeへまとめる。

@@ -115,22 +115,37 @@ final class DashboardPageControllerTest extends TestCase
             ->where('stats.1.value', 1)
             ->where('stats.3.kind', 'unanalyzedNews')
             ->where('stats.3.value', 1)
-            ->where('recentTrend.total', 1)
-            ->where('topStocks.0.symbol', 'AAPL')
-            ->where('topStocks.0.totalScore', 8.25)
-            ->where('topStocks.0.latestPrice', 120)
-            ->where('topStocks.0.changePercent', 20)
-            ->where('topStocks.0.sentiment', AnalysisSentiment::Positive->value)
-            ->where('topStocks.0.sentimentLabel', 'ポジティブ')
-            ->where('topStocks.0.updatedAt', '2026-06-15T12:00:00+00:00')
-            ->where('attentionStocks.0.symbol', 'AAPL')
-            ->where('attentionStocks.0.totalScore', 8.25)
-            ->where('importantNews.0.articleId', $positiveNews->id)
-            ->where('importantNews.0.title', 'Apple product news')
-            ->where('importantNews.0.source', 'Reuters')
-            ->where('importantNews.0.timeAgo', '2026-06-15T11:00:00+00:00')
-            ->where('importantNews.0.publishedAt', '2026-06-15T10:00:00+00:00')
             ->where('latestAnalysisAt', '2026-06-15T11:00:00+00:00')
+            ->missing('dashboardDetails')
+            ->loadDeferredProps('dashboard-details', fn (AssertableInertia $reload) => $reload
+                ->where('dashboardDetails.recentTrend.total', 1)
+                ->where('dashboardDetails.topStocks.0.symbol', 'AAPL')
+                ->where('dashboardDetails.topStocks.0.totalScore', 8.25)
+                ->where('dashboardDetails.topStocks.0.latestPrice', 120)
+                ->where('dashboardDetails.topStocks.0.changePercent', 20)
+                ->where(
+                    'dashboardDetails.topStocks.0.sentiment',
+                    AnalysisSentiment::Positive->value,
+                )
+                ->where('dashboardDetails.topStocks.0.sentimentLabel', 'ポジティブ')
+                ->where(
+                    'dashboardDetails.topStocks.0.updatedAt',
+                    '2026-06-15T12:00:00+00:00',
+                )
+                ->where('dashboardDetails.attentionStocks.0.symbol', 'AAPL')
+                ->where('dashboardDetails.attentionStocks.0.totalScore', 8.25)
+                ->where('dashboardDetails.importantNews.0.articleId', $positiveNews->id)
+                ->where('dashboardDetails.importantNews.0.title', 'Apple product news')
+                ->where('dashboardDetails.importantNews.0.source', 'Reuters')
+                ->where(
+                    'dashboardDetails.importantNews.0.timeAgo',
+                    '2026-06-15T11:00:00+00:00',
+                )
+                ->where(
+                    'dashboardDetails.importantNews.0.publishedAt',
+                    '2026-06-15T10:00:00+00:00',
+                )
+            )
         );
     }
 

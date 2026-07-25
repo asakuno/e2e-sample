@@ -67,12 +67,17 @@ export interface TopStockData {
   updatedAt: string | null;
 }
 
-/** ダッシュボードページProps */
-export interface DashboardPageProps extends AppPageProps {
-  stats: DashboardStatData[];
+/** 初期表示後にDeferred Propsで受け取る詳細データ */
+export interface DashboardDetails {
   recentTrend: TrendData;
   topStocks: TopStockData[];
   attentionStocks: TopStockData[];
   importantNews: ActivityItemData[];
+}
+
+/** ダッシュボードページProps */
+export interface DashboardPageProps extends AppPageProps {
+  stats: DashboardStatData[];
   latestAnalysisAt: string | null;
+  dashboardDetails?: DashboardDetails | undefined;
 }

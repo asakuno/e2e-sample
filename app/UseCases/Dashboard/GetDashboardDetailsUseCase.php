@@ -4,45 +4,35 @@ declare(strict_types=1);
 
 namespace App\UseCases\Dashboard;
 
-use App\Data\Dashboard\DashboardSummaryData;
-use App\Enums\AnalysisSentiment;
+use App\Data\Dashboard\DashboardDetailsData;
 use App\Repositories\DashboardRepositoryInterface;
 use App\Services\Dashboard\DashboardSummaryAssembler;
 use Carbon\CarbonImmutable;
 
-final class GetDashboardSummaryUseCase
+final class GetDashboardDetailsUseCase
 {
-    private const RECENT_DAYS = 7;
+    private const int RECENT_DAYS = 7;
 
-    private const DISPLAY_TIMEZONE = 'Asia/Tokyo';
+    private const string DISPLAY_TIMEZONE = 'Asia/Tokyo';
 
     public function __construct(
         private DashboardRepositoryInterface $dashboardRepository,
         private DashboardSummaryAssembler $dashboardSummaryAssembler,
     ) {}
 
-    public function execute(int $userId): DashboardSummaryData
+    public function execute(int $userId): DashboardDetailsData
     {
         $today = CarbonImmutable::today(self::DISPLAY_TIMEZONE);
         $recentFrom = $today->subDays(self::RECENT_DAYS - 1)->startOfDay();
         $previousFrom = $recentFrom->subDays(self::RECENT_DAYS);
         $previousTo = $recentFrom->subDay()->endOfDay();
 
-        return $this->dashboardSummaryAssembler->assemble(
-            watchlistCount: $this->dashboardRepository->countActiveWatchlists($userId),
-            positiveCount: $this->dashboardRepository->countRecentAnalysesBySentiment(
+        return $this->dashboardSummaryAssembler->assembleDetails(
+            recentCounts: $this->dashboardRepository->countAnalysesByDate(
                 $userId,
-                AnalysisSentiment::Positive,
                 $recentFrom,
+                $today,
             ),
-            negativeCount: $this->dashboardRepository->countRecentAnalysesBySentiment(
-                $userId,
-                AnalysisSentiment::Negative,
-                $recentFrom,
-            ),
-            unanalysedNewsCount: $this->dashboardRepository->countUnanalysedNews($userId),
-            latestAnalysisAt: $this->dashboardRepository->findLatestAnalysisAt($userId),
-            recentCounts: $this->dashboardRepository->countAnalysesByDate($userId, $recentFrom, $today),
             previousCounts: $this->dashboardRepository->countAnalysesByDate(
                 $userId,
                 $previousFrom,

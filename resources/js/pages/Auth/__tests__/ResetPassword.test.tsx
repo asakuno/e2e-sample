@@ -14,6 +14,11 @@ const formState = vi.hoisted(() => ({
 }));
 
 vi.mock('@inertiajs/react', () => ({
+  Link: ({ href, children, ...props }: Record<string, unknown>) => (
+    <a href={href as string} {...props}>
+      {children as React.ReactNode}
+    </a>
+  ),
   useForm: vi.fn((data: Record<string, string>) => ({
     withPrecognition: vi.fn(() => ({
       data,

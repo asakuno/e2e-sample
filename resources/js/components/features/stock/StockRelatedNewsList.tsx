@@ -5,7 +5,7 @@ import {
   formatSignedImpactScore,
   selectPrimaryAnalysis,
 } from '@/components/features/news/news-presenter';
-import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
+import { Link } from '@inertiajs/react';
 import { index as newsIndex } from '@/routes/news';
 import type { NewsAnalysis, NewsArticle } from '@/types/news';
 
@@ -55,14 +55,13 @@ function StockRelatedNewsCard({ article }: { article: NewsArticle }) {
       <RelatedNewsAnalysis analysis={analysis} />
 
       <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-4">
-        <InertiaActionLink
+        <Link
           href={newsIndex.url({ query: { article_id: article.id } })}
-          pendingClassName="opacity-70"
-          className="inline-flex min-h-11 items-center gap-1 rounded-md px-3 py-2 font-medium text-primary text-sm transition-[background-color,color,transform] hover:bg-card active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:active:translate-y-0"
+          className="inline-flex min-h-11 items-center gap-1 rounded-md px-3 py-2 font-medium text-primary text-sm transition-[background-color,color,transform] hover:bg-card active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:active:translate-y-0 data-[loading]:opacity-70"
         >
           Newsで分析を見る
           <ArrowRight aria-hidden="true" className="size-4" />
-        </InertiaActionLink>
+        </Link>
         <a
           href={article.url}
           target="_blank"

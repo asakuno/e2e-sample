@@ -5,7 +5,7 @@ import {
   formatNewsDateTime,
   formatSignedImpactScore,
 } from '@/components/features/news/news-presenter';
-import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
+import { Link } from '@inertiajs/react';
 import { index as newsIndex } from '@/routes/news';
 import type { NewsAnalysis, NewsArticle } from '@/types/news';
 
@@ -95,13 +95,12 @@ function StockAnalysisCard({ analysis, article }: StockAnalysisCardProps) {
       <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-4">
         <AnalysisTimestamp analyzedAt={analysis.analyzed_at} />
         {article !== undefined && (
-          <InertiaActionLink
+          <Link
             href={newsIndex.url({ query: { article_id: article.id } })}
-            pendingClassName="opacity-70"
-            className="inline-flex min-h-11 items-center rounded-md px-3 py-2 font-medium text-primary text-sm underline-offset-4 transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="inline-flex min-h-11 items-center rounded-md px-3 py-2 font-medium text-primary text-sm underline-offset-4 transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-[loading]:opacity-70"
           >
             記事の分析を見る
-          </InertiaActionLink>
+          </Link>
         )}
       </div>
     </article>

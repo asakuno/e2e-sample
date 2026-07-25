@@ -1,176 +1,158 @@
 ---
 name: async-react
 description: |
-  React 19のAsync Reactパターンに沿ったコンポーネント・データフェッチ・状態管理コードの生成・実装支援スキル。Suspense、Transitions、useOptimistic、useActionState、use()フック、Action Props等のReact 19ベストプラクティスを適用する。使用タイミング: (1) Reactコンポーネントの新規作成・リファクタリング時、(2) データフェッチやAPI呼び出しの実装時、(3) ローディング状態・楽観的更新の実装時、(4) フォーム処理・ボタンクリック等のユーザーインタラクション実装時、(5) Suspenseバウンダリの設計時、(6) ページネーション・検索・タブ切り替え等の非同期UIパターン実装時。使用しない場面: (1) React以外のフレームワーク、(2) SSR/RSC固有の実装（Server Components）、(3) スタイリングのみの変更。
+  Laravel + Inertia.js v2 + React 19で、データ取得、フォーム、ナビゲーション、
+  mutation、ローディング、楽観的更新、Suspense境界を設計・実装するためのスキル。
+  Inertiaが所有する通信ライフサイクルとReactが所有する局所状態を分けて扱う。
+  使用タイミング: Reactコンポーネントの作成・変更、非同期UI、フォーム、検索、
+  ページネーション、Deferred Props、Transition、Suspense、Action Propsの検討時。
+  使用しない場面: React以外、Server Components固有実装、スタイリングだけの変更。
 ---
 
-# Async React - React 19 Best Practices Skill
+# Async React for Inertia
 
-## Core Philosophy
+## 基本方針
 
-React 19時代のベストプラクティスは**Async Reactの考え方を取り入れること**に集約される（uhyo氏の提唱に基づく）。
+このプロジェクトのAsync Reactは、Inertiaをページデータと通信の中心に置く。
+React 19のAPIを一律に適用せず、状態と非同期処理の所有者を先に決める。
 
-非同期処理があることを前提にアプリケーションを実装し、**最適なUX**を目指す。APIをただ使うだけではなく、**汎用化し、個別の対応をせずとも最適化されたUXを提供できること**がゴールとなる。
+### Inertiaが所有するもの
 
-## 3 Core Principles
+- URL、ルーティング、ページコンポーネントの交換
+- Laravel Controllerが生成するページprops
+- Partial Reload、Deferred Props、prefetch
+- フォーム送信、Precognition、バリデーションエラー
+- `processing`、progress、visitの開始・完了・キャンセル
 
-### 1. 非緊急なアプリケーションactionはトランジション
+### Reactが所有するもの
 
-データ変更、検索、Reactがstateを所有するタブ・ページ切り替えなど、結果を待つ間も既存UIを操作可能にしたい**非緊急なアプリケーションaction**では、原則として `startTransition` / `useTransition` を使用する。controlled input、モーダル・メニュー・ポップオーバー、focus・selection、PrimitiveのDOMイベント、即時ローカルUI更新は緊急な更新として、通常の `onClick` / `onChange` を使用する。
+- controlled inputの表示値
+- モーダル、メニュー、ポップオーバーの開閉
+- focus、selection、ページ内だけのタブ
+- React内で完結する重い表示更新
+- optimistic UI
+- mutationを起点とする局所的なpending表現
 
-### 2. Suspenseは前提条件
+### アダプター
 
-Suspenseはもはや全ての前提であり必須。アプリケーション内に**どのようにSuspenseを配置し、境界を引くのか**考えることがアプリケーション設計において重要。
+`ActionButton`、`ActionScope`、`runInertiaAction`、`inertiaAction`、
+`visitAction`、`InertiaActionLink` は、Inertiaの通信ライフサイクルを
+Reactのaction表現へ接続する。Inertiaのpage swap自体をConcurrent Transitionへ
+変えるものではない。
 
-### 3. 宣言的な非同期UI
+## 必須ルール
 
-トランジションの「意味」を宣言し、具体的な挙動はReactに委ねる。プログラマーが「何を」を宣言し、「どのように」はReactが最適化する。
+### Laravel由来のページデータ
 
-## Implementation Rules
+1. Laravel由来のページデータは、原則としてInertia propsを使用する。
+2. 検索、ページネーション、フィルタリングはPartial Reloadを優先する。
+3. 初期表示に不要な重いpropsはInertia Deferred Propsを使用する。
+4. 通常のInertia propsをPromiseへ変換して `Suspense + use()` で読み直さない。
+5. 同じ重い集約UseCaseをDeferred propごとに繰り返し実行しない。
 
-### MUST（必ず適用）
+### フォーム
 
-1. **非緊急なアプリケーションaction**: 非同期ミューテーション、検索、Reactがstateを所有するタブ・ページ切り替えなどを行うコンポーネントは `action` propを受け取り、内部で `startTransition` または `useTransition` でラップする
-2. **非同期データ取得**: `useEffect` + `useState` の代わりに、Suspense + `use()` フックを使う
-3. **ローディング表示**: `isPending` で制御する。手動の `isLoading` ステートは使わない
-4. **楽観的更新**: サーバ状態のトグルなど、処理完了前に結果を見せる場面では `useOptimistic` を使う
-5. **Suspenseバウンダリ**: データ取得を行うコンポーネントの親に必ず `<Suspense>` を配置する
-6. **await後のstate更新**: action内で `await` 後に `setState` する場合は、action context の `transition(() => setState(...))` で追加のトランジションに包む
+1. Inertiaフォームは `useForm().withPrecognition()` を第一選択とする。
+2. 送信中は `form.processing`、バリデーションエラーは `form.errors` を使う。
+3. `form.submit()`、`form.post()` などを包むだけの `startTransition` は使わない。
+4. controlled inputの `setState` や `form.setData` をTransition化しない。
 
-### SHOULD（推奨）
+### Transition
 
-1. **フォーム送信**: `useActionState` を使う
-2. **タブ・検索のUI**: `useOptimistic` + `startTransition` で入力は即座に反映しつつバックグラウンドで処理
-3. **キャッシュ付きデータフェッチ**: 同じクエリに対してpromiseをメモ化して返す
-4. **プリフェッチ**: ナビゲーション前にデータをプリロードする
-5. **ErrorBoundary**: Suspenseバウンダリの外側に `<ErrorBoundary>` を配置し、データフェッチのエラーを宣言的にハンドリングする
-6. **action内のtry/catch**: `useActionState` や action prop のコールバック内で `try/catch` を使い、エラー状態を返す
-7. **ActionScope onError**: toast / Sentry / 共通ログなど操作横断のエラー通知が必要な領域では `ActionScope` に `onError` を渡す。個別のバリデーションや業務エラーは action 内で処理する
+Transitionを使うのは次の場合に限る。
 
-### MUST NOT（禁止）
+- Reactが所有する非緊急なstate更新
+- optimistic UI
+- Inertia通信をactionの局所pending表現へ接続するアダプター
 
-1. `useEffect` + `setState` でのデータフェッチ（Suspense + `use()` を使う）
-2. 手動の `isLoading` / `isError` ステート管理（トランジションの `isPending` を使う）
-3. **緊急な更新の一律Transition化**: controlled inputのvalue更新、モーダル・メニュー・ポップオーバーの即時開閉、focus・selection制御、PrimitiveのDOMイベント、即時ローカルUI更新まで `action` propやTransitionに包まない
-4. Suspenseバウンダリなしでの `use()` フック使用
-5. **レンダー中の親state更新**: 子コンポーネントのレンダー内で親の `setState` を呼ぶ（例: `use()` で取得したデータを元にレンダー中に親のステートを更新するパターン）。データは `use()` の戻り値から直接参照する
-6. **不要な `e.stopPropagation()`**: イベントハンドラ内で明確な理由なく `stopPropagation()` を使わない。イベントバブリングはReactの正常な動作であり、不必要に止めるべきではない
+`isPending` はTransitionの進行状態であり、すべてのloading状態やerror状態の
+代替ではない。Inertiaが `processing` を提供する場合は `processing` を使う。
 
-## Pattern Quick Reference
+action内で `await` 後にReact stateを更新する場合は、action contextの
+`transition(() => setState(...))` で追加のTransitionに包む。
 
-| パターン              | 使用するAPI                         | 用途                                       |
-| --------------------- | ----------------------------------- | ------------------------------------------ |
-| ボタン + API呼び出し  | `useTransition` + `action` prop     | データ変更操作                             |
-| 楽観的トグル          | `useOptimistic` + `startTransition` | 即座のUI反映                               |
-| 検索入力              | `useOptimistic` + `startTransition` | 入力の即座反映 + バックグラウンド検索      |
-| タブ切り替え          | `useOptimistic` + `startTransition` | タブの即座切り替え                         |
-| データ一覧表示        | `Suspense` + `use()`                | 非同期データの宣言的表示                   |
-| フォーム送信          | `useActionState`                    | フォームのステート管理                     |
-| 共通actionエラー処理  | `ActionScope onError`               | toast / Sentry / 共通ログ                  |
-| Inertiaナビゲーション | `ActionLink` + `visitAction`        | Inertiaリクエストのpending追跡             |
-| ページネーション      | `Suspense` + `startTransition`      | Reactが所有するstate更新の非ブロッキング化 |
+### Suspense
 
-`ActionLink` / `visitAction` はInertiaリクエストのpendingを `useTransition` に接続するためのものであり、`@inertiajs/react` 内部のpage swap自体をConcurrent Transition化しない。したがって、Suspenseによる旧画面の保持や、古いページを表示したまま新しいページをバックグラウンドレンダーする挙動は保証しない。
+Suspenseを全Inertiaページの必須条件にしない。使用対象は次に限定する。
 
-Reactの `<ViewTransition>` はReact 19.2系stableでは利用せず、`react@canary` を明示的に採用したプロジェクトでのみ検討する。ブラウザのView Transition APIやInertiaのView Transition機能は、ReactのConcurrent Transitionとは別の仕組みである。
+- `React.lazy` によるコード分割
+- 安定したPromiseキャッシュを持つSuspense対応データソース
+- Reactが所有する非同期レンダー境界
+
+Laravel由来の遅延データにはInertiaの `<Deferred>` とDeferred Propsを優先する。
+
+### LinkとButton
+
+- 通常のGETナビゲーションはInertia標準 `Link` を第一選択とする。
+- 単純な通信中表示には `Link` の `data-loading` 属性を使う。
+- `InertiaActionLink` はpending共有、操作抑止、共通エラー処理など、
+  標準 `Link` では表現できないaction契約がある場合だけ使う。
+- `ActionButton` はサーバー状態を変更するmutation、またはReactが所有する
+  非緊急なアプリケーションactionに使う。
+- モーダル、メニュー、ポップオーバー、controlled input、focus、selectionなどの
+  即時ローカルUI更新には通常の `Button` とイベントハンドラを使う。
+
+### loadingとerror
+
+- Inertiaフォーム: `form.processing` / `form.errors`
+- Inertia標準Link: `data-loading`
+- Actionアダプター: `isPending` / `data-pending`
+- Deferred Props: `<Deferred fallback={...}>`
+- 個別の業務エラー: `form.errors` またはaction内
+- 予期しない共通エラー: `ActionScope onError` またはError Boundary
+
+## 適用手順
+
+1. sibling componentと現在のデータフローを確認する。
+2. 非同期処理とstateの所有者をInertia／Reactに分類する。
+3. 次の順で最小の仕組みを選ぶ。
+   - Inertia props
+   - Partial Reload
+   - Deferred Props
+   - `useForm().withPrecognition()`
+   - 標準 `Link`
+   - `ActionButton` / actionアダプター
+   - React-owned Transition、optimistic UI、Suspense
+4. loading、error、キャンセル時の表示とアクセシビリティを決める。
+5. 初期表示、pending、成功、失敗、再試行をテストする。
+
+## クイックリファレンス
+
+| 要件 | 第一選択 |
+| --- | --- |
+| Laravelページデータ | Inertia props |
+| 重い初期props | Inertia Deferred Props + `<Deferred>` |
+| 検索・絞り込み・ページネーション | Inertia Partial Reload |
+| Inertiaフォーム | `useForm().withPrecognition()` |
+| フォーム送信中 | `form.processing` |
+| 通常GET | Inertia `Link` + `data-loading` |
+| mutationの局所pending | `ActionButton` + `runInertiaAction` |
+| 即時ローカルUI | 通常のButton / `onClick` / `onChange` |
+| React-owned非緊急更新 | `useTransition` |
+| optimistic UI | `useOptimistic` |
+| コード分割 | `React.lazy` + `Suspense` |
+| Laravel由来の遅延表示 | Inertia `<Deferred>` |
+
+## 禁止パターン
+
+```tsx
+// Inertiaのフォーム送信を意味なくTransition化しない
+startTransition(() => form.submit());
+
+// controlled inputをTransition化しない
+startTransition(() => form.setData("query", value));
+
+// 通常propsを機械的にPromiseへ変換しない
+const data = use(createPromiseFromInertiaProps(props));
+
+// 単純なGETリンクをaction adapterへ置き換えない
+<InertiaActionLink href="/stocks" />;
+
+// アプリ全体を1つのActionScopeで囲まない
+<ActionScope><App /></ActionScope>;
+```
 
 ## References
 
-詳細なコード例は以下を参照:
-
-- `references/patterns.md` - 各パターンの詳細実装例
-- `references/component-design.md` - 汎用コンポーネント設計パターン
-
-## Anti-patterns to Fix
-
-以下のパターンを見つけたら、Async Reactパターンへのリファクタリングを提案する:
-
-```tsx
-interface User {
-  id: string;
-  name: string;
-}
-
-// ❌ Anti-pattern: useEffect + useState でデータフェッチ
-function UserList() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    fetch("/api/users")
-      .then((r) => r.json())
-      .then((data: User[]) => {
-        setUsers(data);
-        setLoading(false);
-      });
-  }, []);
-  if (loading) return <Spinner />;
-  return (
-    <ul>
-      {users.map((u) => (
-        <li key={u.id}>{u.name}</li>
-      ))}
-    </ul>
-  );
-}
-
-// ✅ Async React pattern: Suspense + use()
-function UserList() {
-  const users = use(getUsers());
-  return (
-    <ul>
-      {users.map((u) => (
-        <li key={u.id}>{u.name}</li>
-      ))}
-    </ul>
-  );
-}
-// 親コンポーネントで:
-<Suspense fallback={<Spinner />}>
-  <UserList />
-</Suspense>;
-```
-
-```tsx
-// ❌ Anti-pattern: onClick + 手動ローディング
-interface SaveButtonOldProps {
-  onSave: () => Promise<void>;
-}
-
-function SaveButton({ onSave }: SaveButtonOldProps) {
-  const [loading, setLoading] = useState(false);
-  return (
-    <button
-      disabled={loading}
-      onClick={async () => {
-        setLoading(true);
-        await onSave();
-        setLoading(false);
-      }}
-    >
-      {loading ? <Spinner /> : "Save"}
-    </button>
-  );
-}
-
-// ✅ Async React pattern: action prop + useTransition
-interface SaveButtonProps {
-  action: () => Promise<void>;
-  children: React.ReactNode;
-}
-
-function SaveButton({ action, children }: SaveButtonProps) {
-  const [isPending, startTransition] = useTransition();
-  return (
-    <button
-      disabled={isPending}
-      onClick={() => {
-        startTransition(async () => {
-          await action();
-        });
-      }}
-    >
-      {isPending ? <Spinner /> : children}
-    </button>
-  );
-}
-```
+- `references/patterns.md` - InertiaとReactの非同期パターン
+- `references/component-design.md` - コンポーネントの責務とAPI設計

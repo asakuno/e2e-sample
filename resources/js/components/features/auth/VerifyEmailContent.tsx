@@ -1,5 +1,3 @@
-import { Link } from '@inertiajs/react';
-import { logout } from '@/actions/App/Http/Controllers/Web/AuthPageController';
 import { ActionButton } from '@/components/ui/ActionButton';
 import type { ActionCallback } from '@/components/ui/ActionScope';
 import { GuestLayout } from '@/layouts/GuestLayout';
@@ -8,9 +6,15 @@ type VerifyEmailContentProps = {
   status: string | undefined;
   cooldown: number;
   onResend: ActionCallback;
+  onLogout: ActionCallback;
 };
 
-export function VerifyEmailContent({ status, cooldown, onResend }: VerifyEmailContentProps) {
+export function VerifyEmailContent({
+  status,
+  cooldown,
+  onResend,
+  onLogout,
+}: VerifyEmailContentProps) {
   return (
     <GuestLayout title="メール認証">
       {/* メールアイコン */}
@@ -58,14 +62,13 @@ export function VerifyEmailContent({ status, cooldown, onResend }: VerifyEmailCo
       <hr className="my-6 border-border" />
 
       <div className="text-center text-[13px] text-muted-foreground">
-        <Link
-          href={logout.url()}
-          method={logout().method}
-          as="button"
+        <ActionButton
+          action={onLogout}
+          pendingLabel="ログアウト中..."
           className="inline-flex min-h-11 items-center justify-center rounded-md px-3 py-2 transition-colors duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           ログアウト
-        </Link>
+        </ActionButton>
       </div>
     </GuestLayout>
   );

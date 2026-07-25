@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Services\Dashboard;
 
 use App\Data\Dashboard\DashboardActivityItemData;
+use App\Data\Dashboard\DashboardDetailsData;
+use App\Data\Dashboard\DashboardOverviewData;
 use App\Data\Dashboard\DashboardStatData;
-use App\Data\Dashboard\DashboardSummaryData;
 use App\Data\Dashboard\DashboardTopStockData;
 use App\Data\Dashboard\DashboardTrendData;
 use App\Data\Dashboard\DashboardTrendPointData;
@@ -23,31 +24,14 @@ use Illuminate\Support\Collection;
 
 final class DashboardSummaryAssembler
 {
-    /**
-     * @param  array<string, int>  $recentCounts
-     * @param  array<string, int>  $previousCounts
-     * @param  Collection<int, StockSignal>  $topSignals
-     * @param  Collection<int, StockSignal>  $attentionSignals
-     * @param  Collection<int, AnalysisResult>  $importantNewsAnalyses
-     */
-    public function assemble(
+    public function assembleOverview(
         int $watchlistCount,
         int $positiveCount,
         int $negativeCount,
         int $unanalysedNewsCount,
         ?CarbonInterface $latestAnalysisAt,
-        array $recentCounts,
-        array $previousCounts,
-        CarbonImmutable $recentFrom,
-        CarbonImmutable $recentTo,
-        Collection $topSignals,
-        Collection $attentionSignals,
-        Collection $importantNewsAnalyses,
-    ): DashboardSummaryData {
-        $recentTotal = array_sum($recentCounts);
-        $previousTotal = array_sum($previousCounts);
-
-        return new DashboardSummaryData(
+    ): DashboardOverviewData {
+        return new DashboardOverviewData(
             stats: $this->buildStats(
                 $watchlistCount,
                 $positiveCount,
@@ -55,6 +39,30 @@ final class DashboardSummaryAssembler
                 $unanalysedNewsCount,
                 $latestAnalysisAt,
             ),
+            latestAnalysisAt: $this->formatDateTime($latestAnalysisAt),
+        );
+    }
+
+    /**
+     * @param  array<string, int>  $recentCounts
+     * @param  array<string, int>  $previousCounts
+     * @param  Collection<int, StockSignal>  $topSignals
+     * @param  Collection<int, StockSignal>  $attentionSignals
+     * @param  Collection<int, AnalysisResult>  $importantNewsAnalyses
+     */
+    public function assembleDetails(
+        array $recentCounts,
+        array $previousCounts,
+        CarbonImmutable $recentFrom,
+        CarbonImmutable $recentTo,
+        Collection $topSignals,
+        Collection $attentionSignals,
+        Collection $importantNewsAnalyses,
+    ): DashboardDetailsData {
+        $recentTotal = array_sum($recentCounts);
+        $previousTotal = array_sum($previousCounts);
+
+        return new DashboardDetailsData(
             recentTrend: new DashboardTrendData(
                 total: $recentTotal,
                 changePercent: $this->formatTrendChange($recentTotal, $previousTotal),
@@ -65,7 +73,6 @@ final class DashboardSummaryAssembler
             topStocks: $this->buildStocks($topSignals),
             attentionStocks: $this->buildStocks($attentionSignals),
             importantNews: $this->buildImportantNews($importantNewsAnalyses),
-            latestAnalysisAt: $this->formatDateTime($latestAnalysisAt),
         );
     }
 
