@@ -194,38 +194,57 @@ controlled inputは即時更新し、送信時にInertia Partial Reloadを使う
 
 ```tsx
 function StockSearchForm({ initialFilters }: Props) {
-  const [query, setQuery] = useState(initialFilters.q);
-  const [searchProcessing, setSearchProcessing] = useState(false);
-  const [resetProcessing, setResetProcessing] = useState(false);
+  const [filters, setFilters] = useState(initialFilters);
+  const [isSearchPending, startSearchTransition] = useTransition();
+  const [isResetPending, startResetTransition] = useTransition();
 
-  function search() {
-    setSearchProcessing(true);
-    router.get(
-      stocksIndex.url(),
-      { q: query },
+  function requestFilters(nextFilters: Filters) {
+    return runInertiaAction(
+      (visitOptions) => {
+        router.get(stocksIndex.url(), compactFilters(nextFilters), visitOptions);
+      },
       {
         only: ["stocks", "filters"],
         preserveState: true,
         replace: true,
-        onFinish: () => setSearchProcessing(false),
       },
     );
   }
 
+  function search() {
+    startSearchTransition(async () => {
+      await requestFilters(filters);
+    });
+  }
+
+  function reset() {
+    const emptyFilters = createEmptyFilters();
+    setFilters(emptyFilters);
+    startResetTransition(async () => {
+      await requestFilters(emptyFilters);
+    });
+  }
+
   return (
     <>
-      <Input value={query} onChange={(event) => setQuery(event.target.value)} />
-      <Button onClick={search} disabled={searchProcessing}>
-        {searchProcessing ? "検索中..." : "検索"}
+      <Input
+        value={filters.q}
+        onChange={(event) => setFilters({ ...filters, q: event.target.value })}
+      />
+      <Button onClick={search} disabled={isSearchPending}>
+        {isSearchPending ? "検索中..." : "検索"}
       </Button>
-      <Button disabled={resetProcessing}>クリア</Button>
+      <Button onClick={reset} disabled={isResetPending}>
+        {isResetPending ? "クリア中..." : "クリア"}
+      </Button>
     </>
   );
 }
 ```
 
 独立した操作を1つのpending flagで表さない。検索中にクリアのラベルが変わるなど、
-操作間のstate汚染を防ぐ。
+操作間のstate汚染を防ぐ。`runInertiaAction`でvisit開始前のcancelもPromiseへ反映し、
+Transitionのpendingが取り残されないようにする。
 
 ページネーションの通常GETは標準 `Link` を使う。
 

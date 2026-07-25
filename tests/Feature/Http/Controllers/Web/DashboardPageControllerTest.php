@@ -16,6 +16,7 @@ use App\Models\Stock;
 use App\Models\StockPrice;
 use App\Models\User;
 use App\Models\Watchlist;
+use App\Repositories\DashboardRepositoryInterface;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
@@ -170,6 +171,62 @@ final class DashboardPageControllerTest extends TestCase
                     'dashboardDetails.importantNews.0.publishedAt',
                     '2026-06-15T10:00:00+00:00',
                 )
+            )
+        );
+    }
+
+    public function test_詳細の遅延取得では概要集計を再実行しない(): void
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $userId = (int) $user->id;
+        $repository = $this->createMock(DashboardRepositoryInterface::class);
+        $repository->expects($this->once())
+            ->method('findLatestAnalysisAt')
+            ->with($userId)
+            ->willReturn(null);
+        $repository->expects($this->once())
+            ->method('countActiveWatchlists')
+            ->with($userId)
+            ->willReturn(0);
+        $repository->expects($this->exactly(2))
+            ->method('countRecentAnalysesBySentiment')
+            ->willReturn(0);
+        $repository->expects($this->once())
+            ->method('countUnanalysedNews')
+            ->with($userId)
+            ->willReturn(0);
+        $repository->expects($this->exactly(2))
+            ->method('countAnalysesByDate')
+            ->willReturn([]);
+        $repository->expects($this->once())
+            ->method('findTopSignals')
+            ->with($userId, 5)
+            ->willReturn(collect());
+        $repository->expects($this->once())
+            ->method('findAttentionSignals')
+            ->with($userId, 5)
+            ->willReturn(collect());
+        $repository->expects($this->once())
+            ->method('findImportantNewsAnalyses')
+            ->with($userId, 5)
+            ->willReturn(collect());
+        $this->app->instance(DashboardRepositoryInterface::class, $repository);
+
+        // Act
+        $response = $this->actingAs($user)->get(route('dashboard'));
+
+        // Assert
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Dashboard')
+            ->has('stats', 5)
+            ->where('latestAnalysisAt', null)
+            ->missing('dashboardDetails')
+            ->loadDeferredProps('dashboard-details', fn (AssertableInertia $reload) => $reload
+                ->has('dashboardDetails')
+                ->missing('stats')
+                ->missing('latestAnalysisAt')
             )
         );
     }

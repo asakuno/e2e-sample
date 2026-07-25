@@ -1,10 +1,24 @@
 /**
  * Dashboard ページテスト
  */
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 const deferredState = vi.hoisted(() => ({ loaded: true }));
+const inertiaState = vi.hoisted(() => {
+  const listeners = new Map<string, Set<(event: never) => void>>();
+
+  return {
+    listeners,
+    reload: vi.fn(),
+    emit: (name: string, event: unknown) => {
+      for (const listener of listeners.get(name) ?? []) {
+        listener(event as never);
+      }
+    },
+  };
+});
 
 vi.mock('@inertiajs/react', () => ({
   Deferred: ({ children, fallback }: { children: React.ReactNode; fallback: React.ReactNode }) => (
@@ -16,7 +30,17 @@ vi.mock('@inertiajs/react', () => ({
       {children as React.ReactNode}
     </a>
   ),
-  router: { post: vi.fn() },
+  router: {
+    on: vi.fn((name: string, listener: (event: never) => void) => {
+      const listeners = inertiaState.listeners.get(name) ?? new Set();
+      listeners.add(listener);
+      inertiaState.listeners.set(name, listeners);
+
+      return () => listeners.delete(listener);
+    }),
+    post: vi.fn(),
+    reload: inertiaState.reload,
+  },
   usePage: vi.fn(() => ({
     url: '/dashboard',
     props: {
@@ -144,6 +168,8 @@ const defaultProps = {
 describe('Dashboard', () => {
   beforeEach(() => {
     deferredState.loaded = true;
+    inertiaState.listeners.clear();
+    inertiaState.reload.mockReset();
   });
 
   it('Head title が「ダッシュボード」であること', () => {
@@ -269,5 +295,36 @@ describe('Dashboard', () => {
     expect(screen.getByRole('status', { name: '注目銘柄を読み込み中' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: '分析推移を読み込み中' })).toBeInTheDocument();
     expect(screen.queryByText('Apple announces new product')).not.toBeInTheDocument();
+  });
+
+  it('詳細の取得失敗時にエラーを表示し、再試行できること', async () => {
+    const user = userEvent.setup();
+    deferredState.loaded = false;
+    render(<Dashboard {...defaultProps} dashboardDetails={undefined} />);
+
+    act(() => {
+      inertiaState.emit('start', {
+        detail: {
+          visit: {
+            only: ['dashboardDetails'],
+          },
+        },
+      });
+      inertiaState.emit('finish', {
+        detail: {
+          visit: {
+            only: ['dashboardDetails'],
+            completed: false,
+          },
+        },
+      });
+    });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('詳細データを取得できませんでした');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '再試行' }));
+
+    expect(inertiaState.reload).toHaveBeenCalledWith({ only: ['dashboardDetails'] });
   });
 });

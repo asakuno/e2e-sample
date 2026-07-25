@@ -25,10 +25,14 @@ class DashboardPageController extends Controller
         GetDashboardDetailsUseCase $detailsUseCase,
     ): Response {
         $userId = (int) $request->user()->getAuthIdentifier();
-        $overview = $overviewUseCase->execute($userId);
+        $overview = null;
+        $resolveOverview = function () use (&$overview, $overviewUseCase, $userId) {
+            return $overview ??= $overviewUseCase->execute($userId);
+        };
 
         return Inertia::render('Dashboard', [
-            ...$overview->toArray(),
+            'stats' => fn (): array => $resolveOverview()->toArray()['stats'],
+            'latestAnalysisAt' => fn (): ?string => $resolveOverview()->latestAnalysisAt,
             'dashboardDetails' => Inertia::defer(
                 fn (): array => $detailsUseCase->execute($userId)->toArray(),
                 'dashboard-details',

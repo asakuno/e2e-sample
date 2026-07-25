@@ -97,6 +97,9 @@ describe('Analysis index', () => {
 
     fireEvent.change(screen.getByLabelText('状態'), { target: { value: '3' } });
 
+    expect(screen.getByRole('link', { name: '前へ' })).toHaveAttribute('href', '/analysis?page=1');
+    expect(screen.queryByRole('link', { name: '次へ' })).not.toBeInTheDocument();
+    expect(screen.getByText('次へ').tagName).toBe('SPAN');
     expect(inertiaMocks.get).toHaveBeenCalledWith(
       '/analysis',
       { page: 1, status: '3' },
