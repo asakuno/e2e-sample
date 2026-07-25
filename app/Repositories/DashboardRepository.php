@@ -7,9 +7,9 @@ namespace App\Repositories;
 use App\Enums\AnalysisSentiment;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
+use App\Models\PeriodAnalysisSignal;
 use App\Models\Stock;
 use App\Models\StockPrice;
-use App\Models\StockSignal;
 use App\Models\Watchlist;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
@@ -61,11 +61,11 @@ final class DashboardRepository implements DashboardRepositoryInterface
     }
 
     /**
-     * @return Collection<int, StockSignal>
+     * @return Collection<int, PeriodAnalysisSignal>
      */
     public function findTopSignals(int $userId, int $limit): Collection
     {
-        return $this->latestSignalsForUser($userId)
+        return $this->periodSignalsForUser($userId)
             ->orderByDesc('total_score')
             ->orderByDesc('signal_date')
             ->orderByDesc('id')
@@ -74,11 +74,11 @@ final class DashboardRepository implements DashboardRepositoryInterface
     }
 
     /**
-     * @return Collection<int, StockSignal>
+     * @return Collection<int, PeriodAnalysisSignal>
      */
     public function findAttentionSignals(int $userId, int $limit): Collection
     {
-        return $this->latestSignalsForUser($userId)
+        return $this->periodSignalsForUser($userId)
             ->orderByRaw('ABS(total_score) DESC')
             ->orderByDesc('signal_date')
             ->orderByDesc('generated_at')
@@ -172,45 +172,22 @@ final class DashboardRepository implements DashboardRepositoryInterface
     }
 
     /**
-     * @return Builder<StockSignal>
+     * @return Builder<PeriodAnalysisSignal>
      */
-    private function latestSignalsForUser(int $userId): Builder
+    private function periodSignalsForUser(int $userId): Builder
     {
-        $latestSignals = StockSignal::query()
-            ->select('stock_signals.*')
-            ->selectRaw(<<<'SQL'
-                ROW_NUMBER() OVER (
-                    PARTITION BY stock_id
-                    ORDER BY signal_date DESC, generated_at DESC, id DESC
-                ) AS latest_rank
-                SQL)
-            ->whereIn('stock_id', $this->activeStockIdsQuery($userId))
-            ->where('prompt_version', $this->currentPromptVersion())
-            ->toBase();
-
-        return StockSignal::query()
-            ->fromSub($latestSignals, 'latest_stock_signals')
-            ->with($this->dashboardStockRelations())
-            ->where('latest_rank', 1);
+        return PeriodAnalysisSignal::query()
+            ->with([
+                'stock.prices' => $this->constrainDashboardPrices(...),
+                'sourceAnalysisImport.analysisBatch.result',
+            ])
+            ->where('user_id', $userId)
+            ->whereIn('stock_id', $this->activeStockIdsQuery($userId));
     }
 
     private function currentPromptVersion(): string
     {
         return (string) config('services.openai.prompt_version', 'v1');
-    }
-
-    /**
-     * @return array{
-     *     'stock.prices': callable(HasMany<StockPrice, Stock>): HasMany<StockPrice, Stock>,
-     *     'stock.analysisResults': callable(HasMany<AnalysisResult, Stock>): HasMany<AnalysisResult, Stock>
-     * }
-     */
-    private function dashboardStockRelations(): array
-    {
-        return [
-            'stock.prices' => $this->constrainDashboardPrices(...),
-            'stock.analysisResults' => $this->constrainDashboardAnalyses(...),
-        ];
     }
 
     /**
@@ -234,18 +211,5 @@ final class DashboardRepository implements DashboardRepositoryInterface
     private function displayPriceSource(): string
     {
         return (string) config('services.stock_analysis.price_display_source', 'alpha_vantage');
-    }
-
-    /**
-     * @param  HasMany<AnalysisResult, Stock>  $query
-     * @return HasMany<AnalysisResult, Stock>
-     */
-    private function constrainDashboardAnalyses(HasMany $query): HasMany
-    {
-        return $query
-            ->where('prompt_version', $this->currentPromptVersion())
-            ->orderByDesc('analyzed_at')
-            ->orderByDesc('id')
-            ->limit(1);
     }
 }

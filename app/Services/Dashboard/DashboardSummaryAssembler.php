@@ -15,8 +15,8 @@ use App\Enums\AnalysisSentiment;
 use App\Enums\DashboardStatKind;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
+use App\Models\PeriodAnalysisSignal;
 use App\Models\StockPrice;
-use App\Models\StockSignal;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -26,8 +26,8 @@ final class DashboardSummaryAssembler
     /**
      * @param  array<string, int>  $recentCounts
      * @param  array<string, int>  $previousCounts
-     * @param  Collection<int, StockSignal>  $topSignals
-     * @param  Collection<int, StockSignal>  $attentionSignals
+     * @param  Collection<int, PeriodAnalysisSignal>  $topSignals
+     * @param  Collection<int, PeriodAnalysisSignal>  $attentionSignals
      * @param  Collection<int, AnalysisResult>  $importantNewsAnalyses
      */
     public function assemble(
@@ -123,13 +123,13 @@ final class DashboardSummaryAssembler
     }
 
     /**
-     * @param  Collection<int, StockSignal>  $signals
+     * @param  Collection<int, PeriodAnalysisSignal>  $signals
      * @return array<int, DashboardTopStockData>
      */
     private function buildStocks(Collection $signals): array
     {
         return $signals
-            ->map(fn (StockSignal $signal): DashboardTopStockData => $this->toTopStockData($signal))
+            ->map(fn (PeriodAnalysisSignal $signal): DashboardTopStockData => $this->toTopStockData($signal))
             ->all();
     }
 
@@ -158,16 +158,17 @@ final class DashboardSummaryAssembler
             ->all();
     }
 
-    private function toTopStockData(StockSignal $signal): DashboardTopStockData
+    private function toTopStockData(PeriodAnalysisSignal $signal): DashboardTopStockData
     {
         $prices = $signal->stock->prices;
         $latestPrice = $prices->get(0);
         $previousPrice = $prices->get(1);
         $latestValue = $latestPrice instanceof StockPrice ? $this->priceValue($latestPrice) : null;
         $previousValue = $previousPrice instanceof StockPrice ? $this->priceValue($previousPrice) : null;
-        $sentiment = $this->nullableSentiment(
-            $signal->stock->analysisResults->first()?->getAttribute('sentiment'),
-        );
+        $periodResult = $signal->sourceAnalysisImport?->analysisBatch?->result;
+        $sentiment = $periodResult instanceof AnalysisResult
+            ? $this->nullableSentiment($periodResult->getAttribute('sentiment'))
+            : null;
 
         return new DashboardTopStockData(
             id: $signal->stock->id,

@@ -27,6 +27,8 @@ const stock: StockDetail = {
   related_news: [],
   analyses: [],
   signals: [],
+  latest_period_analysis: null,
+  period_signal: null,
   selected_period: '1M',
   period_options: [{ value: '1M', label: '1M', available: false }],
   price_history_notice: '価格履歴がないため、期間を選択できません。',

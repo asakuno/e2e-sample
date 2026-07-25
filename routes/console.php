@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Schedule;
 
+Schedule::command('analysis-imports:purge-expired-raw')->daily();
+
 Schedule::command('market:fetch-prices')
     ->cron((string) config('services.alpha_vantage.price_cron'))
     ->timezone((string) config('services.alpha_vantage.schedule_timezone'))

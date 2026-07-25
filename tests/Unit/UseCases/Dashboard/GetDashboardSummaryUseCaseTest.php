@@ -7,11 +7,13 @@ namespace Tests\Unit\UseCases\Dashboard;
 use App\Data\Dashboard\DashboardStatData;
 use App\Enums\AnalysisSentiment;
 use App\Enums\DashboardStatKind;
+use App\Models\AnalysisBatch;
+use App\Models\AnalysisImport;
 use App\Models\AnalysisResult;
 use App\Models\NewsArticle;
+use App\Models\PeriodAnalysisSignal;
 use App\Models\Stock;
 use App\Models\StockPrice;
-use App\Models\StockSignal;
 use App\Repositories\DashboardRepositoryInterface;
 use App\Services\Dashboard\DashboardSummaryAssembler;
 use App\UseCases\Dashboard\GetDashboardSummaryUseCase;
@@ -34,7 +36,7 @@ final class GetDashboardSummaryUseCaseTest extends TestCase
         ]);
         $stock->id = 10;
 
-        $signal = new StockSignal([
+        $signal = new PeriodAnalysisSignal([
             'stock_id' => 10,
             'signal_date' => '2026-06-15',
             'total_score' => 8.25,
@@ -66,6 +68,22 @@ final class GetDashboardSummaryUseCaseTest extends TestCase
         $analysis->setRelation('stock', $stock);
         $analysis->setRelation('analysable', $article);
 
+        $periodAnalysis = new AnalysisResult([
+            'stock_id' => 10,
+            'summary' => '期間分析はポジティブ',
+            'sentiment' => AnalysisSentiment::Positive,
+            'impact_score' => 8,
+            'analyzed_at' => '2026-06-15 12:00:00',
+        ]);
+        $periodAnalysis->id = 41;
+        $batch = new AnalysisBatch;
+        $batch->id = 42;
+        $batch->setRelation('result', $periodAnalysis);
+        $import = new AnalysisImport;
+        $import->id = 43;
+        $import->setRelation('analysisBatch', $batch);
+        $signal->setRelation('sourceAnalysisImport', $import);
+
         $latestPrice = new StockPrice([
             'price_date' => '2026-06-15',
             'adjusted_close' => 120,
@@ -77,12 +95,11 @@ final class GetDashboardSummaryUseCaseTest extends TestCase
         ]);
         $previousPrice->id = 50;
         $stock->setRelation('prices', new Collection([$latestPrice, $previousPrice]));
-        $stock->setRelation('analysisResults', new Collection([$analysis]));
 
         $repository = new class($signal, $analysis) implements DashboardRepositoryInterface
         {
             public function __construct(
-                private readonly StockSignal $signal,
+                private readonly PeriodAnalysisSignal $signal,
                 private readonly AnalysisResult $analysis,
             ) {}
 
