@@ -22,6 +22,8 @@ const maxRetries = parseInt(process.env.PLAYWRIGHT_RETRIES ?? '2', 10);
 
 export default defineConfig({
   testDir: './tests/e2e/tests',
+  // 通常E2Eの出力初期化から変更確認の追記専用履歴を分離
+  outputDir: 'test-results/e2e',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? maxRetries : 0,

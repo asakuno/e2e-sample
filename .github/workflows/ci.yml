@@ -114,6 +114,11 @@ jobs:
         env:
           LARAVEL_BYPASS_ENV_CHECK: 1
 
+      - name: Change Verification Contract Test
+        run: npm run test:change-verification
+        env:
+          CHANGE_VERIFICATION_TEST_BASE_REF: HEAD
+
       - name: Build
         run: npm run build:all
 
