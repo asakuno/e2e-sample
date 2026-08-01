@@ -10,6 +10,11 @@ const pageState = vi.hoisted(() => ({
 }));
 
 vi.mock('@inertiajs/react', () => ({
+  Link: ({ href, children, ...props }: Record<string, unknown>) => (
+    <a href={href as string} {...props}>
+      {children as React.ReactNode}
+    </a>
+  ),
   router: {
     post: vi.fn(),
     visit: vi.fn(),

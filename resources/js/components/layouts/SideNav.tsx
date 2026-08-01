@@ -3,9 +3,8 @@
  *
  * アプリケーションのメインナビゲーション。ロゴ、ナビ項目、注意導線を表示。
  */
-import { usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { NavItem } from '@/components/layouts/NavItem';
-import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
 import { dashboard } from '@/routes';
 import { index as analysisIndex } from '@/routes/analysis';
 import { index as newsIndex } from '@/routes/news';
@@ -43,16 +42,15 @@ export function SideNavView({ currentUrl, onNavigate }: SideNavViewProps) {
       className="flex h-full w-full flex-col overflow-y-auto overscroll-contain border-sidebar-border border-r bg-sidebar text-sidebar-foreground"
     >
       <div className="flex min-h-16 items-center px-6">
-        <InertiaActionLink
+        <Link
           href={dashboard.url()}
           aria-label="Stock Insight ホーム"
           onClick={() => onNavigate?.()}
-          pendingClassName="opacity-70"
-          className="flex min-h-11 flex-col justify-center rounded-lg pr-10 transition-opacity duration-motion-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring"
+          className="flex min-h-11 flex-col justify-center rounded-lg pr-10 transition-opacity duration-motion-fast focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring data-[loading]:opacity-70"
         >
           <span className="font-bold text-lg leading-6">Stock Insight</span>
           <span className="text-sidebar-foreground/70 text-xs leading-4">Market analysis app</span>
-        </InertiaActionLink>
+        </Link>
       </div>
 
       <div className="flex flex-1 flex-col gap-1 px-3 py-2">

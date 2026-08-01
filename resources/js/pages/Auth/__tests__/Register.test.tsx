@@ -11,6 +11,11 @@ const mockValidate = vi.fn();
 let mockProcessing = false;
 
 vi.mock('@inertiajs/react', () => ({
+  Link: ({ href, children, ...props }: Record<string, unknown>) => (
+    <a href={href as string} {...props}>
+      {children as React.ReactNode}
+    </a>
+  ),
   useForm: vi.fn(() => ({
     data: { name: '', email: '', password: '', password_confirmation: '' },
     setData: mockSetData,

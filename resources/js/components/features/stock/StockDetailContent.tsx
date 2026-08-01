@@ -1,6 +1,6 @@
 import { ArrowLeft, BarChart3 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
+import { Link } from '@inertiajs/react';
 import { index, show } from '@/routes/stocks';
 import type { StockDetail } from '@/types/stocks';
 import { StockCompanyInfo } from './StockCompanyInfo';
@@ -17,14 +17,13 @@ type StockDetailContentProps = {
 export function StockDetailContent({ stock, children, watchlistControl }: StockDetailContentProps) {
   return (
     <div className="flex flex-col gap-6">
-      <InertiaActionLink
+      <Link
         href={index.url()}
-        pendingClassName="opacity-70"
-        className="inline-flex min-h-11 w-fit items-center gap-2 rounded-md px-3 py-2 font-medium text-muted-foreground text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-muted hover:text-foreground active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:active:translate-y-0"
+        className="inline-flex min-h-11 w-fit items-center gap-2 rounded-md px-3 py-2 font-medium text-muted-foreground text-sm transition-[background-color,color,transform] duration-motion-fast ease-standard hover:bg-muted hover:text-foreground active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:active:translate-y-0 data-[loading]:opacity-70"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
         銘柄一覧
-      </InertiaActionLink>
+      </Link>
 
       <StockDetailHeader stock={stock} watchlistControl={watchlistControl} />
 
@@ -40,7 +39,7 @@ export function StockDetailContent({ stock, children, watchlistControl }: StockD
             <div className="inline-flex w-fit overflow-hidden rounded-md border border-border bg-muted p-1">
               {stock.period_options.map((option) => {
                 const isActive = option.value === stock.selected_period;
-                const className = `inline-flex min-h-11 items-center rounded px-3 py-2 font-medium text-sm tabular-nums transition-[background-color,color,box-shadow] duration-motion-fast ease-standard ${
+                const className = `inline-flex min-h-11 items-center rounded px-3 py-2 font-medium text-sm tabular-nums transition-[background-color,color,box-shadow,opacity] duration-motion-fast ease-standard data-[loading]:opacity-70 ${
                   isActive
                     ? 'bg-card text-card-foreground shadow-sm'
                     : 'text-muted-foreground hover:bg-card/80 hover:text-foreground'
@@ -62,15 +61,14 @@ export function StockDetailContent({ stock, children, watchlistControl }: StockD
                 }
 
                 return (
-                  <InertiaActionLink
+                  <Link
                     key={option.value}
                     href={show.url(stock.id, { query: { period: option.value } })}
-                    pendingClassName="opacity-70"
                     className={className}
                     aria-current={isActive ? 'page' : undefined}
                   >
                     {option.label}
-                  </InertiaActionLink>
+                  </Link>
                 );
               })}
             </div>

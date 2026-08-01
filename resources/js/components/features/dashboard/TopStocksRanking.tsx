@@ -1,6 +1,6 @@
 import { ArrowRight } from 'lucide-react';
 import { SentimentBadge } from '@/components/features/news/SentimentBadge';
-import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
+import { Link } from '@inertiajs/react';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { formatJstDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
@@ -42,11 +42,10 @@ function TopStocksList({ stocks }: { stocks: TopStockData[] }) {
 
 function TopStockLink({ stock, rank }: { stock: TopStockData; rank: number }) {
   return (
-    <InertiaActionLink
+    <Link
       href={stockShow.url(stock.id)}
-      pendingClassName="opacity-70"
       aria-label={`${rank}位 ${stock.symbol} ${stock.name} の銘柄詳細を見る`}
-      className="group grid min-h-11 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-lg border border-transparent p-3 transition-[background-color,border-color,transform] duration-motion-fast ease-standard hover:border-border hover:bg-muted/60 active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none motion-reduce:active:translate-y-0"
+      className="group grid min-h-11 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 rounded-lg border border-transparent p-3 transition-[background-color,border-color,transform] duration-motion-fast ease-standard hover:border-border hover:bg-muted/60 active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none motion-reduce:active:translate-y-0 data-[loading]:opacity-70"
     >
       <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted font-semibold text-muted-foreground text-sm tabular-nums">
         {rank}
@@ -102,7 +101,7 @@ function TopStockLink({ stock, rank }: { stock: TopStockData; rank: number }) {
         aria-hidden="true"
         className="mt-1 size-4 text-muted-foreground transition-transform duration-motion-fast ease-standard group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
       />
-    </InertiaActionLink>
+    </Link>
   );
 }
 

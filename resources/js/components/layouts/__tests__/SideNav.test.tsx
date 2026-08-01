@@ -6,6 +6,11 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
 vi.mock('@inertiajs/react', () => ({
+  Link: ({ href, children, ...props }: Record<string, unknown>) => (
+    <a href={href as string} {...props}>
+      {children as React.ReactNode}
+    </a>
+  ),
   router: { visit: vi.fn() },
   usePage: vi.fn(() => ({
     url: '/dashboard',

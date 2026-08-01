@@ -1,5 +1,5 @@
 import { ChevronDown } from 'lucide-react';
-import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
+import { Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Surface } from '@/components/ui/surface';
@@ -105,14 +105,13 @@ function CompactRelatedStocks({ stocks }: { stocks: NewsArticleStock[] }) {
       <ul className="flex min-w-0 flex-wrap gap-2" aria-label="関連銘柄">
         {visibleStocks.map((stock) => (
           <li key={stock.id}>
-            <InertiaActionLink
+            <Link
               href={stockShow.url(stock.id)}
-              pendingClassName="opacity-70"
-              className="inline-flex min-h-8 items-center rounded-full bg-muted px-2.5 py-1 font-medium text-foreground text-xs transition-colors duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none"
+              className="inline-flex min-h-8 items-center rounded-full bg-muted px-2.5 py-1 font-medium text-foreground text-xs transition-colors duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none data-[loading]:opacity-70"
             >
               {stock.symbol}
               <span className="sr-only">の銘柄詳細を見る</span>
-            </InertiaActionLink>
+            </Link>
           </li>
         ))}
         {hiddenStockCount > 0 ? (
@@ -143,14 +142,13 @@ function CompactAnalysis({ analyses }: { analyses: NewsAnalysis[] }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <h3 className="font-medium text-muted-foreground text-xs">影響度が最も大きい分析</h3>
-          <InertiaActionLink
+          <Link
             href={stockShow.url(primaryAnalysis.stock.id)}
-            pendingClassName="opacity-70"
-            className="rounded-sm font-semibold text-foreground text-sm transition-colors duration-motion-fast ease-standard hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none"
+            className="rounded-sm font-semibold text-foreground text-sm transition-colors duration-motion-fast ease-standard hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none data-[loading]:opacity-70"
           >
             {primaryAnalysis.stock.symbol}
             <span className="sr-only">の銘柄詳細を見る</span>
-          </InertiaActionLink>
+          </Link>
           <SentimentBadge
             sentiment={primaryAnalysis.sentiment}
             label={primaryAnalysis.sentiment_label}

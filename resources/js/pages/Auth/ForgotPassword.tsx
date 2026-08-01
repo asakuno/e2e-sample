@@ -1,9 +1,8 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import type React from 'react';
 import { showLogin } from '@/actions/App/Http/Controllers/Web/AuthPageController';
 import { sendPasswordResetLink } from '@/actions/App/Http/Controllers/Web/PasswordResetPageController';
 import { FeedbackMessage } from '@/components/ui/FlashMessages';
-import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
 import { InputField } from '@/components/ui/InputField';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { GuestLayout } from '@/layouts/GuestLayout';
@@ -57,13 +56,12 @@ export default function ForgotPassword({ status }: ForgotPasswordProps) {
           <hr className="my-6 border-border" />
 
           <div className="text-center text-[13px] text-muted-foreground">
-            <InertiaActionLink
+            <Link
               href={showLogin.url()}
-              pendingClassName="opacity-70"
-              className="inline-flex min-h-11 items-center rounded-md px-3 py-2 transition-colors duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-11 items-center rounded-md px-3 py-2 transition-colors duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-[loading]:opacity-70"
             >
               ログイン画面に戻る
-            </InertiaActionLink>
+            </Link>
           </div>
         </form>
       </GuestLayout>

@@ -6,7 +6,10 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 // Inertia.js モック
-const mockPost = vi.fn();
+const { mockPost, mockRouterPost } = vi.hoisted(() => ({
+  mockPost: vi.fn(),
+  mockRouterPost: vi.fn(),
+}));
 
 type MockVisitOptions = {
   onBefore?: (visit: unknown) => boolean | void;
@@ -21,11 +24,7 @@ vi.mock('@inertiajs/react', () => ({
   })),
   Head: ({ title }: { title: string }) => <title>{title}</title>,
   usePage: vi.fn(() => ({ props: { flash: {} } })),
-  Link: ({ href, children, ...props }: Record<string, unknown>) => (
-    <a href={href as string} {...props}>
-      {children as React.ReactNode}
-    </a>
-  ),
+  router: { post: mockRouterPost },
 }));
 
 import VerifyEmail from '../VerifyEmail';
@@ -42,6 +41,17 @@ describe('VerifyEmail', () => {
       options.onSuccess?.();
       options.onFinish?.(visit);
     });
+    mockRouterPost.mockImplementation(
+      (_url: string, _data: Record<string, never>, options: MockVisitOptions) => {
+        const visit = {};
+        const shouldContinue = options.onBefore?.(visit);
+
+        if (shouldContinue === false) return;
+
+        options.onSuccess?.();
+        options.onFinish?.(visit);
+      },
+    );
   });
 
   it('メール認証の説明テキストが表示されること', () => {
@@ -112,6 +122,18 @@ describe('VerifyEmail', () => {
     await act(async () => {
       finishRequest();
     });
+  });
+
+  it('ログアウトボタンでログアウトリクエストを送信すること', async () => {
+    // Arrange
+    const user = userEvent.setup();
+    render(<VerifyEmail />);
+
+    // Act
+    await user.click(screen.getByRole('button', { name: 'ログアウト' }));
+
+    // Assert
+    expect(mockRouterPost).toHaveBeenCalledWith('/logout', {}, expect.any(Object));
   });
 
   it('ページタイトルが「メール認証」であること', () => {

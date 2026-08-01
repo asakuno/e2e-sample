@@ -5,11 +5,10 @@
  * GuestLayout でラップし、メールアドレス・パスワード入力を提供する。
  */
 
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import type React from 'react';
 import { login, showRegister } from '@/actions/App/Http/Controllers/Web/AuthPageController';
 import { showForgotPassword } from '@/actions/App/Http/Controllers/Web/PasswordResetPageController';
-import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
 import { FeedbackMessage } from '@/components/ui/FlashMessages';
 import { InputField } from '@/components/ui/InputField';
 import { PasswordInput } from '@/components/ui/PasswordInput';
@@ -72,13 +71,12 @@ export default function Login({ status }: LoginProps) {
           </div>
 
           <div className="mb-6 flex justify-end text-[13px] text-muted-foreground">
-            <InertiaActionLink
+            <Link
               href={showForgotPassword.url()}
-              pendingClassName="opacity-70"
-              className="inline-flex min-h-11 items-center rounded-md px-3 py-2 transition-colors duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-11 items-center rounded-md px-3 py-2 transition-colors duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-[loading]:opacity-70"
             >
               パスワードをお忘れですか？
-            </InertiaActionLink>
+            </Link>
           </div>
 
           {/* 送信ボタン */}
@@ -86,13 +84,12 @@ export default function Login({ status }: LoginProps) {
 
           {/* フッターリンク */}
           <div className="mt-6 flex justify-end text-[13px] text-muted-foreground">
-            <InertiaActionLink
+            <Link
               href={showRegister.url()}
-              pendingClassName="opacity-70"
-              className="inline-flex min-h-11 items-center rounded-md px-3 py-2 transition-colors duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-11 items-center rounded-md px-3 py-2 transition-colors duration-motion-fast ease-standard hover:bg-accent hover:text-accent-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-[loading]:opacity-70"
             >
               新規登録はこちら
-            </InertiaActionLink>
+            </Link>
           </div>
         </form>
       </GuestLayout>

@@ -5,12 +5,13 @@
  * GuestLayout でラップし、認証メール再送機能を提供する。
  */
 
-import { Head, useForm } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
+import { logout } from '@/actions/App/Http/Controllers/Web/AuthPageController';
 import { send } from '@/actions/App/Http/Controllers/Web/EmailVerificationPageController';
 import { VerifyEmailContent } from '@/components/features/auth/VerifyEmailContent';
 import type { ActionCallback } from '@/components/ui/ActionScope';
-import { runInertiaAction } from '@/lib/inertia-actions';
+import { inertiaAction, runInertiaAction } from '@/lib/inertia-actions';
 
 interface VerifyEmailProps {
   status?: string;
@@ -30,6 +31,9 @@ export default function VerifyEmail({ status }: VerifyEmailProps) {
       });
     });
   };
+  const logoutUser = inertiaAction((visitOptions) => {
+    router.post(logout.url(), {}, visitOptions);
+  });
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -40,7 +44,12 @@ export default function VerifyEmail({ status }: VerifyEmailProps) {
   return (
     <>
       <Head title="メール認証" />
-      <VerifyEmailContent status={status} cooldown={cooldown} onResend={resendVerificationEmail} />
+      <VerifyEmailContent
+        status={status}
+        cooldown={cooldown}
+        onResend={resendVerificationEmail}
+        onLogout={logoutUser}
+      />
     </>
   );
 }

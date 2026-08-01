@@ -4,6 +4,11 @@ import type { TopStockData } from '@/types/dashboard';
 import { TopStocksRanking } from '../TopStocksRanking';
 
 vi.mock('@inertiajs/react', () => ({
+  Link: ({ href, children, ...props }: Record<string, unknown>) => (
+    <a href={href as string} {...props}>
+      {children as React.ReactNode}
+    </a>
+  ),
   router: { visit: vi.fn() },
 }));
 

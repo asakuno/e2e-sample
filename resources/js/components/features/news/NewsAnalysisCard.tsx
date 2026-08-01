@@ -1,4 +1,4 @@
-import { InertiaActionLink } from '@/components/ui/InertiaActionLink';
+import { Link } from '@inertiajs/react';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Surface } from '@/components/ui/surface';
 import { cn } from '@/lib/utils';
@@ -16,17 +16,16 @@ export function NewsAnalysisCard({ analysis }: NewsAnalysisCardProps) {
     <Surface tone="subtle" padding="md">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
         <div className="min-w-0">
-          <InertiaActionLink
+          <Link
             href={stockShow.url(analysis.stock.id)}
-            pendingClassName="opacity-70"
             aria-label={`${analysis.stock.symbol} ${analysis.stock.name} の銘柄詳細を見る`}
-            className="inline-flex min-h-11 items-center gap-2 rounded-md font-semibold text-foreground text-sm transition-colors duration-motion-fast ease-standard hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none"
+            className="inline-flex min-h-11 items-center gap-2 rounded-md font-semibold text-foreground text-sm transition-colors duration-motion-fast ease-standard hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none data-[loading]:opacity-70"
           >
             <span>{analysis.stock.symbol}</span>
             <span className="truncate font-normal text-muted-foreground">
               {analysis.stock.name}
             </span>
-          </InertiaActionLink>
+          </Link>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <SentimentBadge sentiment={analysis.sentiment} label={analysis.sentiment_label} />
