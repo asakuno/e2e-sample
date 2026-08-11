@@ -53,6 +53,7 @@ Laravel 12 + Inertia.js v2 + React 19 + TypeScript + Tailwind CSS v4 のフル�
 - UI とビジネスロジックを分離する。
 - 既存コンポーネント、hooks、layouts を再利用してから新規作成を検討する。
 - Tailwind CSS v4 の既存スタイル規約に合わせる。
+- When the user explicitly requests an anti-AI-slop or visual design audit, use `.codex/skills/product-ui-slop-audit/` after reading the existing UI tokens and relevant shared components. The audit is read-only by default.
 
 ## Commands
 
