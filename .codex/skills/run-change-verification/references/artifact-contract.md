@@ -25,6 +25,8 @@ test-results/change-verification/{change-id}/{run-id}/
 ├── promotion.md
 ├── issues.md
 ├── .browser-check-run.json
+├── .browser-check-artifacts.json
+├── .browser-check-execution-error.json   # global pre-report failure path only
 ├── generated/
 │   └── *.check.spec.ts
 ├── evidence/
@@ -33,16 +35,17 @@ test-results/change-verification/{change-id}/{run-id}/
 │   ├── network/
 │   └── notes/
 ├── artifacts/
-├── traces/
+├── videos/
 ├── playwright-report/
 └── playwright-results.json
 ```
 
 Use `generated/` only for temporary Playwright source. Every file below it must be a
 `*.check.spec.ts`; helper modules, generated JavaScript, and other executable files are invalid.
-`artifacts/` is Playwright's configured per-test output directory and may contain screenshots,
-videos, and trace archives. Use `traces/` only for explicitly exported or driver-independent trace
-evidence; do not move evidence merely to satisfy the tree.
+`artifacts/` is Playwright's configured per-test output directory. Raw trace archives are forbidden
+anywhere in the run because they can contain cookies and cannot be redacted after postflight
+hashing. Automatic trace, screenshot, and video capture stays disabled; write only focused,
+sanitized evidence to the approved `evidence/` roots.
 
 Every generated temporary spec must have exactly one static import: the unaliased named values
 `test` and `expect` from the canonical relative path to the repository
@@ -56,6 +59,12 @@ The title must contain exactly one bounded ID for a planned `playwright-temporar
 callback must request only `{ page }`. Its first statement must be a direct static
 `page.goto("...")` whose canonical URL exactly equals that check's `target.url`, including its
 query and fragment. Every planned temporary check must bind to exactly one generated test.
+Each callback must also directly await at least one allowed `expect(...).matcher(...)` assertion
+whose subject is `page`, a locator derived from that guarded page, or a value directly derived from
+the page. Literal-only assertions, an `expect(...)` call without an allowed matcher, and unawaited
+matcher chains do not satisfy the execution contract.
+Existing Page Objects may be read only as locator and behavior references. Never import, call, or
+execute a Page Object or its helper graph from a temporary check.
 Comments and string literals do not satisfy the import contract. The fixture independently blocks
 cross-origin HTTP requests and WebSockets, rejects `about:`, `data:`, `file:`, and other non-HTTP(S)
 top-level destinations after initial page creation, checks the final URL of every remaining or
@@ -100,40 +109,70 @@ The `test:browser-check` wrapper must claim a run atomically in `.browser-check-
 Playwright starts. It must refuse a prior claim or a run that already contains nonempty
 `artifacts/`, `playwright-results.json`, or `playwright-report/`. The claim binds the wrapper token,
 canonical run path, complete `plan.json` hash, generated-source hash, plan revision, and preflight
-Git revision. It also records the complete fixed runtime snapshot. With guest state, both
+Git revision. It also records `frontendAssetsHash`, the deterministic hash of the served
+`public/build`. Ordinary Docker execution first proves that the mounted `node_modules` and
+`vendor` package identities match `package-lock.json` and `composer.lock`, hashes their bounded
+installed content (including Composer autoload files), then binds that dependency fingerprint into
+the claim, runtime, and asset marker. It rechecks the same fingerprint
+after the isolated build and after Playwright. Docker execution promotes a sanitized copy-on-write build into
+`{run-dir}/runtime/assets/public/build` and writes its marker under the same run-owned asset
+workspace; the trusted host CI smoke uses the repository build and marker. In both cases the
+marker must bind the same HEAD and worktree fingerprint. It
+also records the complete fixed runtime snapshot. With guest state, both
 `runtime` and `postflight.runtime` have exactly this shape:
 
 ```json
 {
   "baseUrl": "http://localhost:8000/",
   "useAuthState": false,
+  "appEnvironment": "testing",
+  "databaseConnection": "sqlite",
+  "databaseIdentifierHash": "sha256:<64-lowercase-hex>",
   "browser": "chromium",
   "locale": "ja-JP",
   "timezone": "Asia/Tokyo"
 }
 ```
 
-When `useAuthState` is `true`, add exactly
-`"authStateHash": "sha256:<64-lowercase-hex>"`; omit that key when authentication is disabled.
-The wrapper hashes the regular, non-symlinked workspace `playwright/.auth/user.json` before launch,
-the configuration recomputes and compares the hash, and postflight recomputes it again. Any
-mutation or redirection invalidates the run. The configuration must verify every binding and
+Docker runtime and postflight runtime add exactly one field to that shape:
+
+```json
+{
+  "dependenciesFingerprint": "sha256:<64-lowercase-hex>"
+}
+```
+
+The host SQLite smoke must omit this field. Docker must require it and match it to the run-local
+frontend asset marker.
+
+The initial fingerprint must equal `storage/framework/browser-check-dependencies.json`. The
+recorder creates scripts-disabled npm and plugin/scripts-disabled Composer installations under a
+fresh ignored root addressed by the four manifest and lockfile bytes, fingerprints those complete
+trees, and writes the marker only after both installs succeed. Docker mounts that attested root
+instead of the development `node_modules` and `vendor`. Changing either root manifest, either
+lockfile, any installed package byte, or Composer autoload output invalidates the attestation and
+blocks Docker startup. Invoking the recorder cannot bless bytes from the development installation.
+
+Reusable authentication state is unsupported because every run receives a fresh database and
+unique Docker project. `useAuthState` must remain `false`, `authStateHash` must be omitted, and an
+authenticated check must log in explicitly through the testing UI. The configuration must verify every binding and
 recompute the revision each time
 Playwright evaluates it, including in workers. After any ordinary Playwright exit, the wrapper must
-recompute the plan hash, generated-source hash, runtime binding, and Git revision, then atomically
-add a `postflight` completion record containing those hashes, the revision, an explicit runtime
-snapshot, and Playwright's integer exit code.
+recompute the plan hash, generated-source hash, revision-bound frontend asset hash, runtime
+binding, and Git revision, then atomically
+write `.browser-check-artifacts.json` and add a `postflight` completion record containing those
+hashes, the revision, an explicit runtime snapshot, Playwright's integer exit code, and
+`executionArtifactManifestHash`, the SHA-256 hash of the manifest's exact bytes.
 A pass requires exit code zero; a nonzero completion record can support trustworthy failure
-classification. Spawn errors, signals, and integrity mismatches must not receive a postflight
-record. Create a new run ID for every retry. Run, change, output, and evidence paths must not use
-symlinks that escape or redirect the repository-owned verification tree.
+classification. A global failure before a trustworthy report exists uses the exact
+`.browser-check-execution-error.json` contract below and must not receive a report, manifest, or
+postflight record. Create a new run ID for every retry. Run, change, output, and evidence paths
+must not use symlinks that escape or redirect the repository-owned verification tree.
 
 The final host validator must reopen the claim and independently recompute the raw `plan.json`
-hash, generated-source hash, current revision, canonical runtime URL, and planned authentication
-selection. It validates both preflight revision bindings and every available postflight binding.
-For authenticated runs it validates the recorded hash shape and exact preflight/postflight equality,
-but does not reopen the shared auth file during later final validation because an ordinary E2E setup
-may legitimately rotate that file after this run completed.
+hash, generated-source hash, revision-bound frontend asset hash, current revision, canonical
+runtime URL, and the required `useAuthState: false` selection. It validates both preflight revision
+bindings and every available postflight binding.
 The raw wrapper token is intentionally unavailable at final validation, so only the recorded token
 hash format can be checked. Because Docker writes a path such as `/app/...` while the host sees the
 workspace path, compare `runDir` by its normalized
@@ -141,6 +180,50 @@ workspace path, compare `runDir` by its normalized
 absolute prefix. A report or referenced temporary-browser evidence requires a completed postflight;
 an all-pass temporary execution requires exit code zero, while any failed temporary check requires
 a nonzero exit.
+
+The execution-artifact manifest has exactly these root keys and file-entry keys:
+
+```json
+{
+  "schemaVersion": "1.0",
+  "files": [
+    {
+      "path": "evidence/screenshots/BC-PR10-001-after.png",
+      "size": 1234,
+      "sha256": "sha256:<64-lowercase-hex>"
+    }
+  ]
+}
+```
+
+Sort `files` by simple POSIX lexical path order and keep paths unique. Paths are run-relative,
+normalized, and limited to `playwright-results.json` or regular, non-symlinked descendants of
+`artifacts/`, `playwright-report/`, `evidence/console/`, `evidence/network/`,
+`evidence/screenshots/` and `videos/`. The manifest must list every regular file under
+those roots. Recorded sizes and SHA-256 values must match the current bytes. Every
+temporary-browser evidence citation, including issue evidence, and `playwright-results.json` must
+be present. The manifest does not list itself.
+
+A global no-report failure uses exactly:
+
+```json
+{
+  "schemaVersion": "1.0",
+  "phase": "pre-report",
+  "scope": "global",
+  "affectedCheckIds": ["BC-PR10-001"],
+  "classification": "environment-defect",
+  "message": "The Playwright process did not produce a report.",
+  "occurredAt": "2026-07-30T03:30:00.000Z"
+}
+```
+
+Use only `environment-defect` or `check-script-defect`. `affectedCheckIds` is the sorted exact set
+of all planned `playwright-temporary` checks. Every affected result is `blocked` with blocker
+metadata, no temporary result is pass or fail, and `review.md` uses `incomplete`. The execution
+error must be a strict regular-file record and remains bound to the same valid preflight claim,
+plan, generated source, runtime, and Git revision. It must not coexist with
+`playwright-results.json`, `.browser-check-artifacts.json`, or claim postflight.
 
 ### Check ID
 
@@ -236,6 +319,25 @@ P2
 P3
 ```
 
+### Delegated work type
+
+```text
+unit-test
+feature-test
+component-test
+permanent-e2e
+other
+```
+
+### Delegated work status
+
+```text
+completed
+blocked
+not_run
+not_required
+```
+
 ## `plan.json`
 
 Use schema version `1.0` and this minimum shape:
@@ -268,7 +370,18 @@ Use schema version `1.0` and this minimum shape:
     "routes": ["/news"]
   },
   "existingTestCommands": [],
-  "delegatedWork": [],
+  "delegatedWorkItems": [
+    {
+      "id": "DW-PR10-001",
+      "type": "feature-test",
+      "priority": "P2",
+      "requiredForVerdict": true,
+      "status": "completed",
+      "target": "tests/Feature/NewsExpansionTest.php",
+      "reason": "The deterministic server contract belongs below the browser layer.",
+      "evidence": ["evidence/notes/DW-PR10-001.txt"]
+    }
+  ],
   "unnecessaryChecks": ["A duplicate human check is unnecessary"],
   "assumptions": ["At least two seeded articles exist"],
   "specificationGaps": [],
@@ -289,7 +402,7 @@ Use schema version `1.0` and this minimum shape:
       "preconditions": ["At least two news articles exist"],
       "steps": ["Open the news page", "Expand the first and second articles"],
       "expectedResults": ["Only the second article remains expanded"],
-      "evidence": ["Playwright JSON", "trace", "screenshot or explicit assertion"],
+      "evidence": ["Playwright JSON", "owner-bound focused PNG screenshot"],
       "promotionCandidate": false,
       "status": "planned"
     }
@@ -298,6 +411,39 @@ Use schema version `1.0` and this minimum shape:
 ```
 
 Require all shown root, change, revision, environment, scope, planning-context, and check fields. Keep `checks[].id` unique. Give every `objective` check at least one grounded expected result. Give every check except `not-required` planned evidence. An `observation` check may keep `expectedResults` empty rather than invent a pass/fail criterion. Empty planning-context arrays are valid, but omitting them is not; JSON must remain the source of truth for delegated work, unnecessary checks, assumptions, and specification gaps. Require `target.url` only for browser-responsibility checks; lower-level and not-required rows may omit it rather than fabricate a browser target.
+
+Every `delegatedWorkItems` entry has exactly `id`, `type`, `priority`, `requiredForVerdict`,
+`status`, `target`, `reason`, and `evidence`. Use
+`DW-{normalized-change-id}-{three-digit-sequence}` IDs and keep them unique. A completed item with
+`requiredForVerdict: true` must cite `evidence/delegated/{delegated-work-id}.json`; a generic note or
+another contract file is not completion evidence. The delegated execution record has exactly this
+shape:
+
+```json
+{
+  "schemaVersion": "1.0",
+  "delegatedWorkId": "DW-PR10-001",
+  "type": "feature-test",
+  "target": "tests/Feature/NewsControllerTest.php",
+  "revision": {
+    "baseSha": "<40-lowercase-hex>",
+    "headSha": "<40-lowercase-hex>",
+    "worktreeFingerprint": "sha256:<64-lowercase-hex>"
+  },
+  "command": "php artisan test tests/Feature/NewsControllerTest.php",
+  "workingDirectory": ".",
+  "selectedTargets": ["tests/Feature/NewsControllerTest.php"],
+  "exitCode": 0,
+  "summary": "The delegated feature test passed."
+}
+```
+
+Bind `revision` to the plan, include the delegated target in `selectedTargets`, and require exit
+code zero. Use
+`requiredForVerdict: false` with `not_required` for recommendations that do not gate this run;
+`not_required` is invalid for a required item. Any required P0-P2 item that is not `completed`
+forces an `incomplete` verdict. An unresolved required P3 item may support only
+`conditional-pass` or `incomplete`.
 
 Record the resolved base SHA, current HEAD SHA, and a `sha256:` fingerprint of the tracked diff plus
 all untracked, non-ignored files. Copy the same revision object into `result.json`. The validator
@@ -315,17 +461,28 @@ browser target URL must be a relative path or resolve to the same origin as
 `environment.baseUrl`; a check must not redirect its planned target to another environment.
 
 Automated browser checks (every executable browser-responsibility check except `human` and
-`not-required`) must identify an explicit non-production `appEnvironment`. Values such as `prod`,
-`production`, and `live` are invalid. The temporary Playwright driver additionally accepts only
-localhost, loopback, or Docker `nginx` as its base URL host. Its runtime base URL must equal
-`environment.baseUrl` after URL normalization and Docker `nginx`-to-`localhost` normalization.
-Temporary Playwright plans must use browser `chromium`, locale `ja-JP`, and timezone `Asia/Tokyo`;
-the preflight and postflight runtime snapshots bind the same fixed execution tuple.
+`not-required`) must identify an explicit non-production `appEnvironment`. The temporary
+Playwright driver requires exactly `appEnvironment: testing` and accepts only localhost, loopback,
+or the isolated Docker host `nginx-browser-check`; ordinary `nginx` is invalid. Operator-created
+change-verification plans must use Docker and the raw `http://nginx-browser-check:80` binding.
+Only the trusted `continuous-integration` infrastructure smoke may use a raw
+`http://localhost:<port>` binding with an explicit port from 1024 through 65535 and its internal
+authorization flag. Host execution is configuration-isolated, not an OS sandbox. Temporary
+execution is HTTP-only. The wrapper must preserve and compare that execution mode before
+canonical URL comparison; it must not use normalization to switch a host plan into Docker mode or
+vice versa. The canonical runtime base URL must then equal `environment.baseUrl` after URL
+normalization and `nginx-browser-check`-to-`localhost` normalization. Temporary Playwright plans must use browser
+`chromium`, locale `ja-JP`, and timezone `Asia/Tokyo`. The preflight and postflight runtime
+snapshots also bind `appEnvironment: testing`, `databaseConnection` as `sqlite` or `mysql`, and an
+exact `databaseIdentifierHash` SHA-256 value. Docker requires `mysql` and the SHA-256 of
+`mysql:mysql-browser-check/browser_check`. The trusted CI host smoke requires `sqlite` and the SHA-256 of
+`sqlite:{workspace-relative runDir}/runtime/browser-check.sqlite`. The final host validator
+recomputes this identity from the raw plan mode; claim shape and preflight/postflight equality alone
+are insufficient.
 This is deliberately a local-origin restriction plus a required non-production declaration in the
 plan; it is not presented as independent proof of the application's real deployment environment.
-`environment.useAuthState` is optional for schema compatibility and defaults to `false`; set it to
-`true` only when the plan explicitly requires `playwright/.auth/user.json`. Runtime authentication
-selection must equal this planned value.
+`environment.useAuthState` is optional for schema compatibility and defaults to `false`; the
+wrapper and validator reject `true`. Runtime authentication selection must remain `false`.
 
 A human check may permit evidence waiver only by including a nonempty plan-level `evidenceWaiverReason`. Omit that field for every other check and when waiver is not explicitly justified. A result-level waiver is invalid without this plan permission.
 
@@ -371,7 +528,6 @@ Use schema version `1.0` and this minimum shape:
       },
       "evidence": [
         "playwright-results.json",
-        "artifacts/example/trace.zip",
         "evidence/screenshots/BC-PR10-001-after-20260730123000.png"
       ],
       "issues": [],
@@ -388,6 +544,20 @@ Require each result driver to equal its planned driver and each status to match 
 Use all six summary keys. Count `not_run` as `notRun` and `not_required` as `notRequired`. Summary counts must exactly match `results`.
 
 Require every pass to list at least one existing, run-relative evidence path, except an `existing-test` pass supported by structured `testExecution` or a human pass with an explicit permitted `evidenceWaiverReason`. Require every fail to reference at least one classified issue. Every blocked or not-run result must include `blocker.reason` and `blocker.nextAction`; narrative `actualResult` and `executionNotes` remain supporting context.
+
+Reject empty evidence, symlinks, path aliases, generic contract files, and image extensions whose
+bytes do not have the corresponding image signature. When an `agent-browser` pass uses DOM evidence
+instead of a valid image, cite exactly `evidence/dom/{check-id}.json` with this shape:
+
+```json
+{
+  "schemaVersion": "1.0",
+  "checkId": "BC-PR10-001",
+  "url": "http://localhost:8000/news",
+  "capturedAt": "2026-07-30T03:30:00.000Z",
+  "content": "A focused accessible DOM snapshot that proves the expected result."
+}
+```
 
 `executionNotes` is optional for schema compatibility but strongly recommended. It must never replace `actualResult` or evidence.
 
@@ -414,7 +584,7 @@ Each machine-readable record uses this shape:
   "expected": "The second article expands",
   "actual": "The locator did not resolve",
   "reproduction": ["Run the temporary Playwright check"],
-  "evidence": ["artifacts/example/trace.zip"],
+  "evidence": ["playwright-results.json"],
   "disposition": "Correct the temporary locator in a new run"
 }
 ```
@@ -467,8 +637,18 @@ Use these exact level-two headings even when their arrays are empty:
 ## Specification Gaps
 ```
 
-Project every nonempty array value under its matching heading. Project each selected
-`existingTestCommands` value verbatim somewhere in the document.
+Under `## Delegated Work`, use exactly this seven-column order and one exact row per item:
+
+```markdown
+| Delegated Work ID | Type         | Priority | Required For Verdict | Status    | Target                                 | Reason                                                       |
+| ----------------- | ------------ | -------- | -------------------- | --------- | -------------------------------------- | ------------------------------------------------------------ |
+| `DW-PR10-001`     | feature-test | P2       | true                 | completed | tests/Feature/NewsExpansionTest.php    | The deterministic server contract belongs below the browser. |
+```
+
+Create exactly one `### \`{delegated-work-id}\`` detail section per item and project every
+evidence path under its own section. Use `No delegated work.` when the array is empty. Project
+every nonempty unnecessary-check, assumption, and specification-gap value under its matching
+heading. Project each selected `existingTestCommands` value verbatim somewhere in the document.
 
 ### `result.md`
 
@@ -492,7 +672,7 @@ Summary counts: pass=1; fail=0; blocked=0; notRun=0; observation=0; notRequired=
 
 ### `review.md`
 
-Mention every reviewed check ID. Project corrected counts with the same order:
+Mention every reviewed check ID and delegated-work ID. Project corrected counts with the same order:
 
 ```text
 Corrected summary counts: pass=1; fail=0; blocked=0; notRun=0; observation=0; notRequired=0
@@ -509,8 +689,10 @@ Write exactly one verdict block, with no competing `## Verdict` heading:
 Use `fail` when any acceptance check failed. With no failure but one or more blocked or not-run
 checks, use `incomplete`, or `conditional-pass` only when the review has established that the
 remaining check is explicitly low risk or human-only. For machine validation, low risk means P3;
-every unresolved row must therefore use the `human` driver or priority `P3`. Use `pass` when no
-failed, blocked, or not-run check remains.
+every unresolved row must therefore use the `human` driver or priority `P3`. Required P0-P2
+delegated work that is not completed and a global pre-report execution error both require
+`incomplete`; unresolved required P3 delegated work may support `conditional-pass`. Use `pass`
+only when no failed or required unresolved work remains.
 
 ### `promotion.md` and `issues.md`
 

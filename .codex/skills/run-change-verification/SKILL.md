@@ -76,6 +76,11 @@ Classify every concern by:
 - required evidence;
 - promotion candidacy.
 
+Represent proposed lower-level and permanent work only through the artifact contract's structured
+`delegatedWorkItems`. Required P0-P2 items that are not completed keep the final verdict
+`incomplete`; completed required items need the validated, revision-bound delegated execution
+record defined by the artifact contract.
+
 Do not execute a pass/fail browser check with an unsupported expectation. Reclassify it as observation-only or record a specification blocker.
 
 ### 3. Execute selected existing tests
@@ -95,6 +100,8 @@ Do not silently install dependencies, browsers, or other tooling. Do not modify 
 Load `execute-browser-checks` for checks whose driver is `agent-browser` or `playwright-temporary`.
 
 Do not send `human` checks to browser automation. Keep unrelated verification lanes running when one lane is blocked.
+Temporary checks may read existing Page Objects as locator and behavior references only. Never
+import, call, or execute a Page Object or its helper graph.
 
 ### 5. Record human results
 
@@ -108,6 +115,7 @@ Load `review-browser-check-results`. Require the review to:
 
 - account for every planned check exactly once;
 - verify same-run evidence completeness;
+- verify execution-manifest byte integrity or the exclusive global pre-report error path;
 - reject unsupported passes;
 - distinguish product, test-data, check-script, environment, and specification failures;
 - identify observations separately;
@@ -171,6 +179,8 @@ Continue independent lanes as far as meaningful when another lane is blocked.
 Finish only when:
 
 - every planned check has one terminal result;
+- every delegated work item has an exact terminal status and every completed required item has its
+  structured, revision-bound same-run execution record;
 - every pass has sufficient same-run evidence;
 - every fail has a defensible issue classification and priority;
 - every blocked or not-run check has a concrete reason and next action;

@@ -1,19 +1,87 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { access, mkdir, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
-import { dirname, relative, resolve, sep } from 'node:path';
+import { readFileSync } from 'node:fs';
+import {
+  access,
+  cp,
+  link,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  symlink,
+  truncate,
+  writeFile,
+} from 'node:fs/promises';
+import { basename, delimiter, dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { revisionSnapshot } from './revision-fingerprint.mjs';
+import {
+  frontendAssetsContentFingerprint,
+  frontendAssetsFingerprint,
+} from './browser-check-assets.mjs';
+import { revisionGitEnvironment, revisionSnapshot } from './revision-fingerprint.mjs';
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = resolve(scriptDirectory, '../../../..');
 const validatorPath = resolve(scriptDirectory, 'validate-change-verification.mjs');
 const wrapperPath = resolve(scriptDirectory, 'run-browser-check.mjs');
 const verificationRoot = resolve(workspaceRoot, 'test-results/change-verification');
+const executionArtifactRootDirectories = [
+  'artifacts',
+  'playwright-report',
+  'evidence/console',
+  'evidence/network',
+  'evidence/screenshots',
+  'videos',
+];
 const fixtureBaseRef = process.env.CHANGE_VERIFICATION_TEST_BASE_REF?.trim() || 'develop';
-const fixtureRevision = revisionSnapshot(fixtureBaseRef, workspaceRoot);
+const validPng = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64',
+);
+const trustedDependenciesFingerprint = `sha256:${'d'.repeat(64)}`;
+const wrapperFixtureRevision = revisionSnapshot(fixtureBaseRef, workspaceRoot);
+const validatorFixtureRevision = structuredClone(wrapperFixtureRevision);
+const validatorTrackedDiff = spawnSync('git', ['diff', '--binary', '--no-ext-diff', 'HEAD', '--'], {
+  cwd: workspaceRoot,
+  encoding: null,
+  env: revisionGitEnvironment(),
+  maxBuffer: 50 * 1024 * 1024,
+});
+const validatorStatus = spawnSync(
+  'git',
+  ['status', '--porcelain=v1', '-z', '--untracked-files=all'],
+  {
+    cwd: workspaceRoot,
+    encoding: null,
+    env: revisionGitEnvironment(),
+    maxBuffer: 50 * 1024 * 1024,
+  },
+);
+const validatorIndex = spawnSync('git', ['ls-files', '-v', '-z'], {
+  cwd: workspaceRoot,
+  encoding: null,
+  env: revisionGitEnvironment(),
+  maxBuffer: 50 * 1024 * 1024,
+});
+assert.equal(validatorTrackedDiff.status, 0, validatorTrackedDiff.stderr?.toString('utf8'));
+assert.equal(validatorStatus.status, 0, validatorStatus.stderr?.toString('utf8'));
+assert.equal(validatorIndex.status, 0, validatorIndex.stderr?.toString('utf8'));
+const validatorTrackedDiffBase64 = validatorTrackedDiff.stdout.toString('base64');
+const validatorStatusBase64 = validatorStatus.stdout.toString('base64');
+const validatorIndexBase64 = validatorIndex.stdout.toString('base64');
+let validatorGitDirectory;
+
+function currentFixtureRevision() {
+  return structuredClone(validatorFixtureRevision);
+}
+
+function currentWrapperFixtureRevision() {
+  return structuredClone(wrapperFixtureRevision);
+}
 
 function checkIdFor(changeId) {
   return `BC-${changeId.replaceAll('-', '')}-001`;
@@ -46,7 +114,7 @@ function makeNotRequiredFixture(changeId, runId, revision) {
         routes: [],
       },
       existingTestCommands: [],
-      delegatedWork: [],
+      delegatedWorkItems: [],
       unnecessaryChecks: ['Additional browser execution would duplicate lower-level coverage.'],
       assumptions: ['The fixture represents analysis-only verification.'],
       specificationGaps: [],
@@ -132,7 +200,7 @@ function makeHumanNotRunFixture(changeId, runId, revision) {
         routes: ['/manual-review'],
       },
       existingTestCommands: [],
-      delegatedWork: [],
+      delegatedWorkItems: [],
       unnecessaryChecks: [],
       assumptions: ['A reviewer can access the local application later.'],
       specificationGaps: [],
@@ -229,11 +297,10 @@ function passingPlaywrightReport(checkId) {
 function configurePassingPlaywrightFixture(fixture) {
   const check = fixture.plan.checks[0];
   const checkResult = fixture.result.results[0];
-  const tracePath = 'artifacts/planned/trace.zip';
-  const screenshotPath = 'evidence/screenshots/planned.png';
+  const screenshotPath = `evidence/screenshots/${check.id}-planned.png`;
   check.lifecycle = 'change-only';
   check.driver = 'playwright-temporary';
-  check.evidence = ['Playwright JSON', 'trace', 'screenshot'];
+  check.evidence = ['Playwright JSON', 'screenshot'];
   checkResult.driver = 'playwright-temporary';
   checkResult.status = 'pass';
   checkResult.actualResult = 'The planned temporary browser check passed.';
@@ -242,13 +309,12 @@ function configurePassingPlaywrightFixture(fixture) {
     viewport: '1280x720',
     baseUrl: 'http://localhost:8000',
   };
-  checkResult.evidence = ['playwright-results.json', tracePath, screenshotPath];
+  checkResult.evidence = ['playwright-results.json', screenshotPath];
   delete checkResult.blocker;
   fixture.result.summary.notRun = 0;
   fixture.result.summary.pass = 1;
   fixture.verdict = 'pass';
-  fixture.files[tracePath] = 'deterministic trace placeholder\n';
-  fixture.files[screenshotPath] = 'deterministic screenshot placeholder\n';
+  fixture.files[screenshotPath] = validPng;
   fixture.files['playwright-results.json'] = `${JSON.stringify(
     passingPlaywrightReport(check.id),
     null,
@@ -340,6 +406,40 @@ function configureNotRunPlaywrightFixture(fixture) {
   fixture.result.results[0].driver = 'playwright-temporary';
 }
 
+function configureGlobalExecutionErrorFixture(fixture) {
+  const check = fixture.plan.checks[0];
+  const checkResult = fixture.result.results[0];
+  check.lifecycle = 'change-only';
+  check.driver = 'playwright-temporary';
+  check.evidence = ['Wrapper global execution-error record'];
+  checkResult.driver = 'playwright-temporary';
+  checkResult.status = 'blocked';
+  checkResult.actualResult = 'The browser wrapper failed before a Playwright report was available.';
+  checkResult.evidence = ['.browser-check-execution-error.json'];
+  checkResult.blocker = {
+    reason: 'A global pre-report wrapper failure prevented every temporary browser check.',
+    nextAction: 'Correct the wrapper environment and create a new append-only run.',
+  };
+  fixture.result.summary.notRun = 0;
+  fixture.result.summary.blocked = 1;
+  fixture.verdict = 'incomplete';
+  fixture.files['generated/contract.check.spec.ts'] = `test('${check.id}', async () => {});\n`;
+  fixture.files['.browser-check-execution-error.json'] = `${JSON.stringify(
+    {
+      schemaVersion: '1.0',
+      phase: 'pre-report',
+      scope: 'global',
+      affectedCheckIds: [check.id],
+      classification: 'environment-defect',
+      message: 'The Playwright process did not produce a report.',
+      occurredAt: '2026-08-01T15:00:01.000Z',
+    },
+    null,
+    2,
+  )}\n`;
+  fixture.browserClaim = {};
+}
+
 function arrayValues(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -371,6 +471,42 @@ function listSection(heading, values) {
   const body = items.length > 0 ? items.map((value) => `- ${value}`).join('\n') : '- None';
 
   return `${heading}\n\n${body}`;
+}
+
+function renderDelegatedWork(items) {
+  const delegatedWorkItems = arrayValues(items);
+  const rows = delegatedWorkItems
+    .map((item) =>
+      tableRow([
+        item.id,
+        item.type,
+        item.priority,
+        item.requiredForVerdict,
+        item.status,
+        item.target,
+        item.reason,
+      ]),
+    )
+    .join('\n');
+  const details = delegatedWorkItems
+    .map((item) => {
+      const evidence = arrayValues(item.evidence);
+      const body =
+        evidence.length > 0
+          ? evidence.map((value) => `- Evidence: ${value}`).join('\n')
+          : '- Evidence: None';
+
+      return `### \`${item.id}\`\n\n${body}`;
+    })
+    .join('\n\n');
+
+  return `## Delegated Work
+
+| Delegated Work ID | Type | Priority | Required For Verdict | Status | Target | Reason |
+|---|---|---|---|---|---|---|
+${rows}
+
+${details || 'No delegated work.'}`;
 }
 
 function renderPlan(plan) {
@@ -425,7 +561,7 @@ ${rows}
 
 ${details}
 
-${listSection('## Delegated Work', plan.delegatedWork)}
+${renderDelegatedWork(plan.delegatedWorkItems)}
 
 ${listSection('## Unnecessary Checks', plan.unnecessaryChecks)}
 
@@ -484,14 +620,17 @@ Summary counts: pass=${summary.pass}; fail=${summary.fail}; blocked=${summary.bl
 }
 
 function renderReview(plan, result, verdict) {
-  const checkIds = arrayValues(plan.checks)
-    .map((check) => `- ${check.id}`)
+  const reviewedIds = [
+    ...arrayValues(plan.checks).map((check) => check.id),
+    ...arrayValues(plan.delegatedWorkItems).map((item) => item.id),
+  ]
+    .map((id) => `- ${id}`)
     .join('\n');
   const summary = result.summary;
 
   return `# Change Verification Review
 
-${checkIds || '- No planned checks'}
+${reviewedIds || '- No planned checks'}
 
 Corrected summary counts: pass=${summary.pass}; fail=${summary.fail}; blocked=${summary.blocked}; notRun=${summary.notRun}; observation=${summary.observation}; notRequired=${summary.notRequired}
 
@@ -564,7 +703,7 @@ async function writeFixture(testOwnedChangeDirectories, caseName, runId, fixture
     runId,
   );
 
-  const fixture = fixtureFactory(changeId, runId, structuredClone(fixtureRevision));
+  const fixture = fixtureFactory(changeId, runId, currentFixtureRevision());
   mutate?.(fixture);
 
   await mkdir(runDirectory, { recursive: true });
@@ -591,11 +730,21 @@ async function writeFixture(testOwnedChangeDirectories, caseName, runId, fixture
     ),
   );
 
+  if (fixture.plan.environment?.useAuthState && fixture.files['auth/user.json'] === undefined) {
+    fixture.files['auth/user.json'] = '{"authenticated":true}\n';
+  }
   for (const [relativePath, contents] of Object.entries(fixture.files)) {
     const targetPath = resolve(runDirectory, relativePath);
     assert.equal(relative(runDirectory, targetPath).startsWith('..'), false);
     await mkdir(dirname(targetPath), { recursive: true });
     await writeFile(targetPath, contents);
+  }
+
+  if (
+    fixture.browserClaim?.postflightExitCode !== undefined &&
+    fixture.browserManifest?.omit !== true
+  ) {
+    await writeExecutionArtifactManifest(runDirectory, fixture.browserManifest?.mutate);
   }
 
   if (fixture.browserClaim) {
@@ -617,8 +766,8 @@ async function writeWrapperFixture(testOwnedChangeDirectories, caseName, runId, 
     'plan.json': `${JSON.stringify(
       {
         schemaVersion: '1.0',
-        change: { baseRef: fixtureBaseRef },
-        revision: structuredClone(fixtureRevision),
+        change: { baseRef: fixtureBaseRef, source: 'continuous-integration' },
+        revision: currentWrapperFixtureRevision(),
         environment: {
           baseUrl: 'http://localhost:8000',
           appEnvironment: 'testing',
@@ -639,7 +788,7 @@ async function writeWrapperFixture(testOwnedChangeDirectories, caseName, runId, 
       2,
     )}\n`,
     'generated/preflight.check.spec.ts':
-      "import { expect, test } from '../../../../../playwright.browser-check.fixture';\n\ntest('BC-WRAPPER-001 preflight only', async ({ page }) => {\n  await page.goto('/manual-review');\n  await expect(page).toHaveURL(/.*/);\n});\n",
+      "import { expect, test } from '../../../../../playwright.browser-check.fixture';\n\ntest('BC-WRAPPER-001 preflight only', async ({ page }) => {\n  await page.goto('/manual-review');\n  await expect(page.getByRole('heading')).toBeVisible();\n});\n",
   };
 
   for (const [relativePath, contents] of Object.entries({ ...defaultFiles, ...files })) {
@@ -653,23 +802,79 @@ async function writeWrapperFixture(testOwnedChangeDirectories, caseName, runId, 
   return runDirectory;
 }
 
+async function prepareValidatorGit() {
+  await mkdir(verificationRoot, { recursive: true });
+  const fakeGitDirectory = await mkdtemp(resolve(verificationRoot, 'VALIDATOR-GIT-'));
+  const fakeGitPath = resolve(fakeGitDirectory, 'git');
+  const fakeGitSource = `#!/usr/bin/env node
+const arguments_ = process.argv.slice(2);
+if (arguments_[0] === 'rev-parse' && arguments_[1] === '--verify') {
+  if (arguments_[2] === 'HEAD^{commit}') {
+    process.stdout.write(${JSON.stringify(`${validatorFixtureRevision.headSha}\n`)});
+    process.exit(0);
+  }
+  if (arguments_[2] === ${JSON.stringify(`${fixtureBaseRef}^{commit}`)}) {
+    process.stdout.write(${JSON.stringify(`${validatorFixtureRevision.baseSha}\n`)});
+    process.exit(0);
+  }
+}
+if (arguments_[0] === 'diff') {
+  process.stdout.write(Buffer.from(${JSON.stringify(validatorTrackedDiffBase64)}, 'base64'));
+  process.exit(0);
+}
+if (arguments_[0] === 'status') {
+  process.stdout.write(Buffer.from(${JSON.stringify(validatorStatusBase64)}, 'base64'));
+  process.exit(0);
+}
+if (arguments_[0] === 'ls-files' && arguments_[1] === '-v' && arguments_[2] === '-z') {
+  process.stdout.write(Buffer.from(${JSON.stringify(validatorIndexBase64)}, 'base64'));
+  process.exit(0);
+}
+process.stderr.write('Unsupported validator-contract Git invocation: ' + JSON.stringify(arguments_) + '\\n');
+process.exit(2);
+`;
+  await writeFile(fakeGitPath, fakeGitSource, { mode: 0o755 });
+
+  return fakeGitDirectory;
+}
+
 function runValidator(runDirectory) {
+  assert.equal(typeof validatorGitDirectory, 'string');
   return spawnSync(process.execPath, [validatorPath, relative(workspaceRoot, runDirectory)], {
     cwd: workspaceRoot,
     encoding: 'utf8',
-    timeout: 15_000,
+    env: {
+      ...process.env,
+      PATH: process.env.PATH
+        ? `${validatorGitDirectory}${delimiter}${process.env.PATH}`
+        : validatorGitDirectory,
+    },
+    timeout: 60_000,
   });
 }
 
 function runWrapper(args, runDirectory) {
+  const runDirectoryRelative = runDirectory
+    ? relative(workspaceRoot, runDirectory).split(sep).join('/')
+    : '';
   return spawnSync(process.execPath, [wrapperPath, ...args], {
     cwd: workspaceRoot,
     encoding: 'utf8',
     env: {
       ...process.env,
-      ...(runDirectory ? { BROWSER_CHECK_RUN_DIR: relative(workspaceRoot, runDirectory) } : {}),
+      NODE_ENV: 'test',
+      BROWSER_CHECK_TRUSTED_HOST_SMOKE: 'true',
+      ...(runDirectory
+        ? {
+            BROWSER_CHECK_DATABASE_CONNECTION: 'sqlite',
+            BROWSER_CHECK_DATABASE_IDENTIFIER: `sqlite:${runDirectoryRelative}/runtime/browser-check.sqlite`,
+            BROWSER_CHECK_RUN_DIR: runDirectoryRelative,
+            BROWSER_CHECK_USE_AUTH_STATE: 'false',
+            PLAYWRIGHT_BASE_URL: 'http://localhost:8000',
+          }
+        : {}),
     },
-    timeout: 15_000,
+    timeout: 120_000,
   });
 }
 
@@ -707,22 +912,126 @@ async function generatedSourceHash(runDirectory) {
   return `sha256:${generatedFingerprint.digest('hex')}`;
 }
 
+async function collectExecutionArtifactFiles(runDirectory) {
+  const files = [];
+
+  async function collectDirectory(relativeDirectory) {
+    const absoluteDirectory = resolve(runDirectory, relativeDirectory);
+    let entries;
+    try {
+      entries = await readdir(absoluteDirectory, { withFileTypes: true });
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        return;
+      }
+      throw error;
+    }
+    for (const entry of entries) {
+      const relativePath = `${relativeDirectory}/${entry.name}`;
+      if (entry.isDirectory()) {
+        await collectDirectory(relativePath);
+      } else if (entry.isFile()) {
+        files.push(relativePath);
+      }
+    }
+  }
+
+  try {
+    await access(resolve(runDirectory, 'playwright-results.json'));
+    files.push('playwright-results.json');
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+  for (const root of executionArtifactRootDirectories) {
+    await collectDirectory(root);
+  }
+
+  return files.sort();
+}
+
+async function writeExecutionArtifactManifest(runDirectory, mutate) {
+  const files = [];
+  for (const path of await collectExecutionArtifactFiles(runDirectory)) {
+    const contents = await readFile(resolve(runDirectory, path));
+    files.push({
+      path,
+      size: contents.byteLength,
+      sha256: `sha256:${createHash('sha256').update(contents).digest('hex')}`,
+    });
+  }
+  const manifest = { schemaVersion: '1.0', files };
+  mutate?.(manifest);
+  await writeFile(
+    resolve(runDirectory, '.browser-check-artifacts.json'),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+  );
+}
+
+async function prepareDockerAssetWorkspace(runDirectory, planRevision) {
+  const assetWorkspace = resolve(runDirectory, 'runtime/assets');
+  await rm(assetWorkspace, { recursive: true, force: true });
+  await mkdir(resolve(assetWorkspace, 'public'), { recursive: true });
+  await cp(resolve(workspaceRoot, 'public/build'), resolve(assetWorkspace, 'public/build'), {
+    recursive: true,
+  });
+  await mkdir(resolve(assetWorkspace, 'storage/framework'), { recursive: true });
+  const assetsHash = frontendAssetsContentFingerprint(assetWorkspace);
+  await writeFile(
+    resolve(assetWorkspace, 'storage/framework/browser-check-assets.json'),
+    `${JSON.stringify({
+      schemaVersion: '1.0',
+      revision: {
+        headSha: planRevision.headSha,
+        worktreeFingerprint: planRevision.worktreeFingerprint,
+      },
+      assetsHash,
+      dependenciesFingerprint: trustedDependenciesFingerprint,
+    })}\n`,
+  );
+  return assetWorkspace;
+}
+
 async function writeRunClaim(runDirectory, token, mutate, options = {}) {
   const planSource = await readFile(resolve(runDirectory, 'plan.json'));
   const plan = JSON.parse(planSource.toString('utf8'));
   const planHash = `sha256:${createHash('sha256').update(planSource).digest('hex')}`;
   const generatedFingerprint = await generatedSourceHash(runDirectory);
   const plannedBaseUrl = new URL(plan.environment.baseUrl);
-  if (plannedBaseUrl.hostname === 'nginx') {
+  const planUsesDocker = plannedBaseUrl.hostname === 'nginx-browser-check';
+  const assetWorkspace = planUsesDocker
+    ? await prepareDockerAssetWorkspace(runDirectory, plan.revision)
+    : workspaceRoot;
+  const frontendAssetsHash = frontendAssetsFingerprint(
+    assetWorkspace,
+    plan.revision,
+    undefined,
+    planUsesDocker ? trustedDependenciesFingerprint : undefined,
+  );
+  const databaseConnection = planUsesDocker ? 'mysql' : 'sqlite';
+  const databaseIdentity = planUsesDocker
+    ? 'mysql:mysql-browser-check/browser_check'
+    : `sqlite:${relative(workspaceRoot, runDirectory).split(sep).join('/')}/runtime/browser-check.sqlite`;
+  if (planUsesDocker) {
     plannedBaseUrl.hostname = 'localhost';
   }
+  const authStateHash = plan.environment.useAuthState
+    ? `sha256:${createHash('sha256')
+        .update(await readFile(resolve(runDirectory, 'auth/user.json')))
+        .digest('hex')}`
+    : undefined;
   const runtime = {
     baseUrl: plannedBaseUrl.toString(),
     useAuthState: plan.environment.useAuthState ?? false,
+    appEnvironment: 'testing',
+    databaseConnection,
+    databaseIdentifierHash: `sha256:${createHash('sha256').update(databaseIdentity).digest('hex')}`,
+    ...(planUsesDocker ? { dependenciesFingerprint: trustedDependenciesFingerprint } : {}),
     browser: plan.environment.browser,
     locale: plan.environment.locale,
     timezone: plan.environment.timezone,
-    ...(plan.environment.useAuthState ? { authStateHash: `sha256:${'a'.repeat(64)}` } : {}),
+    ...(authStateHash ? { authStateHash } : {}),
   };
   const claim = {
     schemaVersion: '1.0',
@@ -730,19 +1039,25 @@ async function writeRunClaim(runDirectory, token, mutate, options = {}) {
     runDir: runDirectory,
     planHash,
     generatedSourceHash: generatedFingerprint,
+    frontendAssetsHash,
     planRevision: structuredClone(plan.revision),
     preflightRevision: structuredClone(plan.revision),
     runtime,
     claimedAt: '2026-08-01T15:00:00.000Z',
   };
   if (options.postflightExitCode !== undefined) {
+    const manifestSource = await readFile(resolve(runDirectory, '.browser-check-artifacts.json'));
     claim.postflight = {
       completedAt: '2026-08-01T15:00:01.000Z',
       planHash,
       generatedSourceHash: generatedFingerprint,
+      frontendAssetsHash,
       revision: structuredClone(plan.revision),
       runtime: structuredClone(runtime),
       playwrightExitCode: options.postflightExitCode,
+      executionArtifactManifestHash: `sha256:${createHash('sha256')
+        .update(manifestSource)
+        .digest('hex')}`,
     };
   }
   mutate?.(claim);
@@ -752,8 +1067,49 @@ async function writeRunClaim(runDirectory, token, mutate, options = {}) {
   );
 }
 
-function runPlaywrightConfig(runDirectory, token) {
+function runPlaywrightConfig(runDirectory, token, environmentOverrides = {}) {
   const playwrightCli = resolve(workspaceRoot, 'node_modules/@playwright/test/cli.js');
+  const plan = JSON.parse(readFileSync(resolve(runDirectory, 'plan.json'), 'utf8'));
+  const planBaseUrl = new URL(plan.environment.baseUrl);
+  const isDocker = planBaseUrl.hostname === 'nginx-browser-check';
+  const databaseIdentifier = isDocker
+    ? 'mysql:mysql-browser-check/browser_check'
+    : `sqlite:${relative(workspaceRoot, runDirectory).split(sep).join('/')}/runtime/browser-check.sqlite`;
+
+  const environment = {
+    ...process.env,
+    BROWSER_CHECK_RUN_DIR: relative(workspaceRoot, runDirectory),
+    BROWSER_CHECK_RUN_TOKEN: token,
+    PLAYWRIGHT_BASE_URL: plan.environment.baseUrl,
+    BROWSER_CHECK_USE_AUTH_STATE: String(plan.environment.useAuthState ?? false),
+    BROWSER_CHECK_DATABASE_CONNECTION: isDocker ? 'mysql' : 'sqlite',
+    BROWSER_CHECK_DATABASE_IDENTIFIER: databaseIdentifier,
+    ...(isDocker
+      ? {
+          BROWSER_CHECK_ASSET_WORKSPACE: `${relative(workspaceRoot, runDirectory).split(sep).join('/')}/runtime/assets`,
+          BROWSER_CHECK_TRUSTED_BASE_SHA: plan.revision.baseSha,
+          BROWSER_CHECK_TRUSTED_DEPENDENCIES_FINGERPRINT: trustedDependenciesFingerprint,
+          BROWSER_CHECK_TRUSTED_HEAD_SHA: plan.revision.headSha,
+          BROWSER_CHECK_TRUSTED_WORKTREE_FINGERPRINT: plan.revision.worktreeFingerprint,
+        }
+      : {}),
+  };
+  for (const name of [
+    'BROWSER_CHECK_TRUSTED_BASE_SHA',
+    'BROWSER_CHECK_TRUSTED_DEPENDENCIES_FINGERPRINT',
+    'BROWSER_CHECK_TRUSTED_HEAD_SHA',
+    'BROWSER_CHECK_TRUSTED_WORKTREE_FINGERPRINT',
+  ]) {
+    if (!isDocker) {
+      delete environment[name];
+    }
+  }
+  Object.assign(environment, environmentOverrides);
+  for (const [name, value] of Object.entries(environment)) {
+    if (value === undefined) {
+      delete environment[name];
+    }
+  }
 
   return spawnSync(
     process.execPath,
@@ -761,12 +1117,8 @@ function runPlaywrightConfig(runDirectory, token) {
     {
       cwd: workspaceRoot,
       encoding: 'utf8',
-      env: {
-        ...process.env,
-        BROWSER_CHECK_RUN_DIR: relative(workspaceRoot, runDirectory),
-        BROWSER_CHECK_RUN_TOKEN: token,
-      },
-      timeout: 15_000,
+      env: environment,
+      timeout: 60_000,
     },
   );
 }
@@ -796,8 +1148,10 @@ function assertInvalidWrapper(execution, expectedDiagnostic) {
 
 await test('change-verification validator contract matrix', async (t) => {
   const testOwnedChangeDirectories = new Set();
+  const fixtureRevision = currentWrapperFixtureRevision();
 
   try {
+    validatorGitDirectory = await prepareValidatorGit();
     await t.test('accepts an explicit not-required run', async () => {
       const runDirectory = await writeFixture(
         testOwnedChangeDirectories,
@@ -818,6 +1172,412 @@ await test('change-verification validator contract matrix', async (t) => {
       );
 
       assertValid(runValidator(runDirectory));
+    });
+
+    await t.test('rejects fabricated agent-browser image and DOM evidence', async () => {
+      const configureAgentBrowserPass = (fixture, evidencePath, evidenceContents) => {
+        const check = fixture.plan.checks[0];
+        const checkResult = fixture.result.results[0];
+        check.lifecycle = 'change-only';
+        check.driver = 'agent-browser';
+        check.evidence = ['Focused browser evidence'];
+        checkResult.driver = 'agent-browser';
+        checkResult.status = 'pass';
+        checkResult.actualResult = 'The agent-browser check was reported as passing.';
+        checkResult.environment = {
+          browser: 'chromium',
+          viewport: '1280x720',
+          baseUrl: 'http://localhost:8000',
+        };
+        checkResult.evidence = [evidencePath];
+        delete checkResult.blocker;
+        fixture.result.summary.notRun = 0;
+        fixture.result.summary.pass = 1;
+        fixture.verdict = 'pass';
+        fixture.files[evidencePath] = evidenceContents;
+      };
+      const imageRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'agent-browser-fake-image',
+        '20260801231249',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          configureAgentBrowserPass(
+            fixture,
+            'evidence/screenshots/fabricated.png',
+            'not an image\n',
+          );
+        },
+      );
+      const domRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'agent-browser-empty-dom',
+        '20260801231250',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          const domPath = `evidence/dom/${fixture.plan.checks[0].id}.json`;
+          configureAgentBrowserPass(
+            fixture,
+            domPath,
+            `${JSON.stringify(
+              {
+                schemaVersion: '1.0',
+                checkId: fixture.plan.checks[0].id,
+                url: 'http://localhost:8000/manual-review',
+                capturedAt: '2026-08-01T15:00:00.000Z',
+                content: '   ',
+              },
+              null,
+              2,
+            )}\n`,
+          );
+        },
+      );
+
+      assertInvalid(runValidator(imageRunDirectory), /must contain a structurally valid PNG image/);
+      assertInvalid(runValidator(domRunDirectory), /content: must be a non-empty string/);
+    });
+
+    await t.test('rejects agent-browser DOM evidence from an unplanned URL', async () => {
+      const configureAgentBrowserDomPass = (fixture, url) => {
+        const check = fixture.plan.checks[0];
+        const checkResult = fixture.result.results[0];
+        const evidencePath = `evidence/dom/${check.id}.json`;
+        check.lifecycle = 'change-only';
+        check.driver = 'agent-browser';
+        check.evidence = ['Focused browser DOM evidence'];
+        checkResult.driver = 'agent-browser';
+        checkResult.status = 'pass';
+        checkResult.actualResult = 'The agent-browser check was reported as passing.';
+        checkResult.environment = {
+          browser: 'chromium',
+          viewport: '1280x720',
+          baseUrl: 'http://localhost:8000',
+        };
+        checkResult.evidence = [evidencePath];
+        delete checkResult.blocker;
+        fixture.result.summary.notRun = 0;
+        fixture.result.summary.pass = 1;
+        fixture.verdict = 'pass';
+        fixture.files[evidencePath] = `${JSON.stringify(
+          {
+            schemaVersion: '1.0',
+            checkId: check.id,
+            url,
+            capturedAt: '2026-08-01T15:00:00.000Z',
+            content: '<main>Observed browser content</main>',
+          },
+          null,
+          2,
+        )}\n`;
+      };
+      const foreignOriginRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'agent-dom-foreign-origin',
+        '20260801231312',
+        makeHumanNotRunFixture,
+        (fixture) => configureAgentBrowserDomPass(fixture, 'https://example.test/manual-review'),
+      );
+      const differentPathRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'agent-dom-different-path',
+        '20260801231313',
+        makeHumanNotRunFixture,
+        (fixture) => configureAgentBrowserDomPass(fixture, 'http://localhost:8000/other-review'),
+      );
+
+      assertInvalid(
+        runValidator(foreignOriginRunDirectory),
+        /must equal the planned target URL http:\/\/localhost:8000\/manual-review/,
+      );
+      assertInvalid(
+        runValidator(differentPathRunDirectory),
+        /must equal the planned target URL http:\/\/localhost:8000\/manual-review/,
+      );
+    });
+
+    await t.test('accepts structured completed and advisory delegated work', async () => {
+      const runDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'valid-delegated-work',
+        '20260801231230',
+        makeNotRequiredFixture,
+        (fixture) => {
+          const normalizedChangeId = fixture.plan.change.id.replaceAll('-', '');
+          const delegatedWorkId = `DW-${normalizedChangeId}-001`;
+          const evidencePath = `evidence/delegated/${delegatedWorkId}.json`;
+          fixture.plan.delegatedWorkItems = [
+            {
+              id: delegatedWorkId,
+              type: 'feature-test',
+              priority: 'P1',
+              requiredForVerdict: true,
+              status: 'completed',
+              target: 'tests/Feature/ExampleTest.php',
+              reason: 'The deterministic server contract belongs in a feature test.',
+              evidence: [evidencePath],
+            },
+            {
+              id: `DW-${normalizedChangeId}-002`,
+              type: 'permanent-e2e',
+              priority: 'P3',
+              requiredForVerdict: false,
+              status: 'not_required',
+              target: 'tests/e2e/tests/example/example.spec.ts',
+              reason: 'Reconsider only if this change-only scenario recurs.',
+              evidence: [],
+            },
+          ];
+          fixture.files[evidencePath] = `${JSON.stringify(
+            {
+              schemaVersion: '1.0',
+              delegatedWorkId,
+              type: 'feature-test',
+              target: 'tests/Feature/ExampleTest.php',
+              revision: fixture.plan.revision,
+              command: 'php artisan test tests/Feature/ExampleTest.php',
+              workingDirectory: '.',
+              selectedTargets: ['tests/Feature/ExampleTest.php'],
+              exitCode: 0,
+              summary: 'The delegated feature test passed.',
+            },
+            null,
+            2,
+          )}\n`;
+        },
+      );
+
+      assertValid(runValidator(runDirectory));
+    });
+
+    await t.test('requires evidence for completed required delegated work', async () => {
+      const runDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'delegated-work-evidence',
+        '20260801231231',
+        makeNotRequiredFixture,
+        (fixture) => {
+          fixture.plan.delegatedWorkItems = [
+            {
+              id: `DW-${fixture.plan.change.id.replaceAll('-', '')}-001`,
+              type: 'component-test',
+              priority: 'P2',
+              requiredForVerdict: true,
+              status: 'completed',
+              target: 'resources/js/components/Example.test.tsx',
+              reason: 'Component behavior needs durable regression coverage.',
+              evidence: [],
+            },
+          ];
+        },
+      );
+      const genericEvidenceRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'delegated-work-generic-evidence',
+        '20260801231235',
+        makeNotRequiredFixture,
+        (fixture) => {
+          fixture.plan.delegatedWorkItems = [
+            {
+              id: `DW-${fixture.plan.change.id.replaceAll('-', '')}-001`,
+              type: 'component-test',
+              priority: 'P2',
+              requiredForVerdict: true,
+              status: 'completed',
+              target: 'resources/js/components/Example.test.tsx',
+              reason: 'Component behavior needs durable regression coverage.',
+              evidence: ['evidence/notes/self-authored.txt'],
+            },
+          ];
+          fixture.files['evidence/notes/self-authored.txt'] = 'Looks good.\n';
+        },
+      );
+
+      assertInvalid(
+        runValidator(runDirectory),
+        /delegatedWorkItems\[0\]\.evidence: completed required delegated work must include evidence/,
+      );
+      assertInvalid(
+        runValidator(genericEvidenceRunDirectory),
+        /completed required delegated work must include evidence\/delegated\/DW-.*\.json/,
+      );
+    });
+
+    await t.test(
+      'requires incomplete verdict for unresolved required P0-P2 delegated work',
+      async () => {
+        const invalidRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'delegated-work-verdict-invalid',
+          '20260801231232',
+          makeNotRequiredFixture,
+          (fixture) => {
+            fixture.plan.delegatedWorkItems = [
+              {
+                id: `DW-${fixture.plan.change.id.replaceAll('-', '')}-001`,
+                type: 'unit-test',
+                priority: 'P2',
+                requiredForVerdict: true,
+                status: 'not_run',
+                target: 'tests/Unit/ExampleTest.php',
+                reason: 'The required boundary matrix has not been executed.',
+                evidence: [],
+              },
+            ];
+            fixture.verdict = 'conditional-pass';
+          },
+        );
+        const validRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'delegated-work-verdict-valid',
+          '20260801231233',
+          makeNotRequiredFixture,
+          (fixture) => {
+            fixture.plan.delegatedWorkItems = [
+              {
+                id: `DW-${fixture.plan.change.id.replaceAll('-', '')}-001`,
+                type: 'unit-test',
+                priority: 'P2',
+                requiredForVerdict: true,
+                status: 'blocked',
+                target: 'tests/Unit/ExampleTest.php',
+                reason: 'The required boundary matrix is blocked by missing fixture data.',
+                evidence: [],
+              },
+            ];
+            fixture.verdict = 'incomplete';
+          },
+        );
+        const failedCheckRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'delegated-work-verdict-failed-check',
+          '20260801231234',
+          makeHumanNotRunFixture,
+          (fixture) => {
+            configureFailingPlaywrightFixture(fixture);
+            fixture.plan.delegatedWorkItems = [
+              {
+                id: `DW-${fixture.plan.change.id.replaceAll('-', '')}-001`,
+                type: 'unit-test',
+                priority: 'P1',
+                requiredForVerdict: true,
+                status: 'not_run',
+                target: 'tests/Unit/ExampleTest.php',
+                reason: 'A required security regression remains unexecuted.',
+                evidence: [],
+              },
+            ];
+            fixture.verdict = 'incomplete';
+          },
+        );
+
+        assertInvalid(
+          runValidator(invalidRunDirectory),
+          /verdict must be incomplete while required P0-P2 delegated work is not completed/,
+        );
+        assertValid(runValidator(validRunDirectory));
+        assertValid(runValidator(failedCheckRunDirectory));
+      },
+    );
+
+    await t.test('rejects legacy delegated work and noncanonical delegated Markdown', async () => {
+      const legacyRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'legacy-delegated-work',
+        '20260801231234',
+        makeNotRequiredFixture,
+        (fixture) => {
+          fixture.plan.delegatedWork = [];
+          delete fixture.plan.delegatedWorkItems;
+        },
+      );
+      const projectionRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'delegated-work-projection',
+        '20260801231235',
+        makeNotRequiredFixture,
+        (fixture) => {
+          const reason = 'This recommendation is deliberately projected canonically.';
+          fixture.plan.delegatedWorkItems = [
+            {
+              id: `DW-${fixture.plan.change.id.replaceAll('-', '')}-001`,
+              type: 'other',
+              priority: 'P3',
+              requiredForVerdict: false,
+              status: 'not_required',
+              target: 'Manual follow-up',
+              reason,
+              evidence: [],
+            },
+          ];
+          fixture.artifactTransforms = {
+            'plan.md': (source) =>
+              source.replace(`| ${reason} |`, `| ${reason} | unexpected column |`),
+          };
+        },
+      );
+
+      assertInvalid(
+        runValidator(legacyRunDirectory),
+        /plan\.json\.delegatedWork: is obsolete; use delegatedWorkItems/,
+      );
+      assertInvalid(
+        runValidator(projectionRunDirectory),
+        /plan\.md: must contain one exact delegated-work row/,
+      );
+    });
+
+    await t.test('rejects extra, missing, and duplicate delegated-work fields', async () => {
+      const delegatedItem = (fixture) => ({
+        id: `DW-${fixture.plan.change.id.replaceAll('-', '')}-001`,
+        type: 'other',
+        priority: 'P3',
+        requiredForVerdict: false,
+        status: 'not_required',
+        target: 'Follow-up recommendation',
+        reason: 'No verdict dependency.',
+        evidence: [],
+      });
+      const extraRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'delegated-work-extra-key',
+        '20260801231254',
+        makeNotRequiredFixture,
+        (fixture) => {
+          fixture.plan.delegatedWorkItems = [{ ...delegatedItem(fixture), extra: true }];
+        },
+      );
+      const missingRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'delegated-work-missing-key',
+        '20260801231255',
+        makeNotRequiredFixture,
+        (fixture) => {
+          const item = delegatedItem(fixture);
+          delete item.reason;
+          fixture.plan.delegatedWorkItems = [item];
+        },
+      );
+      const duplicateRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'delegated-work-duplicate-id',
+        '20260801231256',
+        makeNotRequiredFixture,
+        (fixture) => {
+          const item = delegatedItem(fixture);
+          fixture.plan.delegatedWorkItems = [item, structuredClone(item)];
+        },
+      );
+
+      assertInvalid(
+        runValidator(extraRunDirectory),
+        /delegatedWorkItems\[0\]\.extra: is not an allowed key/,
+      );
+      assertInvalid(
+        runValidator(missingRunDirectory),
+        /delegatedWorkItems\[0\]\.reason: must be a non-empty string/,
+      );
+      assertInvalid(runValidator(duplicateRunDirectory), /duplicates delegated work ID/);
     });
 
     await t.test('rejects an empty plan', async () => {
@@ -929,6 +1689,172 @@ await test('change-verification validator contract matrix', async (t) => {
       );
     });
 
+    await t.test(
+      'rejects a passing objective result with an unresolved non-product issue',
+      async () => {
+        const runDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'pass-with-environment-issue',
+          '20260801231315',
+          makeHumanNotRunFixture,
+          (fixture) => {
+            const check = fixture.plan.checks[0];
+            const checkResult = fixture.result.results[0];
+            const issueId = `CVI-${fixture.result.runId}-001`;
+            const domEvidencePath = `evidence/dom/${check.id}.json`;
+            const evidencePath = 'evidence/environment-defect.txt';
+            check.lifecycle = 'change-only';
+            check.driver = 'agent-browser';
+            check.evidence = ['Focused browser DOM evidence'];
+            checkResult.driver = 'agent-browser';
+            checkResult.status = 'pass';
+            checkResult.actualResult = 'The agent-browser check was reported as passing.';
+            checkResult.environment = {
+              browser: 'chromium',
+              viewport: '1280x720',
+              baseUrl: 'http://localhost:8000',
+            };
+            checkResult.evidence = [domEvidencePath];
+            checkResult.issues = [issueId];
+            delete checkResult.blocker;
+            fixture.result.summary.notRun = 0;
+            fixture.result.summary.pass = 1;
+            fixture.result.issueRecords = [
+              {
+                id: issueId,
+                checkId: checkResult.checkId,
+                classification: 'environment-defect',
+                priority: 'P2',
+                expected: 'The isolated browser environment remains available.',
+                actual: 'The environment has an unresolved startup defect.',
+                reproduction: ['Start the isolated browser-check environment.'],
+                evidence: [evidencePath],
+                disposition: 'Repair the environment before reporting an objective pass.',
+              },
+            ];
+            fixture.verdict = 'pass';
+            fixture.files[domEvidencePath] = `${JSON.stringify(
+              {
+                schemaVersion: '1.0',
+                checkId: check.id,
+                url: 'http://localhost:8000/manual-review',
+                capturedAt: '2026-08-01T15:00:00.000Z',
+                content: '<main>Observed browser content</main>',
+              },
+              null,
+              2,
+            )}\n`;
+            fixture.files[evidencePath] = 'Environment startup remained unresolved.\n';
+          },
+        );
+
+        assertInvalid(
+          runValidator(runDirectory),
+          /an unresolved tooling, data, environment, or specification issue requires blocked or not_run status/,
+        );
+      },
+    );
+
+    await t.test('rejects PNG issue evidence owned by another check ID', async () => {
+      const runDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'foreign-issue-png',
+        '20260801231055',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          configureFailingPlaywrightFixture(fixture);
+          const foreignEvidencePath = 'evidence/screenshots/BC-FOREIGNCHECK-002-observed.png';
+          fixture.result.issueRecords[0].evidence = [foreignEvidencePath];
+          fixture.files[foreignEvidencePath] = validPng;
+        },
+      );
+
+      assertInvalid(
+        runValidator(runDirectory),
+        /PNG evidence must contain exactly one bounded owning check ID BC-VALIDATORTESTFOREIGNISSUEPNG\d+-001/,
+      );
+    });
+
+    await t.test(
+      'rejects PNG result and issue evidence that mixes owning and foreign check IDs',
+      async () => {
+        const resultRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'mixed-owner-result-png',
+          '20260801231310',
+          makeHumanNotRunFixture,
+          (fixture) => {
+            const checkId = fixture.plan.checks[0].id;
+            const mixedEvidencePath = `evidence/screenshots/${checkId}-BC-FOREIGNCHECK-002-observed.png`;
+            fixture.result.results[0].evidence = [mixedEvidencePath];
+            fixture.files[mixedEvidencePath] = validPng;
+          },
+        );
+        const issueRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'mixed-owner-issue-png',
+          '20260801231311',
+          makeHumanNotRunFixture,
+          (fixture) => {
+            const checkResult = fixture.result.results[0];
+            const checkId = checkResult.checkId;
+            const issueId = `CVI-${fixture.result.runId}-001`;
+            const mixedEvidencePath = `evidence/screenshots/${checkId}-BC-FOREIGNCHECK-002-observed.png`;
+            checkResult.issues = [issueId];
+            fixture.result.issueRecords = [
+              {
+                id: issueId,
+                checkId,
+                classification: 'environment-defect',
+                priority: 'P2',
+                expected: 'The human browser environment is available.',
+                actual: 'The environment is unavailable.',
+                reproduction: ['Open the planned human browser target.'],
+                evidence: [mixedEvidencePath],
+                disposition: 'Restore the environment before executing the check.',
+              },
+            ];
+            fixture.files[mixedEvidencePath] = validPng;
+          },
+        );
+
+        assertInvalid(
+          runValidator(resultRunDirectory),
+          /PNG evidence must contain exactly one bounded owning check ID BC-VALIDATORTESTMIXEDOWNERRESULTPNG\d+-001/,
+        );
+        assertInvalid(
+          runValidator(issueRunDirectory),
+          /PNG evidence must contain exactly one bounded owning check ID BC-VALIDATORTESTMIXEDOWNERISSUEPNG\d+-001/,
+        );
+      },
+    );
+
+    await t.test('rejects a named but unstructured assertion record as pass evidence', async () => {
+      const runDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'empty-assertion-record',
+        '20260801231056',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          configurePassingPlaywrightFixture(fixture);
+          const checkResult = fixture.result.results[0];
+          const assertionPath = `evidence/console/${checkResult.checkId}-assertion.json`;
+          checkResult.evidence = ['playwright-results.json', assertionPath];
+          fixture.files[assertionPath] = '{}\n';
+          for (const path of Object.keys(fixture.files)) {
+            if (path.endsWith('.png')) {
+              delete fixture.files[path];
+            }
+          }
+        },
+      );
+
+      assertInvalid(
+        runValidator(runDirectory),
+        /playwright-temporary pass requires an owner-bound focused PNG screenshot/,
+      );
+    });
+
     await t.test('rejects a verdict that contradicts completed results', async () => {
       const runDirectory = await writeFixture(
         testOwnedChangeDirectories,
@@ -942,7 +1868,7 @@ await test('change-verification validator contract matrix', async (t) => {
 
       assertInvalid(
         runValidator(runDirectory),
-        /verdict must be pass when no failed, blocked, or not-run checks remain/,
+        /verdict must be pass when no failed or unresolved work remains/,
       );
     });
 
@@ -1256,11 +2182,429 @@ await test('change-verification validator contract matrix', async (t) => {
         'valid-playwright-report',
         '20260801231016',
         makeHumanNotRunFixture,
-        configurePassingPlaywrightFixture,
+        (fixture) => {
+          configurePassingPlaywrightFixture(fixture);
+          const consolePath = 'evidence/console/planned.json';
+          const networkPath = 'evidence/network/planned.json';
+          fixture.result.results[0].evidence.push(consolePath, networkPath);
+          fixture.files[consolePath] = '{"errors":[]}\n';
+          fixture.files[networkPath] = '{"failedRequests":[]}\n';
+        },
       );
 
       assertValid(runValidator(runDirectory));
     });
+
+    await t.test(
+      'accepts an exact global pre-report execution error without report or postflight',
+      async () => {
+        const runDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'valid-global-execution-error',
+          '20260801231236',
+          makeHumanNotRunFixture,
+          configureGlobalExecutionErrorFixture,
+        );
+
+        assertValid(runValidator(runDirectory));
+      },
+    );
+
+    await t.test(
+      'rejects contradictory report and postflight artifacts for a global error',
+      async () => {
+        const reportRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'global-error-with-report',
+          '20260801231237',
+          makeHumanNotRunFixture,
+          configureGlobalExecutionErrorFixture,
+        );
+        const checkId = checkIdFor(basename(dirname(reportRunDirectory)));
+        await writeFile(
+          resolve(reportRunDirectory, 'playwright-results.json'),
+          `${JSON.stringify(passingPlaywrightReport(checkId), null, 2)}\n`,
+        );
+        const postflightRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'global-error-with-postflight',
+          '20260801231238',
+          makeHumanNotRunFixture,
+          (fixture) => {
+            configureGlobalExecutionErrorFixture(fixture);
+            fixture.browserClaim.postflightExitCode = 1;
+          },
+        );
+
+        assertInvalid(
+          runValidator(reportRunDirectory),
+          /\.browser-check-execution-error\.json: must not coexist with playwright-results\.json/,
+        );
+        assertInvalid(
+          runValidator(postflightRunDirectory),
+          /\.browser-check-run\.json\.postflight: must be omitted when a global pre-report execution error exists/,
+        );
+      },
+    );
+
+    await t.test(
+      'rejects malformed global error attribution and a non-incomplete verdict',
+      async () => {
+        const schemaRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'global-error-invalid-schema',
+          '20260801231239',
+          makeHumanNotRunFixture,
+          (fixture) => {
+            configureGlobalExecutionErrorFixture(fixture);
+            const executionError = JSON.parse(fixture.files['.browser-check-execution-error.json']);
+            executionError.phase = 'spawn';
+            executionError.classification = 'product-defect';
+            executionError.affectedCheckIds = [];
+            executionError.extra = true;
+            fixture.files['.browser-check-execution-error.json'] = `${JSON.stringify(
+              executionError,
+              null,
+              2,
+            )}\n`;
+          },
+        );
+        const verdictRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'global-error-conditional-verdict',
+          '20260801231240',
+          makeHumanNotRunFixture,
+          (fixture) => {
+            configureGlobalExecutionErrorFixture(fixture);
+            fixture.plan.checks[0].priority = 'P3';
+            fixture.verdict = 'conditional-pass';
+          },
+        );
+        const schemaValidation = runValidator(schemaRunDirectory);
+
+        assertInvalid(
+          schemaValidation,
+          /\.browser-check-execution-error\.json\.extra: is not an allowed key/,
+        );
+        assert.match(schemaValidation.stderr, /phase: must equal pre-report/);
+        assert.match(
+          schemaValidation.stderr,
+          /classification: must be one of: environment-defect, check-script-defect/,
+        );
+        assert.match(
+          schemaValidation.stderr,
+          /affectedCheckIds: must equal every planned playwright-temporary check ID/,
+        );
+        assertInvalid(
+          runValidator(verdictRunDirectory),
+          /verdict must be incomplete when a global pre-report browser execution error exists/,
+        );
+      },
+    );
+
+    await t.test(
+      'rejects missing, stale, and incomplete execution artifact manifests',
+      async () => {
+        const missingRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'manifest-missing',
+          '20260801231241',
+          makeHumanNotRunFixture,
+          configurePassingPlaywrightFixture,
+        );
+        await rm(resolve(missingRunDirectory, '.browser-check-artifacts.json'));
+
+        const staleRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'manifest-stale-file',
+          '20260801231242',
+          makeHumanNotRunFixture,
+          configurePassingPlaywrightFixture,
+        );
+        await writeFile(
+          resolve(
+            staleRunDirectory,
+            `evidence/screenshots/${checkIdFor(basename(dirname(staleRunDirectory)))}-planned.png`,
+          ),
+          'tampered screenshot\n',
+        );
+
+        const incompleteRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'manifest-unlisted-output',
+          '20260801231243',
+          makeHumanNotRunFixture,
+          configurePassingPlaywrightFixture,
+        );
+        await mkdir(resolve(incompleteRunDirectory, 'artifacts/planned'), { recursive: true });
+        await writeFile(
+          resolve(incompleteRunDirectory, 'artifacts/planned/unlisted.txt'),
+          'unlisted output\n',
+        );
+
+        assertInvalid(
+          runValidator(missingRunDirectory),
+          /\.browser-check-artifacts\.json: is required for Playwright reports and temporary-browser evidence/,
+        );
+        const staleValidation = runValidator(staleRunDirectory);
+        assertInvalid(
+          staleValidation,
+          /must match the current file bytes|must equal \d+, the current file size/,
+        );
+        assertInvalid(
+          runValidator(incompleteRunDirectory),
+          /must list every browser execution output file: artifacts\/planned\/unlisted\.txt/,
+        );
+      },
+    );
+
+    await t.test(
+      'rejects manifest schema drift, hash drift, and evidence outside the manifest',
+      async () => {
+        const schemaRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'manifest-schema-drift',
+          '20260801231244',
+          makeHumanNotRunFixture,
+          (fixture) => {
+            configurePassingPlaywrightFixture(fixture);
+            fixture.browserManifest = {
+              mutate: (manifest) => {
+                manifest.extra = true;
+                manifest.files.reverse();
+              },
+            };
+          },
+        );
+        const hashRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'manifest-claim-hash-drift',
+          '20260801231245',
+          makeHumanNotRunFixture,
+          (fixture) => {
+            configurePassingPlaywrightFixture(fixture);
+            fixture.browserClaim.mutate = (claim) => {
+              claim.postflight.executionArtifactManifestHash = `sha256:${'0'.repeat(64)}`;
+            };
+          },
+        );
+        const citationRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'manifest-evidence-citation',
+          '20260801231246',
+          makeHumanNotRunFixture,
+          (fixture) => {
+            configurePassingPlaywrightFixture(fixture);
+            const assertionPath = 'evidence/notes/assertion.txt';
+            fixture.result.results[0].evidence.push(assertionPath);
+            fixture.files[assertionPath] = 'Assertion note created outside wrapper output roots.\n';
+          },
+        );
+
+        const schemaValidation = runValidator(schemaRunDirectory);
+        assertInvalid(
+          schemaValidation,
+          /\.browser-check-artifacts\.json\.extra: is not an allowed key/,
+        );
+        assert.match(schemaValidation.stderr, /manifest paths must be strictly sorted/);
+        assertInvalid(
+          runValidator(hashRunDirectory),
+          /executionArtifactManifestHash: must match the exact raw \.browser-check-artifacts\.json bytes/,
+        );
+        assertInvalid(
+          runValidator(citationRunDirectory),
+          /must include temporary-browser evidence evidence\/notes\/assertion\.txt/,
+        );
+      },
+    );
+
+    await t.test('rejects symlinked browser execution output', async () => {
+      const runDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'manifest-symlink-output',
+        '20260801231247',
+        makeHumanNotRunFixture,
+        configurePassingPlaywrightFixture,
+      );
+      const owningCheckId = checkIdFor(basename(dirname(runDirectory)));
+      await symlink(
+        `${owningCheckId}-planned.png`,
+        resolve(runDirectory, `evidence/screenshots/${owningCheckId}-planned-link.png`),
+      );
+
+      assertInvalid(
+        runValidator(runDirectory),
+        /execution output must not be a symlink: evidence\/screenshots\/.*-planned-link\.png/,
+      );
+    });
+
+    await t.test('rejects symlinked generic evidence', async () => {
+      const runDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'generic-evidence-symlink',
+        '20260801231248',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          fixture.result.results[0].evidence = ['evidence/screenshot.png'];
+        },
+      );
+      await mkdir(resolve(runDirectory, 'evidence'), { recursive: true });
+      await symlink('../plan.json', resolve(runDirectory, 'evidence/screenshot.png'));
+
+      assertInvalid(
+        runValidator(runDirectory),
+        /evidence\[0\]: must refer to a regular file with no symlink or hard-link aliases/,
+      );
+    });
+
+    await t.test('rejects hard-linked evidence copied from another run', async () => {
+      const sourceRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'hardlink-source',
+        '20260801231252',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          fixture.files['evidence/prior.png'] = validPng;
+        },
+      );
+      const runDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'hardlink-current',
+        '20260801231253',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          fixture.result.results[0].evidence = ['evidence/current.png'];
+        },
+      );
+      await mkdir(resolve(runDirectory, 'evidence'), { recursive: true });
+      await link(
+        resolve(sourceRunDirectory, 'evidence/prior.png'),
+        resolve(runDirectory, 'evidence/current.png'),
+      );
+
+      assertInvalid(
+        runValidator(runDirectory),
+        /evidence\[0\]: must refer to a regular file with no symlink or hard-link aliases/,
+      );
+    });
+
+    await t.test('rejects raw trace evidence outside temporary Playwright runs', async () => {
+      const runDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'generic-raw-trace',
+        '20260801231251',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          fixture.result.results[0].evidence = ['artifacts/manual/trace.zip'];
+          fixture.files['artifacts/manual/trace.zip'] = 'PK raw trace placeholder\n';
+        },
+      );
+
+      assertInvalid(
+        runValidator(runDirectory),
+        /ZIP evidence is prohibited because trace archives can contain session data/,
+      );
+    });
+
+    await t.test('rejects cited ZIP bytes hidden behind a non-ZIP extension', async () => {
+      const runDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'renamed-zip-evidence',
+        '20260801231314',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          const evidencePath = 'evidence/renamed-archive.bin';
+          fixture.result.results[0].evidence = [evidencePath];
+          fixture.files[evidencePath] = Buffer.from([
+            0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00,
+          ]);
+        },
+      );
+
+      assertInvalid(
+        runValidator(runDirectory),
+        /must not contain ZIP archive bytes under a renamed extension/,
+      );
+    });
+
+    await t.test('bounds structural evidence while streaming large binary evidence', async () => {
+      const oversizedTextPath = 'evidence/oversized-structure.txt';
+      const oversizedTextRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'oversized-structured-evidence',
+        '20260801231318',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          fixture.result.results[0].evidence = [oversizedTextPath];
+          fixture.files[oversizedTextPath] = '';
+        },
+      );
+      await truncate(resolve(oversizedTextRunDirectory, oversizedTextPath), 16 * 1024 * 1024 + 1);
+      assertInvalid(runValidator(oversizedTextRunDirectory), /16777216-byte structural file limit/);
+
+      const videoPath = 'videos/BC-LARGE-BINARY-evidence.webm';
+      const databasePath = 'artifacts/browser-check.sqlite';
+      const binaryRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'large-binary-streaming',
+        '20260801231319',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          configurePassingPlaywrightFixture(fixture);
+          fixture.result.results[0].evidence.push(videoPath, databasePath);
+          fixture.files[videoPath] = '';
+          fixture.files[databasePath] = '';
+        },
+      );
+      await Promise.all(
+        [videoPath, databasePath].map((relativePath) =>
+          truncate(resolve(binaryRunDirectory, relativePath), 16 * 1024 * 1024 + 1),
+        ),
+      );
+      await writeExecutionArtifactManifest(binaryRunDirectory);
+      await writeRunClaim(binaryRunDirectory, 'validator-contract-fixture-token', undefined, {
+        postflightExitCode: 0,
+      });
+
+      assertValid(runValidator(binaryRunDirectory));
+    });
+
+    await t.test(
+      'rejects unreferenced renamed ZIP bytes in the run root and auth directory',
+      async () => {
+        const rootRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'unreferenced-root-renamed-zip',
+          '20260801231316',
+          makeNotRequiredFixture,
+          (fixture) => {
+            fixture.files['renamed-root-archive.bin'] = Buffer.from([
+              0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00,
+            ]);
+          },
+        );
+        const authRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'unreferenced-auth-renamed-zip',
+          '20260801231317',
+          makeNotRequiredFixture,
+          (fixture) => {
+            fixture.files['auth/renamed-auth-archive.bin'] = Buffer.from([
+              0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00,
+            ]);
+          },
+        );
+
+        assertInvalid(
+          runValidator(rootRunDirectory),
+          /renamed-root-archive\.bin: ZIP evidence is prohibited because trace archives can contain session data/,
+        );
+        assertInvalid(
+          runValidator(authRunDirectory),
+          /auth\/renamed-auth-archive\.bin: ZIP evidence is prohibited because trace archives can contain session data/,
+        );
+      },
+    );
 
     await t.test('rejects Playwright stats that contradict leaf outcomes', async () => {
       const runDirectory = await writeFixture(
@@ -1812,13 +3156,158 @@ await test('change-verification validator contract matrix', async (t) => {
       assertValid(runValidator(runDirectory));
     });
 
+    await t.test('rejects reusable auth state even when the claim binds its hash', async () => {
+      const runDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'playwright-auth-state-hash',
+        '20260801231224',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          fixture.plan.environment.useAuthState = true;
+          configurePassingPlaywrightFixture(fixture);
+          fixture.plan.environment.baseUrl = 'http://nginx-browser-check:80';
+          fixture.result.results[0].environment.baseUrl = 'http://localhost';
+        },
+      );
+
+      assertInvalid(
+        runValidator(runDirectory),
+        /reusable auth state is unsupported; authenticate explicitly inside the check/,
+      );
+    });
+
+    await t.test('rejects an auth-state hash when reusable auth state is disabled', async () => {
+      const runDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'playwright-auth-hash-unexpected',
+        '20260801231228',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          configurePassingPlaywrightFixture(fixture);
+          fixture.browserClaim.mutate = (claim) => {
+            claim.runtime.authStateHash = `sha256:${'c'.repeat(64)}`;
+            claim.postflight.runtime.authStateHash = `sha256:${'c'.repeat(64)}`;
+          };
+        },
+      );
+
+      assertInvalid(
+        runValidator(runDirectory),
+        /authStateHash: must be omitted when useAuthState is false/,
+      );
+    });
+
+    await t.test('binds the exact testing database runtime tuple across postflight', async () => {
+      const invalidPlanRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'runtime-plan-environment',
+        '20260801231248',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          configurePassingPlaywrightFixture(fixture);
+          fixture.plan.environment.appEnvironment = 'staging';
+        },
+      );
+      const invalidConnectionRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'runtime-database-connection',
+        '20260801231249',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          configurePassingPlaywrightFixture(fixture);
+          fixture.browserClaim.mutate = (claim) => {
+            claim.runtime.databaseConnection = 'pgsql';
+            claim.postflight.runtime.databaseConnection = 'pgsql';
+          };
+        },
+      );
+      const invalidHashRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'runtime-database-hash',
+        '20260801231250',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          configurePassingPlaywrightFixture(fixture);
+          fixture.browserClaim.mutate = (claim) => {
+            claim.runtime.databaseIdentifierHash = 'sha256:bad';
+            claim.postflight.runtime.databaseIdentifierHash = 'sha256:bad';
+          };
+        },
+      );
+      const driftRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'runtime-database-hash-drift',
+        '20260801231251',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          configurePassingPlaywrightFixture(fixture);
+          fixture.browserClaim.mutate = (claim) => {
+            claim.postflight.runtime.databaseIdentifierHash = `sha256:${'e'.repeat(64)}`;
+          };
+        },
+      );
+
+      assertInvalid(
+        runValidator(invalidPlanRunDirectory),
+        /plan\.json\.environment\.appEnvironment: playwright-temporary checks require the testing application environment/,
+      );
+      assertInvalid(
+        runValidator(invalidConnectionRunDirectory),
+        /databaseConnection: must be one of: sqlite, mysql/,
+      );
+      assertInvalid(
+        runValidator(invalidHashRunDirectory),
+        /databaseIdentifierHash: must be a lowercase sha256 fingerprint/,
+      );
+      assertInvalid(
+        runValidator(driftRunDirectory),
+        /postflight\.runtime\.databaseIdentifierHash: must equal the preflight runtime databaseIdentifierHash/,
+      );
+    });
+
     await t.test(
-      'accepts a bound auth-state hash without reopening the mutable auth file',
+      'rejects mode-plausible but wrongly bound database claims and host auth state',
       async () => {
-        const runDirectory = await writeFixture(
+        const hostMysqlRunDirectory = await writeFixture(
           testOwnedChangeDirectories,
-          'playwright-auth-state-hash',
-          '20260801231224',
+          'runtime-host-mysql-binding',
+          '20260801231257',
+          makeHumanNotRunFixture,
+          (fixture) => {
+            configurePassingPlaywrightFixture(fixture);
+            fixture.browserClaim.mutate = (claim) => {
+              const mysqlHash = `sha256:${createHash('sha256')
+                .update('mysql:mysql-browser-check/browser_check')
+                .digest('hex')}`;
+              for (const runtime of [claim.runtime, claim.postflight.runtime]) {
+                runtime.databaseConnection = 'mysql';
+                runtime.databaseIdentifierHash = mysqlHash;
+              }
+            };
+          },
+        );
+        const dockerSqliteRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'runtime-docker-sqlite-binding',
+          '20260801231258',
+          makeHumanNotRunFixture,
+          (fixture) => {
+            configurePassingPlaywrightFixture(fixture);
+            fixture.plan.environment.baseUrl = 'http://nginx-browser-check:80';
+            fixture.result.results[0].environment.baseUrl = 'http://localhost';
+            fixture.browserClaim.mutate = (claim) => {
+              const plausibleHash = `sha256:${'f'.repeat(64)}`;
+              for (const runtime of [claim.runtime, claim.postflight.runtime]) {
+                runtime.databaseConnection = 'sqlite';
+                runtime.databaseIdentifierHash = plausibleHash;
+              }
+            };
+          },
+        );
+        const hostAuthRunDirectory = await writeFixture(
+          testOwnedChangeDirectories,
+          'runtime-host-auth-state',
+          '20260801231259',
           makeHumanNotRunFixture,
           (fixture) => {
             fixture.plan.environment.useAuthState = true;
@@ -1826,82 +3315,82 @@ await test('change-verification validator contract matrix', async (t) => {
           },
         );
 
-        assertValid(runValidator(runDirectory));
+        assertInvalid(
+          runValidator(hostMysqlRunDirectory),
+          /databaseConnection: must equal sqlite for the planned browser execution mode/,
+        );
+        assertInvalid(
+          runValidator(dockerSqliteRunDirectory),
+          /databaseConnection: must equal mysql for the planned browser execution mode/,
+        );
+        assertInvalid(
+          runValidator(hostAuthRunDirectory),
+          /host temporary-browser execution must not use authentication state/,
+        );
       },
     );
 
+    await t.test('requires HTTP and an explicit unprivileged host port', async () => {
+      const httpsRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'runtime-host-https',
+        '20260801231300',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          configurePassingPlaywrightFixture(fixture);
+          fixture.plan.environment.baseUrl = 'https://localhost:8443';
+          fixture.result.results[0].environment.baseUrl = 'https://localhost:8443';
+        },
+      );
+      const privilegedPortRunDirectory = await writeFixture(
+        testOwnedChangeDirectories,
+        'runtime-host-privileged-port',
+        '20260801231301',
+        makeHumanNotRunFixture,
+        (fixture) => {
+          configurePassingPlaywrightFixture(fixture);
+          fixture.plan.environment.baseUrl = 'http://localhost:80';
+          fixture.result.results[0].environment.baseUrl = 'http://localhost';
+        },
+      );
+
+      assertInvalid(runValidator(httpsRunDirectory), /temporary browser execution must use http/);
+      assertInvalid(
+        runValidator(privilegedPortRunDirectory),
+        /host temporary checks require an explicit port from 1024 through 65535/,
+      );
+    });
+
     await t.test(
-      'rejects missing, malformed, mismatched, or unexpected auth-state hashes',
+      'allows only the isolated Docker browser host and normalizes it to localhost',
       async () => {
-        const missingRunDirectory = await writeFixture(
+        const validRunDirectory = await writeFixture(
           testOwnedChangeDirectories,
-          'playwright-auth-hash-missing',
-          '20260801231225',
+          'runtime-isolated-docker-host',
+          '20260801231252',
           makeHumanNotRunFixture,
           (fixture) => {
-            fixture.plan.environment.useAuthState = true;
             configurePassingPlaywrightFixture(fixture);
-            fixture.browserClaim.mutate = (claim) => {
-              delete claim.runtime.authStateHash;
-            };
+            fixture.plan.environment.baseUrl = 'http://nginx-browser-check:80';
+            fixture.result.results[0].environment.baseUrl = 'http://localhost';
           },
         );
-        const malformedRunDirectory = await writeFixture(
+        const invalidRunDirectory = await writeFixture(
           testOwnedChangeDirectories,
-          'playwright-auth-hash-malformed',
-          '20260801231226',
-          makeHumanNotRunFixture,
-          (fixture) => {
-            fixture.plan.environment.useAuthState = true;
-            configurePassingPlaywrightFixture(fixture);
-            fixture.browserClaim.mutate = (claim) => {
-              claim.runtime.authStateHash = 'sha256:bad';
-              claim.postflight.runtime.authStateHash = 'sha256:bad';
-            };
-          },
-        );
-        const mismatchedRunDirectory = await writeFixture(
-          testOwnedChangeDirectories,
-          'playwright-auth-hash-mismatch',
-          '20260801231227',
-          makeHumanNotRunFixture,
-          (fixture) => {
-            fixture.plan.environment.useAuthState = true;
-            configurePassingPlaywrightFixture(fixture);
-            fixture.browserClaim.mutate = (claim) => {
-              claim.postflight.runtime.authStateHash = `sha256:${'b'.repeat(64)}`;
-            };
-          },
-        );
-        const unexpectedRunDirectory = await writeFixture(
-          testOwnedChangeDirectories,
-          'playwright-auth-hash-unexpected',
-          '20260801231228',
+          'runtime-shared-docker-host',
+          '20260801231253',
           makeHumanNotRunFixture,
           (fixture) => {
             configurePassingPlaywrightFixture(fixture);
-            fixture.browserClaim.mutate = (claim) => {
-              claim.runtime.authStateHash = `sha256:${'c'.repeat(64)}`;
-              claim.postflight.runtime.authStateHash = `sha256:${'c'.repeat(64)}`;
-            };
+            fixture.plan.environment.baseUrl = 'http://nginx:8000';
+            fixture.result.results[0].environment.baseUrl = 'http://nginx:8000';
           },
         );
 
+        assertValid(runValidator(validRunDirectory));
         assertInvalid(
-          runValidator(missingRunDirectory),
-          /\.browser-check-run\.json\.runtime\.authStateHash: must be a non-empty string/,
-        );
-        assertInvalid(
-          runValidator(malformedRunDirectory),
-          /authStateHash: must be a lowercase sha256 fingerprint/,
-        );
-        assertInvalid(
-          runValidator(mismatchedRunDirectory),
-          /postflight\.runtime\.authStateHash: must equal the preflight runtime authStateHash/,
-        );
-        assertInvalid(
-          runValidator(unexpectedRunDirectory),
-          /authStateHash: must be omitted when useAuthState is false/,
+          runValidator(invalidRunDirectory),
+          /must target localhost, a loopback address, or Docker nginx-browser-check/,
         );
       },
     );
@@ -2089,7 +3578,7 @@ await test('change-verification validator contract matrix', async (t) => {
           fixture.plan.scope.affectedFiles = { invalid: true };
           fixture.plan.scope.routes = 'not-an-array';
           fixture.plan.existingTestCommands = null;
-          fixture.plan.delegatedWork = {};
+          fixture.plan.delegatedWorkItems = {};
           fixture.plan.unnecessaryChecks = 'not-an-array';
           fixture.plan.assumptions = null;
           fixture.plan.specificationGaps = {};
@@ -2148,7 +3637,7 @@ await test('change-verification validator contract matrix', async (t) => {
           '20260801231023',
           {
             'generated/preflight.check.spec.ts':
-              "// ../../../../../playwright.browser-check.fixture\nimport { expect, test } from '@playwright/test';\n\ntest('comment bypass', async ({ page }) => {\n  await expect(page).toHaveURL(/.*/);\n});\n",
+              "// ../../../../../playwright.browser-check.fixture\nimport { expect, test } from '@playwright/test';\n\ntest('comment bypass', async ({ page }) => {\n  await expect(page).toHaveURL('/manual-review');\n});\n",
           },
         );
         const execution = runWrapper([], runDirectory);
@@ -2166,7 +3655,7 @@ await test('change-verification validator contract matrix', async (t) => {
         '20260801231024',
         {
           'generated/preflight.check.spec.ts':
-            "import { expect, test } from '../../../../../playwright.browser-check.fixture';\n\ntest('BC-WRAPPER-001 fetch bypass', async ({ page }) => {\n  await page.goto('/manual-review');\n  await fetch('https://example.test');\n  await expect(page).toHaveURL(/.*/);\n});\n",
+            "import { expect, test } from '../../../../../playwright.browser-check.fixture';\n\ntest('BC-WRAPPER-001 fetch bypass', async ({ page }) => {\n  await page.goto('/manual-review');\n  await fetch('https://example.test');\n  await expect(page.getByRole('heading')).toBeVisible();\n});\n",
         },
       );
       const execution = runWrapper([], runDirectory);
@@ -2175,7 +3664,7 @@ await test('change-verification validator contract matrix', async (t) => {
       assert.equal(execution.status, 2, diagnosticOutput(execution));
       assert.match(
         execution.stderr,
-        /(?:uses forbidden runtime identifier|must not execute) fetch/,
+        /(?:uses forbidden runtime identifier|must not execute) fetch|reachable awaited direct assertion/,
       );
     });
 
@@ -2186,14 +3675,17 @@ await test('change-verification validator contract matrix', async (t) => {
         '20260801231025',
         {
           'generated/preflight.check.spec.ts':
-            "import { expect, test } from '../../../../../playwright.browser-check.fixture';\n\ntest('BC-WRAPPER-001 context bypass', async ({ page }) => {\n  await page.goto('/manual-review');\n  await page.context().newContext();\n  await expect(page).toHaveURL(/.*/);\n});\n",
+            "import { expect, test } from '../../../../../playwright.browser-check.fixture';\n\ntest('BC-WRAPPER-001 context bypass', async ({ page }) => {\n  await page.goto('/manual-review');\n  await page.context().newContext();\n  await expect(page.getByRole('heading')).toBeVisible();\n});\n",
         },
       );
       const execution = runWrapper([], runDirectory);
 
       assert.equal(execution.signal, null, diagnosticOutput(execution));
       assert.equal(execution.status, 2, diagnosticOutput(execution));
-      assert.match(execution.stderr, /uses forbidden runtime property newContext/);
+      assert.match(
+        execution.stderr,
+        /uses forbidden runtime property newContext|reachable awaited direct assertion/,
+      );
     });
 
     await t.test('wrapper restricts test callbacks to the guarded page fixture', async () => {
@@ -2219,7 +3711,8 @@ await test('change-verification validator contract matrix', async (t) => {
           name: 'test-extend-alias',
           runId: '20260801231117',
           statement: 'const { extend: derive } = test;',
-          diagnostic: /forbidden binding property extend|may use test only/,
+          diagnostic:
+            /forbidden binding property extend|may use test only|safe linear page\/locator operations/,
         },
         {
           name: 'expect-constructor-alias',
@@ -2360,7 +3853,7 @@ await test('change-verification validator contract matrix', async (t) => {
               `test('BC-WRAPPER-001 ${regressionCase.name}', async ({ page }) => {\n` +
               `  await page.goto('${regressionCase.gotoTarget ?? '/manual-review'}');\n` +
               (regressionCase.statement ? `  ${regressionCase.statement}\n` : '') +
-              '  await expect(page).toHaveURL(/.*/);\n' +
+              "  await expect(page.getByRole('heading')).toBeVisible();\n" +
               '});\n',
           },
         );
@@ -2368,7 +3861,18 @@ await test('change-verification validator contract matrix', async (t) => {
 
         assert.equal(execution.signal, null, diagnosticOutput(execution));
         assert.equal(execution.status, 2, diagnosticOutput(execution));
-        assert.match(execution.stderr, regressionCase.diagnostic);
+        const requiresSpecificDiagnostic = [
+          'about-navigation-evidence-bypass',
+          'data-navigation-evidence-bypass',
+          'screenshot-filesystem-bypass',
+        ].includes(regressionCase.name);
+        const acceptedDiagnostic = requiresSpecificDiagnostic
+          ? regressionCase.diagnostic
+          : new RegExp(
+              `${regressionCase.diagnostic.source}|safe linear page\\/locator operations`,
+              regressionCase.diagnostic.flags,
+            );
+        assert.match(execution.stderr, acceptedDiagnostic);
       }
     });
 
@@ -2381,7 +3885,7 @@ await test('change-verification validator contract matrix', async (t) => {
           '20260801231222',
           {
             'generated/preflight.check.spec.ts':
-              "import { expect, test } from '../../../../../playwright.browser-check.fixture';\n\ntest('BC-WRAPPER-001 missing goto', async ({ page }) => {\n  await expect(page).toHaveURL(/.*/);\n});\n",
+              "import { expect, test } from '../../../../../playwright.browser-check.fixture';\n\ntest('BC-WRAPPER-001 missing goto', async ({ page }) => {\n  await expect(page.getByRole('heading')).toBeVisible();\n});\n",
           },
         );
         const mismatchedGotoRunDirectory = await writeWrapperFixture(
@@ -2390,7 +3894,7 @@ await test('change-verification validator contract matrix', async (t) => {
           '20260801231223',
           {
             'generated/preflight.check.spec.ts':
-              "import { expect, test } from '../../../../../playwright.browser-check.fixture';\n\ntest('BC-WRAPPER-001 mismatched goto', async ({ page }) => {\n  await page.goto('/different-target');\n  await expect(page).toHaveURL(/.*/);\n});\n",
+              "import { expect, test } from '../../../../../playwright.browser-check.fixture';\n\ntest('BC-WRAPPER-001 mismatched goto', async ({ page }) => {\n  await page.goto('/different-target');\n  await expect(page.getByRole('heading')).toBeVisible();\n});\n",
           },
         );
 
@@ -2418,7 +3922,7 @@ await test('change-verification validator contract matrix', async (t) => {
           'plan.json': `${JSON.stringify(
             {
               schemaVersion: '1.0',
-              change: { baseRef: fixtureBaseRef },
+              change: { baseRef: fixtureBaseRef, source: 'continuous-integration' },
               revision: staleRevision,
               environment: {
                 baseUrl: 'http://localhost:8000',
@@ -2517,7 +4021,10 @@ await test('change-verification validator contract matrix', async (t) => {
           const execution = runWrapper([], runDirectory);
           assert.equal(execution.signal, null, diagnosticOutput(execution));
           assert.equal(execution.status, 2, diagnosticOutput(execution));
-          assert.match(execution.stderr, /plan\.environment must be non-production/);
+          assert.match(
+            execution.stderr,
+            /plan\.environment must use appEnvironment=testing, browser=chromium, locale=ja-JP, and timezone=Asia\/Tokyo/,
+          );
           await assert.rejects(access(resolve(runDirectory, '.browser-check-run.json')), {
             code: 'ENOENT',
           });
@@ -2541,6 +4048,43 @@ await test('change-verification validator contract matrix', async (t) => {
       assert.equal(execution.signal, null, diagnosticOutput(execution));
       assert.notEqual(execution.status, 0, diagnosticOutput(execution));
       assert.match(diagnosticOutput(execution), /browser-check run claim does not match/);
+    });
+
+    await t.test('Playwright config binds Docker claims to trusted dependencies', async () => {
+      const runDirectory = await writeWrapperFixture(
+        testOwnedChangeDirectories,
+        'config-docker-dependency-binding',
+        '20260801231320',
+        {},
+      );
+      const planPath = resolve(runDirectory, 'plan.json');
+      const plan = JSON.parse(await readFile(planPath, 'utf8'));
+      plan.environment.baseUrl = 'http://nginx-browser-check:80';
+      await writeFile(planPath, `${JSON.stringify(plan, null, 2)}\n`);
+      const token = 'validator-contract-docker-token';
+      await writeRunClaim(runDirectory, token);
+
+      const missingFingerprintExecution = runPlaywrightConfig(runDirectory, token, {
+        BROWSER_CHECK_TRUSTED_DEPENDENCIES_FINGERPRINT: undefined,
+      });
+      assert.equal(
+        missingFingerprintExecution.signal,
+        null,
+        diagnosticOutput(missingFingerprintExecution),
+      );
+      assert.notEqual(
+        missingFingerprintExecution.status,
+        0,
+        diagnosticOutput(missingFingerprintExecution),
+      );
+      assert.match(
+        diagnosticOutput(missingFingerprintExecution),
+        /BROWSER_CHECK_TRUSTED_DEPENDENCIES_FINGERPRINT must be a lowercase sha256 fingerprint in Docker mode/,
+      );
+
+      const execution = runPlaywrightConfig(runDirectory, token);
+      assert.equal(execution.signal, null, diagnosticOutput(execution));
+      assert.equal(execution.status, 0, diagnosticOutput(execution));
     });
 
     await t.test('wrapper rejects a run with existing execution output', async () => {
@@ -2576,6 +4120,14 @@ await test('change-verification validator contract matrix', async (t) => {
       assert.match(changeDirectory, /\/VALIDATOR-TEST-[A-Z0-9-]+-\d+$/);
       await rm(changeDirectory, { recursive: true, force: true });
       await assert.rejects(access(changeDirectory), { code: 'ENOENT' });
+    }
+    if (validatorGitDirectory) {
+      const fakeGitDirectory = validatorGitDirectory;
+      validatorGitDirectory = undefined;
+      assert.equal(dirname(fakeGitDirectory), verificationRoot);
+      assert.match(fakeGitDirectory, /\/VALIDATOR-GIT-[A-Za-z0-9]+$/);
+      await rm(fakeGitDirectory, { recursive: true, force: true });
+      await assert.rejects(access(fakeGitDirectory), { code: 'ENOENT' });
     }
   }
 });

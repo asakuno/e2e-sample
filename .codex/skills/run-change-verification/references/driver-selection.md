@@ -40,6 +40,8 @@ Delegate to unit, feature, or component coverage when the concern is determinist
 - detailed display branches and error-code matrices.
 
 Describe the delegated target in the plan. Do not invent a new execution-driver value for future work.
+Use a structured `delegatedWorkItems` record with a stable `DW-*` ID, exact work type, priority,
+verdict requirement, status, target, reason, and evidence instead of a free-form recommendation.
 
 ## 3. Permanent E2E
 
@@ -65,10 +67,12 @@ Choose `playwright-temporary` with lifecycle `change-only` when:
 
 - steps and expected results are objective;
 - repeated execution during the change is useful;
-- Web-first assertions and trace evidence add confidence;
+- Web-first assertions and focused, sanitized evidence add confidence;
 - permanent maintenance is not justified.
 
 Generate code only under the run's `generated/` directory.
+You may read existing Page Objects to understand stable locators and intended behavior, but never
+import, call, or execute them or their helper graph in a temporary check.
 
 ## 6. Human
 
@@ -94,7 +98,7 @@ Choose `not-required` only after documenting why no additional execution is need
 | Auth | Request validation and credential rejection matrix | Existing or new feature tests | Deterministic server behavior does not need many browser paths |
 | Auth | Stable sign-in redirect across Laravel, session, Inertia, and React | Existing permanent E2E, executed as `existing-test` | A representative cross-boundary flow has regression value |
 | Stocks | Repository symbol and market filters | Existing or new feature test | The failure is isolated below the UI |
-| Stocks | One-off search pending-state transition with stable labels | `playwright-temporary` when component coverage is insufficient | Assertion and trace evidence help during the change without permanent cost |
+| Stocks | One-off search pending-state transition with stable labels | `playwright-temporary` when component coverage is insufficient | Assertion and focused screenshot evidence help during the change without permanent cost |
 | Watchlist | Authorization and persistence | Existing or new feature test | Server contracts provide stronger, cheaper evidence |
 | Watchlist | Keyboard focus after an Inertia mutation | `agent-browser` | Focus and navigation diagnostics are browser-specific and exploratory |
 | Dashboard | Responsive access to primary navigation | `agent-browser` | Viewport and interaction inspection matter; subjective impressions stay observations |

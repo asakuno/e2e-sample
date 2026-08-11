@@ -106,7 +106,7 @@ Do not copy temporary source unchanged. During promotion:
 
 ## Evidence Preservation
 
-Keep the original `plan.json`, `result.json`, temporary source, screenshots, traces, issues, review, and promotion decision as append-only historical evidence. Do not rewrite the old recommendation after promotion; record the permanent relationship in the new specification and current work instead.
+Keep the original `plan.json`, `result.json`, temporary source, sanitized evidence, issues, review, and promotion decision as append-only historical evidence. Do not rewrite the old recommendation after promotion; record the permanent relationship in the new specification and current work instead.
 
 Do not commit ignored change-verification artifacts solely because promotion occurred.
 

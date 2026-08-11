@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { createHash } from 'node:crypto';
-import { lstat, readFile, readdir, realpath, stat } from 'node:fs/promises';
+import { lstat, open, readdir, realpath } from 'node:fs/promises';
 import { basename, dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path';
+import { frontendAssetsFingerprint } from './browser-check-assets.mjs';
 import { revisionSnapshot } from './revision-fingerprint.mjs';
 
 const RESPONSIBILITIES = new Set(['unit', 'feature', 'component', 'browser']);
@@ -17,6 +18,14 @@ const DRIVERS = new Set([
 ]);
 const STATUSES = new Set(['pass', 'fail', 'blocked', 'not_run', 'observation', 'not_required']);
 const PRIORITIES = new Set(['P0', 'P1', 'P2', 'P3']);
+const DELEGATED_WORK_TYPES = new Set([
+  'unit-test',
+  'feature-test',
+  'component-test',
+  'permanent-e2e',
+  'other',
+]);
+const DELEGATED_WORK_STATUSES = new Set(['completed', 'blocked', 'not_run', 'not_required']);
 const ISSUE_CLASSIFICATIONS = new Set([
   'product-defect',
   'test-data-defect',
@@ -44,8 +53,232 @@ const PLAYWRIGHT_RESULT_STATUSES = new Set([
 const PLAYWRIGHT_EXPECTED_STATUSES = PLAYWRIGHT_RESULT_STATUSES;
 const CHECK_ID_PATTERN_SOURCE =
   '(?<![A-Za-z0-9-])BC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*-\\d{3}(?![A-Za-z0-9-])';
+const DELEGATED_WORK_ID_PATTERN_SOURCE =
+  '(?<![A-Za-z0-9-])DW-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*-\\d{3}(?![A-Za-z0-9-])';
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const FINGERPRINT_PATTERN = /^sha256:[0-9a-f]{64}$/;
+const EXECUTION_ARTIFACT_ROOT_FILE = 'playwright-results.json';
+const EXECUTION_ARTIFACT_ROOT_DIRECTORIES = [
+  'artifacts',
+  'playwright-report',
+  'evidence/console',
+  'evidence/network',
+  'evidence/screenshots',
+  'videos',
+];
+const ZIP_SIGNATURES = new Set(['504b0304', '504b0506', '504b0708']);
+const FILE_READ_CHUNK_BYTES = 64 * 1024;
+const MAX_STRUCTURED_FILE_BYTES = 16 * 1024 * 1024;
+const workspaceRoot = await realpath(process.cwd());
+
+function hasZipSignature(contents) {
+  return contents.byteLength >= 4 && ZIP_SIGNATURES.has(contents.subarray(0, 4).toString('hex'));
+}
+
+function regularFileStatsMatch(beforeStat, afterStat) {
+  return (
+    afterStat.isFile() &&
+    !afterStat.isSymbolicLink() &&
+    afterStat.nlink === 1 &&
+    beforeStat.dev === afterStat.dev &&
+    beforeStat.ino === afterStat.ino &&
+    beforeStat.size === afterStat.size &&
+    beforeStat.mtimeMs === afterStat.mtimeMs
+  );
+}
+
+async function streamRegularFile(
+  filePath,
+  beforeStat,
+  label,
+  onChunk,
+  { capturePrefixBytes = 0, maxBytes } = {},
+) {
+  if (beforeStat.isSymbolicLink() || !beforeStat.isFile() || beforeStat.nlink !== 1) {
+    throw new Error(`${label} must be a real, single-link regular file`);
+  }
+  if (maxBytes !== undefined && beforeStat.size > maxBytes) {
+    throw new Error(`${label} exceeds the ${maxBytes}-byte structural file limit`);
+  }
+
+  const prefix = Buffer.alloc(Math.min(capturePrefixBytes, beforeStat.size));
+  let prefixBytes = 0;
+  let fileHandle;
+  let descriptorAfterStat;
+  let totalBytes = 0;
+  try {
+    fileHandle = await open(filePath, 'r');
+    const descriptorBeforeStat = await fileHandle.stat();
+    if (!regularFileStatsMatch(beforeStat, descriptorBeforeStat)) {
+      throw new Error(`${label} changed before it could be read`);
+    }
+    const chunk = Buffer.allocUnsafe(FILE_READ_CHUNK_BYTES);
+    while (true) {
+      const { bytesRead } = await fileHandle.read(chunk, 0, chunk.byteLength, null);
+      if (bytesRead === 0) {
+        break;
+      }
+      totalBytes += bytesRead;
+      if (maxBytes !== undefined && totalBytes > maxBytes) {
+        throw new Error(`${label} exceeds the ${maxBytes}-byte structural file limit`);
+      }
+      const currentChunk = chunk.subarray(0, bytesRead);
+      if (prefixBytes < prefix.byteLength) {
+        const bytesToCopy = Math.min(prefix.byteLength - prefixBytes, currentChunk.byteLength);
+        currentChunk.copy(prefix, prefixBytes, 0, bytesToCopy);
+        prefixBytes += bytesToCopy;
+      }
+      onChunk(currentChunk);
+    }
+    descriptorAfterStat = await fileHandle.stat();
+  } finally {
+    await fileHandle?.close();
+  }
+
+  const pathAfterStat = await lstat(filePath);
+  if (
+    totalBytes !== beforeStat.size ||
+    !descriptorAfterStat ||
+    !regularFileStatsMatch(beforeStat, descriptorAfterStat) ||
+    !regularFileStatsMatch(beforeStat, pathAfterStat)
+  ) {
+    throw new Error(`${label} changed while it was being read`);
+  }
+  return { prefix, size: totalBytes };
+}
+
+async function hashRegularFile(filePath, beforeStat, label) {
+  const hash = createHash('sha256');
+  const { prefix, size } = await streamRegularFile(
+    filePath,
+    beforeStat,
+    label,
+    (chunk) => hash.update(chunk),
+    { capturePrefixBytes: 4 },
+  );
+  return { prefix, sha256: `sha256:${hash.digest('hex')}`, size };
+}
+
+async function readBoundedRegularFile(filePath, beforeStat, label, includeHash = false) {
+  const chunks = [];
+  const hash = includeHash ? createHash('sha256') : undefined;
+  const { prefix, size } = await streamRegularFile(
+    filePath,
+    beforeStat,
+    label,
+    (chunk) => {
+      chunks.push(Buffer.from(chunk));
+      hash?.update(chunk);
+    },
+    { capturePrefixBytes: 4, maxBytes: MAX_STRUCTURED_FILE_BYTES },
+  );
+  return {
+    contents: Buffer.concat(chunks, size),
+    prefix,
+    ...(hash ? { sha256: `sha256:${hash.digest('hex')}` } : {}),
+  };
+}
+
+async function readRegularFilePrefix(filePath, beforeStat, label, byteCount = 4) {
+  if (beforeStat.isSymbolicLink() || !beforeStat.isFile() || beforeStat.nlink !== 1) {
+    throw new Error(`${label} must be a real, single-link regular file`);
+  }
+  const prefix = Buffer.alloc(Math.min(byteCount, beforeStat.size));
+  let fileHandle;
+  let descriptorAfterStat;
+  let bytesRead = 0;
+  try {
+    fileHandle = await open(filePath, 'r');
+    const descriptorBeforeStat = await fileHandle.stat();
+    if (!regularFileStatsMatch(beforeStat, descriptorBeforeStat)) {
+      throw new Error(`${label} changed before it could be inspected`);
+    }
+    if (prefix.byteLength > 0) {
+      ({ bytesRead } = await fileHandle.read(prefix, 0, prefix.byteLength, 0));
+    }
+    descriptorAfterStat = await fileHandle.stat();
+  } finally {
+    await fileHandle?.close();
+  }
+  const pathAfterStat = await lstat(filePath);
+  if (
+    bytesRead !== prefix.byteLength ||
+    !descriptorAfterStat ||
+    !regularFileStatsMatch(beforeStat, descriptorAfterStat) ||
+    !regularFileStatsMatch(beforeStat, pathAfterStat)
+  ) {
+    throw new Error(`${label} changed while it was being inspected`);
+  }
+  return prefix;
+}
+
+function crc32(buffer) {
+  let crc = 0xffffffff;
+  for (const byte of buffer) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+    }
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function isStructurallyValidPng(contents) {
+  if (
+    contents.byteLength < 45 ||
+    !contents.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex'))
+  ) {
+    return false;
+  }
+  let offset = 8;
+  let chunkIndex = 0;
+  let sawHeader = false;
+  let sawImageData = false;
+  let sawEnd = false;
+  while (offset + 12 <= contents.byteLength) {
+    const dataLength = contents.readUInt32BE(offset);
+    const typeOffset = offset + 4;
+    const dataOffset = offset + 8;
+    const dataEnd = dataOffset + dataLength;
+    const crcOffset = dataEnd;
+    const nextOffset = crcOffset + 4;
+    if (nextOffset > contents.byteLength) {
+      return false;
+    }
+    const type = contents.subarray(typeOffset, dataOffset).toString('ascii');
+    if (!/^[A-Za-z]{4}$/.test(type)) {
+      return false;
+    }
+    const expectedCrc = contents.readUInt32BE(crcOffset);
+    if (crc32(contents.subarray(typeOffset, dataEnd)) !== expectedCrc) {
+      return false;
+    }
+    if (type === 'IHDR') {
+      if (chunkIndex !== 0 || sawHeader || dataLength !== 13) {
+        return false;
+      }
+      sawHeader =
+        contents.readUInt32BE(dataOffset) > 0 && contents.readUInt32BE(dataOffset + 4) > 0;
+      if (!sawHeader) {
+        return false;
+      }
+    } else if (type === 'IDAT') {
+      if (!sawHeader || sawEnd || dataLength === 0) {
+        return false;
+      }
+      sawImageData = true;
+    } else if (type === 'IEND') {
+      if (!sawHeader || !sawImageData || sawEnd || dataLength !== 0) {
+        return false;
+      }
+      sawEnd = true;
+      return nextOffset === contents.byteLength;
+    }
+    offset = nextOffset;
+    chunkIndex += 1;
+  }
+  return false;
+}
 
 function calendarComponentsAreValid(year, month, day, hour, minute, second, millisecond = 0) {
   const candidate = new Date(0);
@@ -108,6 +341,9 @@ function canonicalBrowserBaseUrl(value, path, requireLocalHost = false) {
     addError(path, 'must use http or https');
     return '';
   }
+  if (requireLocalHost && parsedUrl.protocol !== 'http:') {
+    addError(path, 'temporary browser execution must use http');
+  }
   if (parsedUrl.username || parsedUrl.password) {
     addError(path, 'must not contain credentials');
   }
@@ -115,11 +351,11 @@ function canonicalBrowserBaseUrl(value, path, requireLocalHost = false) {
     addError(path, 'must not contain a query string or fragment');
   }
 
-  const allowedHosts = new Set(['localhost', '127.0.0.1', '[::1]', 'nginx']);
+  const allowedHosts = new Set(['localhost', '127.0.0.1', '[::1]', 'nginx-browser-check']);
   if (requireLocalHost && !allowedHosts.has(parsedUrl.hostname)) {
-    addError(path, 'must target localhost, a loopback address, or Docker nginx');
+    addError(path, 'must target localhost, a loopback address, or Docker nginx-browser-check');
   }
-  if (parsedUrl.hostname === 'nginx') {
+  if (parsedUrl.hostname === 'nginx-browser-check') {
     parsedUrl.hostname = 'localhost';
   }
 
@@ -264,26 +500,42 @@ function requireEnum(value, allowed, path) {
   return value;
 }
 
-async function readRunFile(filename) {
+function requireExactKeys(record, allowedKeys, path) {
+  for (const key of Object.keys(record)) {
+    if (!allowedKeys.has(key)) {
+      addError(`${path}.${key}`, 'is not an allowed key');
+    }
+  }
+}
+
+async function readRunFileData(filename, includeHash = false) {
   const path = resolve(runDir, filename);
 
   try {
     const pathStat = await lstat(path);
-    if (pathStat.isSymbolicLink() || !pathStat.isFile()) {
-      addError(filename, 'must be a regular file, not a symlink');
-      return '';
+    if (pathStat.isSymbolicLink() || !pathStat.isFile() || pathStat.nlink !== 1) {
+      addError(filename, 'must be a regular file with no symlink or hard-link aliases');
+      return undefined;
     }
     const realFilePath = await realpath(path);
     if (!pathStaysInside(realRunDir, realFilePath)) {
       addError(filename, 'resolves outside the run directory');
-      return '';
+      return undefined;
     }
 
-    return await readFile(realFilePath, 'utf8');
+    return await readBoundedRegularFile(realFilePath, pathStat, filename, includeHash);
   } catch (error) {
     addError(filename, `cannot be read: ${error.message}`);
-    return '';
+    return undefined;
   }
+}
+
+async function readRunFileBytes(filename) {
+  return (await readRunFileData(filename))?.contents;
+}
+
+async function readRunFile(filename) {
+  return (await readRunFileBytes(filename))?.toString('utf8') ?? '';
 }
 
 async function readJson(filename) {
@@ -480,7 +732,6 @@ async function generatedSourceFingerprint() {
     return left < right ? -1 : 1;
   });
   for (const generatedCheck of sortedChecks) {
-    let source;
     try {
       const realGeneratedCheck = await realpath(generatedCheck);
       if (!pathStaysInside(realRunDir, realGeneratedCheck)) {
@@ -490,7 +741,27 @@ async function generatedSourceFingerprint() {
         );
         continue;
       }
-      source = await readFile(realGeneratedCheck);
+      const generatedCheckStat = await lstat(realGeneratedCheck);
+      if (
+        generatedCheckStat.isSymbolicLink() ||
+        !generatedCheckStat.isFile() ||
+        generatedCheckStat.nlink !== 1
+      ) {
+        addError(
+          '.browser-check-run.json.generatedSourceHash',
+          `generated source must be a real, single-link regular file: ${relative(generatedDir, generatedCheck)}`,
+        );
+        continue;
+      }
+      fingerprint.update(relative(generatedDir, generatedCheck).split(sep).join('/'));
+      fingerprint.update('\0');
+      await streamRegularFile(
+        realGeneratedCheck,
+        generatedCheckStat,
+        `generated source ${relative(generatedDir, generatedCheck)}`,
+        (chunk) => fingerprint.update(chunk),
+      );
+      fingerprint.update('\0');
     } catch (error) {
       addError(
         '.browser-check-run.json.generatedSourceHash',
@@ -498,10 +769,6 @@ async function generatedSourceFingerprint() {
       );
       continue;
     }
-    fingerprint.update(relative(generatedDir, generatedCheck).split(sep).join('/'));
-    fingerprint.update('\0');
-    fingerprint.update(source);
-    fingerprint.update('\0');
   }
 
   return `sha256:${fingerprint.digest('hex')}`;
@@ -513,15 +780,20 @@ function validateBrowserRuntime(
   canonicalPlanBaseUrl,
   plannedUseAuthState,
   planEnvironmentValues,
+  expectedDatabaseRuntime,
 ) {
   const runtime = requireRecord(value, path);
   const expectedKeys = new Set([
     'baseUrl',
+    'appEnvironment',
+    'databaseConnection',
+    'databaseIdentifierHash',
     'browser',
     'locale',
     'timezone',
     'useAuthState',
     ...(plannedUseAuthState ? ['authStateHash'] : []),
+    ...(expectedDatabaseRuntime.connection === 'mysql' ? ['dependenciesFingerprint'] : []),
   ]);
   for (const key of Object.keys(runtime)) {
     if (!expectedKeys.has(key)) {
@@ -555,6 +827,57 @@ function validateBrowserRuntime(
     }
   }
 
+  const appEnvironment = requireString(runtime, 'appEnvironment', path);
+  if (appEnvironment && appEnvironment !== 'testing') {
+    addError(`${path}.appEnvironment`, 'must equal testing');
+  }
+  if (
+    appEnvironment &&
+    planEnvironmentValues.appEnvironment &&
+    appEnvironment !== planEnvironmentValues.appEnvironment
+  ) {
+    addError(`${path}.appEnvironment`, 'must match plan.environment.appEnvironment');
+  }
+
+  const databaseConnection = requireEnum(
+    runtime.databaseConnection,
+    new Set(['sqlite', 'mysql']),
+    `${path}.databaseConnection`,
+  );
+  const databaseIdentifierHash = requireString(runtime, 'databaseIdentifierHash', path);
+  if (databaseIdentifierHash && !FINGERPRINT_PATTERN.test(databaseIdentifierHash)) {
+    addError(`${path}.databaseIdentifierHash`, 'must be a lowercase sha256 fingerprint');
+  }
+  if (
+    databaseConnection &&
+    expectedDatabaseRuntime.connection &&
+    databaseConnection !== expectedDatabaseRuntime.connection
+  ) {
+    addError(
+      `${path}.databaseConnection`,
+      `must equal ${expectedDatabaseRuntime.connection} for the planned browser execution mode`,
+    );
+  }
+  if (
+    databaseIdentifierHash &&
+    expectedDatabaseRuntime.identifierHash &&
+    databaseIdentifierHash !== expectedDatabaseRuntime.identifierHash
+  ) {
+    addError(
+      `${path}.databaseIdentifierHash`,
+      'must match the database identity derived from the planned browser execution mode',
+    );
+  }
+  let dependenciesFingerprint;
+  if (expectedDatabaseRuntime.connection === 'mysql') {
+    dependenciesFingerprint = requireString(runtime, 'dependenciesFingerprint', path);
+    if (dependenciesFingerprint && !FINGERPRINT_PATTERN.test(dependenciesFingerprint)) {
+      addError(`${path}.dependenciesFingerprint`, 'must be a lowercase sha256 fingerprint');
+    }
+  } else if (runtime.dependenciesFingerprint !== undefined) {
+    addError(`${path}.dependenciesFingerprint`, 'must be omitted for host browser execution');
+  }
+
   const fixedRuntimeValues = {};
   for (const key of ['browser', 'locale', 'timezone']) {
     const runtimeValue = requireString(runtime, key, path);
@@ -577,6 +900,10 @@ function validateBrowserRuntime(
   return {
     baseUrl: runtimeBaseUrl,
     useAuthState,
+    appEnvironment,
+    databaseConnection,
+    databaseIdentifierHash,
+    dependenciesFingerprint,
     ...fixedRuntimeValues,
     authStateHash,
   };
@@ -591,14 +918,17 @@ async function validateBrowserClaim({
   canonicalPlanBaseUrl,
   plannedUseAuthState,
   planEnvironmentValues,
+  expectedDatabaseRuntime,
   requiresPostflight,
+  forbidsPostflight,
   temporaryResultRecords,
   hasPlaywrightReport,
+  artifactManifestValidationPromise,
 }) {
   try {
     const claimStat = await lstat(resolve(runDir, '.browser-check-run.json'));
-    if (claimStat.isSymbolicLink() || !claimStat.isFile()) {
-      addError('.browser-check-run.json', 'must be a regular file, not a symlink');
+    if (claimStat.isSymbolicLink() || !claimStat.isFile() || claimStat.nlink !== 1) {
+      addError('.browser-check-run.json', 'must be a regular file with no link aliases');
       return;
     }
   } catch (error) {
@@ -653,6 +983,51 @@ async function validateBrowserClaim({
     );
   }
 
+  let expectedFrontendAssetsHash;
+  try {
+    const planUsesDockerAssets =
+      typeof planEnvironmentValues.baseUrl === 'string' &&
+      new URL(planEnvironmentValues.baseUrl).hostname === 'nginx-browser-check';
+    const assetWorkspaceRoot = planUsesDockerAssets
+      ? resolve(runDir, 'runtime/assets')
+      : workspaceRoot;
+    const claimedDependenciesFingerprint = planUsesDockerAssets
+      ? claim.runtime?.dependenciesFingerprint
+      : undefined;
+    expectedFrontendAssetsHash = frontendAssetsFingerprint(
+      assetWorkspaceRoot,
+      planRevision,
+      undefined,
+      claimedDependenciesFingerprint,
+    );
+  } catch (error) {
+    addError(
+      '.browser-check-run.json.frontendAssetsHash',
+      `cannot bind public/build: ${error.message}`,
+    );
+  }
+  const claimFrontendAssetsHash = requireString(
+    claim,
+    'frontendAssetsHash',
+    '.browser-check-run.json',
+  );
+  if (claimFrontendAssetsHash && !FINGERPRINT_PATTERN.test(claimFrontendAssetsHash)) {
+    addError(
+      '.browser-check-run.json.frontendAssetsHash',
+      'must be a lowercase sha256 fingerprint',
+    );
+  }
+  if (
+    claimFrontendAssetsHash &&
+    expectedFrontendAssetsHash &&
+    claimFrontendAssetsHash !== expectedFrontendAssetsHash
+  ) {
+    addError(
+      '.browser-check-run.json.frontendAssetsHash',
+      'must match the current public/build tree',
+    );
+  }
+
   const claimPlanRevision = requireClaimRevision(
     claim.planRevision,
     '.browser-check-run.json.planRevision',
@@ -679,9 +1054,20 @@ async function validateBrowserClaim({
     canonicalPlanBaseUrl,
     plannedUseAuthState,
     planEnvironmentValues,
+    expectedDatabaseRuntime,
   );
+  if (plannedUseAuthState) {
+    await validateRunAuthStateFile(claimRuntime.authStateHash);
+  }
 
   const claimedAt = canonicalIsoTimestamp(claim.claimedAt, '.browser-check-run.json.claimedAt');
+  if (forbidsPostflight && claim.postflight !== undefined) {
+    addError(
+      '.browser-check-run.json.postflight',
+      'must be omitted when a global pre-report execution error exists',
+    );
+    return;
+  }
   if (requiresPostflight && !isRecord(claim.postflight)) {
     addError(
       '.browser-check-run.json.postflight',
@@ -739,6 +1125,38 @@ async function validateBrowserClaim({
       'must match the current generated temporary check sources',
     );
   }
+
+  const postflightFrontendAssetsHash = requireString(
+    postflight,
+    'frontendAssetsHash',
+    '.browser-check-run.json.postflight',
+  );
+  if (postflightFrontendAssetsHash && !FINGERPRINT_PATTERN.test(postflightFrontendAssetsHash)) {
+    addError(
+      '.browser-check-run.json.postflight.frontendAssetsHash',
+      'must be a lowercase sha256 fingerprint',
+    );
+  }
+  if (
+    postflightFrontendAssetsHash &&
+    expectedFrontendAssetsHash &&
+    postflightFrontendAssetsHash !== expectedFrontendAssetsHash
+  ) {
+    addError(
+      '.browser-check-run.json.postflight.frontendAssetsHash',
+      'must match the current public/build tree',
+    );
+  }
+  if (
+    postflightFrontendAssetsHash &&
+    claimFrontendAssetsHash &&
+    postflightFrontendAssetsHash !== claimFrontendAssetsHash
+  ) {
+    addError(
+      '.browser-check-run.json.postflight.frontendAssetsHash',
+      'must equal the preflight frontendAssetsHash',
+    );
+  }
   if (
     postflightGeneratedSourceHash &&
     claimGeneratedSourceHash &&
@@ -747,6 +1165,36 @@ async function validateBrowserClaim({
     addError(
       '.browser-check-run.json.postflight.generatedSourceHash',
       'must equal the preflight generatedSourceHash',
+    );
+  }
+
+  const artifactManifest = artifactManifestValidationPromise
+    ? await artifactManifestValidationPromise
+    : undefined;
+  const executionArtifactManifestHash = requireString(
+    postflight,
+    'executionArtifactManifestHash',
+    '.browser-check-run.json.postflight',
+  );
+  if (executionArtifactManifestHash && !FINGERPRINT_PATTERN.test(executionArtifactManifestHash)) {
+    addError(
+      '.browser-check-run.json.postflight.executionArtifactManifestHash',
+      'must be a lowercase sha256 fingerprint',
+    );
+  }
+  if (!artifactManifest) {
+    addError(
+      '.browser-check-run.json.postflight.executionArtifactManifestHash',
+      'requires .browser-check-artifacts.json',
+    );
+  } else if (
+    executionArtifactManifestHash &&
+    artifactManifest.hash &&
+    executionArtifactManifestHash !== artifactManifest.hash
+  ) {
+    addError(
+      '.browser-check-run.json.postflight.executionArtifactManifestHash',
+      'must match the exact raw .browser-check-artifacts.json bytes',
     );
   }
 
@@ -767,6 +1215,7 @@ async function validateBrowserClaim({
     canonicalPlanBaseUrl,
     plannedUseAuthState,
     planEnvironmentValues,
+    expectedDatabaseRuntime,
   );
   if (
     postflightRuntime.baseUrl &&
@@ -778,7 +1227,16 @@ async function validateBrowserClaim({
       'must equal the preflight runtime baseUrl',
     );
   }
-  for (const key of ['browser', 'locale', 'timezone', 'authStateHash']) {
+  for (const key of [
+    'appEnvironment',
+    'databaseConnection',
+    'databaseIdentifierHash',
+    'dependenciesFingerprint',
+    'browser',
+    'locale',
+    'timezone',
+    'authStateHash',
+  ]) {
     if (postflightRuntime[key] !== claimRuntime[key]) {
       addError(
         `.browser-check-run.json.postflight.runtime.${key}`,
@@ -843,27 +1301,533 @@ async function validateEvidenceFiles(evidencePaths, resultPath) {
   for (const [index, evidencePath] of evidencePaths.entries()) {
     const path = `${resultPath}.evidence[${index}]`;
     if (
-      isAbsolute(evidencePath) ||
-      evidencePath.includes('\\') ||
-      !pathStaysInside(runDir, resolve(runDir, evidencePath))
+      basename(evidencePath).toLowerCase().endsWith('.zip') ||
+      evidencePath.toLowerCase().startsWith('traces/')
     ) {
-      addError(path, 'must be a run-relative path that stays inside the run directory');
+      addError(path, 'ZIP evidence is prohibited because trace archives can contain session data');
+      continue;
+    }
+    const allowedRoot =
+      evidencePath === 'playwright-results.json' ||
+      evidencePath === '.browser-check-execution-error.json' ||
+      ['artifacts/', 'playwright-report/', 'evidence/', 'videos/'].some((root) =>
+        evidencePath.startsWith(root),
+      );
+    if (!normalizedRunRelativePath(evidencePath) || !allowedRoot) {
+      addError(path, 'must be a normalized path beneath an approved evidence root');
       continue;
     }
 
     try {
-      const realEvidencePath = await realpath(resolve(runDir, evidencePath));
-      if (!pathStaysInside(realRunDir, realEvidencePath)) {
-        addError(path, 'resolves outside the run directory');
+      const absoluteEvidencePath = resolve(runDir, evidencePath);
+      const evidenceStat = await lstat(absoluteEvidencePath);
+      if (evidenceStat.isSymbolicLink() || !evidenceStat.isFile() || evidenceStat.nlink !== 1) {
+        addError(path, 'must refer to a regular file with no symlink or hard-link aliases');
         continue;
       }
+      const realEvidencePath = await realpath(absoluteEvidencePath);
+      if (
+        !pathStaysInside(realRunDir, realEvidencePath) ||
+        relative(realRunDir, realEvidencePath).split(sep).join('/') !== evidencePath
+      ) {
+        addError(path, 'must resolve to the exact path inside the run directory');
+        continue;
+      }
+      if (evidenceStat.size === 0) {
+        addError(path, 'must not be empty');
+        continue;
+      }
+      const prefix = await readRegularFilePrefix(realEvidencePath, evidenceStat, evidencePath);
+      if (hasZipSignature(prefix)) {
+        addError(path, 'must not contain ZIP archive bytes under a renamed extension');
+        continue;
+      }
+      const extension = extname(evidencePath).toLowerCase();
+      const textExtensions = new Set(['.txt', '.md', '.json', '.html']);
+      const requiresStructuralInspection = textExtensions.has(extension) || extension === '.png';
+      let contents;
+      if (requiresStructuralInspection) {
+        contents = (await readBoundedRegularFile(realEvidencePath, evidenceStat, evidencePath))
+          .contents;
+      }
+      if (textExtensions.has(extension) && !contents?.toString('utf8').trim()) {
+        addError(path, 'must contain non-whitespace evidence');
+      }
+      if (new Set(['.jpg', '.jpeg', '.webp']).has(extension)) {
+        addError(path, 'must use PNG so the validator can verify the complete image structure');
+      } else if (extension === '.png' && (!contents || !isStructurallyValidPng(contents))) {
+        addError(path, 'must contain a structurally valid PNG image');
+      }
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        addError(path, `referenced file does not exist: ${evidencePath}`);
+      } else {
+        addError(path, `cannot inspect referenced file ${evidencePath}: ${error.message}`);
+      }
+    }
+  }
+}
 
-      const evidenceStat = await stat(realEvidencePath);
-      if (!evidenceStat.isFile()) {
-        addError(path, 'must refer to a file');
+async function rejectRawTraceArtifacts() {
+  const visit = async (directoryPath, relativeDirectory) => {
+    let entries;
+    try {
+      entries = await readdir(directoryPath, { withFileTypes: true });
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        return;
+      }
+      addError(relativeDirectory, `cannot inspect trace-sensitive artifact root: ${error.message}`);
+      return;
+    }
+    for (const entry of entries) {
+      const relativePath = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name;
+      const absolutePath = resolve(directoryPath, entry.name);
+      const pathStat = await lstat(absolutePath);
+      if (pathStat.isSymbolicLink()) {
+        addError(relativePath, 'run artifacts must not contain symlinks');
+        continue;
+      }
+      if (pathStat.isDirectory()) {
+        await visit(absolutePath, relativePath);
+      } else if (pathStat.isFile()) {
+        if (pathStat.nlink !== 1) {
+          addError(relativePath, 'run artifacts must not contain hard-link aliases');
+          continue;
+        }
+        let hasArchiveBytes = false;
+        try {
+          hasArchiveBytes = hasZipSignature(
+            await readRegularFilePrefix(absolutePath, pathStat, relativePath),
+          );
+        } catch (error) {
+          addError(relativePath, `cannot inspect trace-sensitive artifact: ${error.message}`);
+        }
+        if (
+          relativeDirectory === 'traces' ||
+          relativeDirectory.startsWith('traces/') ||
+          entry.name.toLowerCase().endsWith('.zip') ||
+          hasArchiveBytes
+        ) {
+          addError(
+            relativePath,
+            'ZIP evidence is prohibited because trace archives can contain session data',
+          );
+        }
+      } else {
+        addError(relativePath, 'run artifacts must be regular files or directories');
+      }
+    }
+  };
+
+  await visit(runDir, '');
+}
+
+async function validateDelegatedExecutionEvidence(evidencePath, item, itemPath) {
+  const evidence = requireRecord(await readJson(evidencePath), evidencePath);
+  requireExactKeys(
+    evidence,
+    new Set([
+      'schemaVersion',
+      'delegatedWorkId',
+      'type',
+      'target',
+      'revision',
+      'command',
+      'workingDirectory',
+      'selectedTargets',
+      'exitCode',
+      'summary',
+    ]),
+    evidencePath,
+  );
+  if (evidence.schemaVersion !== '1.0') {
+    addError(`${evidencePath}.schemaVersion`, 'must equal 1.0');
+  }
+  if (evidence.delegatedWorkId !== item.id) {
+    addError(`${evidencePath}.delegatedWorkId`, `must equal ${item.id}`);
+  }
+  if (evidence.type !== item.type) {
+    addError(`${evidencePath}.type`, `must equal ${item.type}`);
+  }
+  if (evidence.target !== item.target) {
+    addError(`${evidencePath}.target`, `must equal ${item.target}`);
+  }
+  const evidenceRevision = requireRecord(evidence.revision, `${evidencePath}.revision`);
+  requireExactKeys(
+    evidenceRevision,
+    new Set(['baseSha', 'headSha', 'worktreeFingerprint']),
+    `${evidencePath}.revision`,
+  );
+  for (const key of ['baseSha', 'headSha', 'worktreeFingerprint']) {
+    if (evidenceRevision[key] !== planRevision[key]) {
+      addError(`${evidencePath}.revision.${key}`, `must equal plan.json.revision.${key}`);
+    }
+  }
+  requireString(evidence, 'command', evidencePath);
+  requireString(evidence, 'workingDirectory', evidencePath);
+  const selectedTargets = requireStringArray(
+    evidence.selectedTargets,
+    `${evidencePath}.selectedTargets`,
+  );
+  if (!selectedTargets.includes(item.target)) {
+    addError(`${evidencePath}.selectedTargets`, `must include delegated target ${item.target}`);
+  }
+  if (evidence.exitCode !== 0) {
+    addError(`${evidencePath}.exitCode`, 'must equal 0 for completed delegated work');
+  }
+  requireString(evidence, 'summary', evidencePath);
+
+  if (!item.evidence.includes(evidencePath)) {
+    addError(`${itemPath}.evidence`, `must cite ${evidencePath}`);
+  }
+}
+
+async function validateAgentBrowserDomEvidence(evidencePath, checkId, expectedUrl) {
+  const evidence = requireRecord(await readJson(evidencePath), evidencePath);
+  requireExactKeys(
+    evidence,
+    new Set(['schemaVersion', 'checkId', 'url', 'capturedAt', 'content']),
+    evidencePath,
+  );
+  if (evidence.schemaVersion !== '1.0') {
+    addError(`${evidencePath}.schemaVersion`, 'must equal 1.0');
+  }
+  if (evidence.checkId !== checkId) {
+    addError(`${evidencePath}.checkId`, `must equal ${checkId}`);
+  }
+  const url = requireString(evidence, 'url', evidencePath);
+  if (url) {
+    try {
+      const parsedUrl = new URL(url);
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        addError(`${evidencePath}.url`, 'must use HTTP or HTTPS');
+      }
+      if (parsedUrl.hostname === 'nginx-browser-check') {
+        parsedUrl.hostname = 'localhost';
+      }
+      if (expectedUrl && parsedUrl.toString() !== expectedUrl) {
+        addError(`${evidencePath}.url`, `must equal the planned target URL ${expectedUrl}`);
       }
     } catch {
-      addError(path, `referenced file does not exist: ${evidencePath}`);
+      addError(`${evidencePath}.url`, 'must be an absolute URL');
+    }
+  }
+  canonicalIsoTimestamp(evidence.capturedAt, `${evidencePath}.capturedAt`);
+  requireString(evidence, 'content', evidencePath);
+}
+
+async function validateRunAuthStateFile(expectedHash) {
+  const relativePath = 'auth/user.json';
+  const absolutePath = resolve(runDir, relativePath);
+  try {
+    const pathStat = await lstat(absolutePath);
+    if (pathStat.isSymbolicLink() || !pathStat.isFile() || pathStat.nlink !== 1) {
+      addError(relativePath, 'must be a regular file with no symlink or hard-link aliases');
+      return;
+    }
+    const realFilePath = await realpath(absolutePath);
+    if (
+      !pathStaysInside(realRunDir, realFilePath) ||
+      relative(realRunDir, realFilePath).split(sep).join('/') !== relativePath
+    ) {
+      addError(relativePath, 'must remain at its exact run-owned path');
+      return;
+    }
+    const currentHash = (await hashRegularFile(realFilePath, pathStat, relativePath)).sha256;
+    if (expectedHash && currentHash !== expectedHash) {
+      addError(relativePath, 'must match the claimed runtime authStateHash');
+    }
+  } catch (error) {
+    addError(relativePath, `cannot be inspected: ${error.message}`);
+  }
+}
+
+function executionArtifactPathIsAllowed(value) {
+  return (
+    value === EXECUTION_ARTIFACT_ROOT_FILE ||
+    EXECUTION_ARTIFACT_ROOT_DIRECTORIES.some((root) => value.startsWith(`${root}/`))
+  );
+}
+
+function normalizedRunRelativePath(value) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    return false;
+  }
+  if (isAbsolute(value) || value.includes('\\')) {
+    return false;
+  }
+
+  const segments = value.split('/');
+  return segments.every((segment) => segment !== '' && segment !== '.' && segment !== '..');
+}
+
+async function collectExecutionOutputFiles() {
+  const outputPaths = new Set();
+
+  async function inspectPath(absolutePath, relativePath, rootMayBeAbsent = false) {
+    let pathStat;
+    try {
+      pathStat = await lstat(absolutePath);
+    } catch (error) {
+      if (rootMayBeAbsent && error.code === 'ENOENT') {
+        return;
+      }
+      addError(
+        '.browser-check-artifacts.json',
+        `cannot inspect output ${relativePath}: ${error.message}`,
+      );
+      return;
+    }
+
+    if (pathStat.isSymbolicLink()) {
+      addError(
+        '.browser-check-artifacts.json',
+        `execution output must not be a symlink: ${relativePath}`,
+      );
+      return;
+    }
+
+    let realOutputPath;
+    try {
+      realOutputPath = await realpath(absolutePath);
+    } catch (error) {
+      addError(
+        '.browser-check-artifacts.json',
+        `cannot resolve output ${relativePath}: ${error.message}`,
+      );
+      return;
+    }
+    if (
+      !pathStaysInside(realRunDir, realOutputPath) ||
+      relative(realRunDir, realOutputPath).split(sep).join('/') !== relativePath
+    ) {
+      addError(
+        '.browser-check-artifacts.json',
+        `execution output must stay at its run-relative path: ${relativePath}`,
+      );
+      return;
+    }
+
+    if (pathStat.isFile()) {
+      outputPaths.add(relativePath);
+      return;
+    }
+    if (!pathStat.isDirectory()) {
+      addError(
+        '.browser-check-artifacts.json',
+        `execution output must be a regular file or directory: ${relativePath}`,
+      );
+      return;
+    }
+
+    let entries;
+    try {
+      entries = await readdir(absolutePath, { withFileTypes: true });
+    } catch (error) {
+      addError(
+        '.browser-check-artifacts.json',
+        `cannot read output directory ${relativePath}: ${error.message}`,
+      );
+      return;
+    }
+    for (const entry of entries) {
+      await inspectPath(resolve(absolutePath, entry.name), `${relativePath}/${entry.name}`);
+    }
+  }
+
+  await inspectPath(
+    resolve(runDir, EXECUTION_ARTIFACT_ROOT_FILE),
+    EXECUTION_ARTIFACT_ROOT_FILE,
+    true,
+  );
+  for (const root of EXECUTION_ARTIFACT_ROOT_DIRECTORIES) {
+    await inspectPath(resolve(runDir, root), root, true);
+  }
+
+  return outputPaths;
+}
+
+async function validateExecutionArtifactManifest() {
+  const manifestData = await readRunFileData('.browser-check-artifacts.json', true);
+  if (!manifestData) {
+    return { hash: '', paths: new Set() };
+  }
+
+  const manifestSource = manifestData.contents;
+  const manifestHash = manifestData.sha256;
+  let rawManifest;
+  try {
+    rawManifest = JSON.parse(manifestSource.toString('utf8'));
+  } catch (error) {
+    addError('.browser-check-artifacts.json', `is not valid JSON: ${error.message}`);
+    return { hash: manifestHash, paths: new Set() };
+  }
+
+  const manifest = requireRecord(rawManifest, '.browser-check-artifacts.json');
+  requireExactKeys(manifest, new Set(['schemaVersion', 'files']), '.browser-check-artifacts.json');
+  if (manifest.schemaVersion !== '1.0') {
+    addError('.browser-check-artifacts.json.schemaVersion', 'must equal "1.0"');
+  }
+
+  const files = Array.isArray(manifest.files) ? manifest.files : [];
+  if (!Array.isArray(manifest.files)) {
+    addError('.browser-check-artifacts.json.files', 'must be an array');
+  }
+  const manifestPaths = new Set();
+  let previousPath;
+  for (const [index, rawFile] of files.entries()) {
+    const path = `.browser-check-artifacts.json.files[${index}]`;
+    const file = requireRecord(rawFile, path);
+    requireExactKeys(file, new Set(['path', 'size', 'sha256']), path);
+    const relativePath = requireString(file, 'path', path);
+    if (relativePath && !normalizedRunRelativePath(relativePath)) {
+      addError(`${path}.path`, 'must be a normalized run-relative POSIX path');
+    } else if (relativePath && !executionArtifactPathIsAllowed(relativePath)) {
+      addError(`${path}.path`, 'must be within an allowed browser execution output root');
+    }
+    if (relativePath && manifestPaths.has(relativePath)) {
+      addError(`${path}.path`, `duplicates manifest path ${relativePath}`);
+    }
+    if (relativePath && previousPath !== undefined && relativePath <= previousPath) {
+      addError(`${path}.path`, 'manifest paths must be strictly sorted');
+    }
+    if (relativePath) {
+      manifestPaths.add(relativePath);
+      previousPath = relativePath;
+    }
+
+    if (!Number.isSafeInteger(file.size) || file.size < 0) {
+      addError(`${path}.size`, 'must be a non-negative safe integer byte count');
+    }
+    const recordedHash = requireString(file, 'sha256', path);
+    if (recordedHash && !FINGERPRINT_PATTERN.test(recordedHash)) {
+      addError(`${path}.sha256`, 'must be a lowercase sha256 fingerprint');
+    }
+
+    if (!relativePath || !normalizedRunRelativePath(relativePath)) {
+      continue;
+    }
+    const absolutePath = resolve(runDir, relativePath);
+    if (!pathStaysInside(runDir, absolutePath)) {
+      addError(`${path}.path`, 'must stay inside the run directory');
+      continue;
+    }
+    try {
+      const pathStat = await lstat(absolutePath);
+      if (pathStat.isSymbolicLink() || !pathStat.isFile() || pathStat.nlink !== 1) {
+        addError(`${path}.path`, 'must refer to a regular file with no link aliases');
+        continue;
+      }
+      const realFilePath = await realpath(absolutePath);
+      if (
+        !pathStaysInside(realRunDir, realFilePath) ||
+        relative(realRunDir, realFilePath).split(sep).join('/') !== relativePath
+      ) {
+        addError(`${path}.path`, 'must resolve to the same path inside the run directory');
+        continue;
+      }
+      const hashedFile = await hashRegularFile(realFilePath, pathStat, relativePath);
+      if (Number.isSafeInteger(file.size) && file.size !== hashedFile.size) {
+        addError(`${path}.size`, `must equal ${hashedFile.size}, the current file size`);
+      }
+      if (recordedHash && recordedHash !== hashedFile.sha256) {
+        addError(`${path}.sha256`, 'must match the current file bytes');
+      }
+    } catch (error) {
+      addError(`${path}.path`, `cannot inspect manifest file ${relativePath}: ${error.message}`);
+    }
+  }
+
+  const outputPaths = await collectExecutionOutputFiles();
+  for (const outputPath of outputPaths) {
+    if (!manifestPaths.has(outputPath)) {
+      addError(
+        '.browser-check-artifacts.json.files',
+        `must list every browser execution output file: ${outputPath}`,
+      );
+    }
+  }
+  for (const manifestPath of manifestPaths) {
+    if (!outputPaths.has(manifestPath)) {
+      addError(
+        '.browser-check-artifacts.json.files',
+        `lists a path outside the current browser execution outputs: ${manifestPath}`,
+      );
+    }
+  }
+
+  return { hash: manifestHash, paths: manifestPaths };
+}
+
+async function validateGlobalExecutionError(plannedChecks, resultRecords) {
+  const executionError = requireRecord(
+    await readJson('.browser-check-execution-error.json'),
+    '.browser-check-execution-error.json',
+  );
+  requireExactKeys(
+    executionError,
+    new Set([
+      'schemaVersion',
+      'phase',
+      'scope',
+      'affectedCheckIds',
+      'classification',
+      'message',
+      'occurredAt',
+    ]),
+    '.browser-check-execution-error.json',
+  );
+  if (executionError.schemaVersion !== '1.0') {
+    addError('.browser-check-execution-error.json.schemaVersion', 'must equal "1.0"');
+  }
+  if (executionError.phase !== 'pre-report') {
+    addError('.browser-check-execution-error.json.phase', 'must equal pre-report');
+  }
+  if (executionError.scope !== 'global') {
+    addError('.browser-check-execution-error.json.scope', 'must equal global');
+  }
+  const affectedCheckIds = requireStringArray(
+    executionError.affectedCheckIds,
+    '.browser-check-execution-error.json.affectedCheckIds',
+  );
+  const sortedTemporaryCheckIds = [...plannedChecks]
+    .filter(([, check]) => check.driver === 'playwright-temporary')
+    .map(([checkId]) => checkId)
+    .sort((left, right) => left.localeCompare(right));
+  if (
+    affectedCheckIds.length !== sortedTemporaryCheckIds.length ||
+    affectedCheckIds.some((checkId, index) => checkId !== sortedTemporaryCheckIds[index])
+  ) {
+    addError(
+      '.browser-check-execution-error.json.affectedCheckIds',
+      'must equal every planned playwright-temporary check ID in sorted order',
+    );
+  }
+  requireEnum(
+    executionError.classification,
+    new Set(['environment-defect', 'check-script-defect']),
+    '.browser-check-execution-error.json.classification',
+  );
+  requireString(executionError, 'message', '.browser-check-execution-error.json');
+  canonicalIsoTimestamp(
+    executionError.occurredAt,
+    '.browser-check-execution-error.json.occurredAt',
+  );
+
+  if (sortedTemporaryCheckIds.length === 0) {
+    addError(
+      '.browser-check-execution-error.json',
+      'must not exist without a planned playwright-temporary check',
+    );
+  }
+  for (const checkId of sortedTemporaryCheckIds) {
+    const checkResult = resultRecords.get(checkId);
+    if (checkResult?.status !== 'blocked') {
+      addError(
+        `result.json.results.${checkId}.status`,
+        'must be blocked when a global browser execution error prevented a report',
+      );
     }
   }
 }
@@ -1172,6 +2136,8 @@ const [
   planSource,
   playwrightResultsExists,
   browserClaimExists,
+  executionArtifactManifestExists,
+  browserExecutionErrorExists,
 ] = await Promise.all([
   readJson('plan.json'),
   readJson('result.json'),
@@ -1179,6 +2145,8 @@ const [
   readRunFile('plan.json'),
   runFileExists('playwright-results.json'),
   runFileExists('.browser-check-run.json'),
+  runFileExists('.browser-check-artifacts.json'),
+  runFileExists('.browser-check-execution-error.json'),
 ]);
 const projectionFiles = ['plan.md', 'result.md', 'review.md', 'promotion.md'];
 const projectionSources = await Promise.all(
@@ -1353,6 +2321,12 @@ if (planEnvironment.useAuthState !== undefined) {
     addError('plan.json.environment.useAuthState', 'must be a boolean when provided');
   } else {
     plannedUseAuthState = planEnvironment.useAuthState;
+    if (plannedUseAuthState) {
+      addError(
+        'plan.json.environment.useAuthState',
+        'reusable auth state is unsupported; authenticate explicitly inside the check',
+      );
+    }
   }
 }
 if (planEnvironment.timezone !== 'Asia/Tokyo') {
@@ -1366,10 +2340,85 @@ const existingTestCommands = requireStringArray(
   plan.existingTestCommands,
   'plan.json.existingTestCommands',
 );
+const evidenceValidationTasks = [];
 const planningContext = {};
-for (const key of ['delegatedWork', 'unnecessaryChecks', 'assumptions', 'specificationGaps']) {
+for (const key of ['unnecessaryChecks', 'assumptions', 'specificationGaps']) {
   planningContext[key] = requireStringArray(plan[key], `plan.json.${key}`);
 }
+if (plan.delegatedWork !== undefined) {
+  addError('plan.json.delegatedWork', 'is obsolete; use delegatedWorkItems');
+}
+const rawDelegatedWorkItems = Array.isArray(plan.delegatedWorkItems) ? plan.delegatedWorkItems : [];
+if (!Array.isArray(plan.delegatedWorkItems)) {
+  addError('plan.json.delegatedWorkItems', 'must be an array');
+}
+const delegatedWorkItems = new Map();
+rawDelegatedWorkItems.forEach((rawItem, index) => {
+  const path = `plan.json.delegatedWorkItems[${index}]`;
+  const item = requireRecord(rawItem, path);
+  requireExactKeys(
+    item,
+    new Set([
+      'id',
+      'type',
+      'priority',
+      'requiredForVerdict',
+      'status',
+      'target',
+      'reason',
+      'evidence',
+    ]),
+    path,
+  );
+  const id = requireString(item, 'id', path);
+  if (id && !/^DW-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*-\d{3}$/.test(id)) {
+    addError(`${path}.id`, 'must match DW-{normalized-change-id}-{three-digit-sequence}');
+  }
+  if (id && changeId) {
+    const itemChangeId = id.slice(3, -4);
+    const compactChangeId = changeId.replaceAll('-', '');
+    if (itemChangeId !== changeId && itemChangeId !== compactChangeId) {
+      addError(`${path}.id`, `must identify plan change ${changeId}`);
+    }
+  }
+  if (delegatedWorkItems.has(id)) {
+    addError(`${path}.id`, `duplicates delegated work ID ${id}`);
+  } else if (id) {
+    delegatedWorkItems.set(id, item);
+  }
+
+  requireEnum(item.type, DELEGATED_WORK_TYPES, `${path}.type`);
+  requireEnum(item.priority, PRIORITIES, `${path}.priority`);
+  if (typeof item.requiredForVerdict !== 'boolean') {
+    addError(`${path}.requiredForVerdict`, 'must be a boolean');
+  }
+  const status = requireEnum(item.status, DELEGATED_WORK_STATUSES, `${path}.status`);
+  requireString(item, 'target', path);
+  requireString(item, 'reason', path);
+  const itemEvidence = requireStringArray(item.evidence, `${path}.evidence`);
+  if (status === 'not_required' && item.requiredForVerdict === true) {
+    addError(`${path}.requiredForVerdict`, 'must be false when status is not_required');
+  }
+  if (item.requiredForVerdict === true && status === 'completed' && itemEvidence.length === 0) {
+    addError(`${path}.evidence`, 'completed required delegated work must include evidence');
+  }
+  if (itemEvidence.length > 0) {
+    evidenceValidationTasks.push(validateEvidenceFiles(itemEvidence, path));
+  }
+  if (item.requiredForVerdict === true && status === 'completed' && id) {
+    const executionEvidencePath = `evidence/delegated/${id}.json`;
+    if (!itemEvidence.includes(executionEvidencePath)) {
+      addError(
+        `${path}.evidence`,
+        `completed required delegated work must include ${executionEvidencePath}`,
+      );
+    } else {
+      evidenceValidationTasks.push(
+        validateDelegatedExecutionEvidence(executionEvidencePath, item, path),
+      );
+    }
+  }
+});
 
 const rawChecks = Array.isArray(plan.checks) ? plan.checks : [];
 if (!Array.isArray(plan.checks)) {
@@ -1508,6 +2557,12 @@ const hasAutomatedBrowserCheck = [...plannedChecks.values()].some(
     check.responsibility === 'browser' && !['human', 'not-required'].includes(check.driver),
 );
 if (hasTemporaryPlaywrightCheck) {
+  if (planEnvironmentValues.appEnvironment !== 'testing') {
+    addError(
+      'plan.json.environment.appEnvironment',
+      'playwright-temporary checks require the testing application environment',
+    );
+  }
   if (planEnvironmentValues.browser !== 'chromium') {
     addError(
       'plan.json.environment.browser',
@@ -1537,6 +2592,44 @@ const canonicalPlanBaseUrl = planEnvironmentValues.baseUrl
       hasTemporaryPlaywrightCheck,
     )
   : '';
+let expectedDatabaseRuntime = {};
+if (hasTemporaryPlaywrightCheck && canonicalPlanBaseUrl) {
+  const rawPlanBaseUrl = new URL(planEnvironmentValues.baseUrl);
+  const planUsesDocker = rawPlanBaseUrl.hostname === 'nginx-browser-check';
+  let databaseIdentity;
+  if (planUsesDocker) {
+    if (planEnvironmentValues.baseUrl !== 'http://nginx-browser-check:80') {
+      addError(
+        'plan.json.environment.baseUrl',
+        'Docker temporary checks must use the exact raw URL http://nginx-browser-check:80',
+      );
+    }
+    databaseIdentity = 'mysql:mysql-browser-check/browser_check';
+    expectedDatabaseRuntime.connection = 'mysql';
+  } else {
+    const hostPort = Number(rawPlanBaseUrl.port);
+    if (!rawPlanBaseUrl.port || hostPort < 1024 || hostPort > 65535) {
+      addError(
+        'plan.json.environment.baseUrl',
+        'host temporary checks require an explicit port from 1024 through 65535',
+      );
+    }
+    if (plannedUseAuthState) {
+      addError(
+        'plan.json.environment.useAuthState',
+        'host temporary-browser execution must not use authentication state',
+      );
+    }
+    const workspaceRelativeDatabasePath = `${relative(process.cwd(), runDir)
+      .split(sep)
+      .join('/')}/runtime/browser-check.sqlite`;
+    databaseIdentity = `sqlite:${workspaceRelativeDatabasePath}`;
+    expectedDatabaseRuntime.connection = 'sqlite';
+  }
+  expectedDatabaseRuntime.identifierHash = `sha256:${createHash('sha256')
+    .update(databaseIdentity)
+    .digest('hex')}`;
+}
 if (canonicalPlanBaseUrl) {
   const plannedOrigin = new URL(canonicalPlanBaseUrl).origin;
   for (const [checkId, check] of plannedChecks) {
@@ -1636,13 +2729,31 @@ for (const summaryKey of Object.values(SUMMARY_KEYS)) {
   }
 }
 
-const evidenceValidationTasks = [];
 const rawIssueRecords = Array.isArray(result.issueRecords) ? result.issueRecords : [];
 if (!Array.isArray(result.issueRecords)) {
   addError('result.json.issueRecords', 'must be an array');
 }
 
 const issueRecords = new Map();
+
+function validateOwnedPngEvidence(evidencePaths, checkId, ownerPath) {
+  if (!checkId) {
+    return;
+  }
+  for (const [evidenceIndex, evidencePath] of evidencePaths.entries()) {
+    if (extname(evidencePath).toLowerCase() !== '.png') {
+      continue;
+    }
+    const checkIdOccurrences = evidencePath.match(new RegExp(CHECK_ID_PATTERN_SOURCE, 'g')) ?? [];
+    if (checkIdOccurrences.length !== 1 || checkIdOccurrences[0] !== checkId) {
+      addError(
+        `${ownerPath}.evidence[${evidenceIndex}]`,
+        `PNG evidence must contain exactly one bounded owning check ID ${checkId}`,
+      );
+    }
+  }
+}
+
 rawIssueRecords.forEach((rawIssueRecord, index) => {
   const path = `result.json.issueRecords[${index}]`;
   const issueRecord = requireRecord(rawIssueRecord, path);
@@ -1678,6 +2789,7 @@ rawIssueRecords.forEach((rawIssueRecord, index) => {
   if (issueEvidence.length === 0) {
     addError(`${path}.evidence`, 'must contain at least one evidence file');
   } else {
+    validateOwnedPngEvidence(issueEvidence, checkId, path);
     evidenceValidationTasks.push(validateEvidenceFiles(issueEvidence, path));
   }
 
@@ -1808,6 +2920,7 @@ rawResults.forEach((rawCheckResult, index) => {
 
   const evidence = requireStringArray(checkResult.evidence, `${path}.evidence`);
   const issues = requireStringArray(checkResult.issues, `${path}.issues`);
+  validateOwnedPngEvidence(evidence, checkId, path);
   if (checkResult.executionNotes !== undefined) {
     requireStringArray(checkResult.executionNotes, `${path}.executionNotes`);
   }
@@ -1916,37 +3029,40 @@ rawResults.forEach((rawCheckResult, index) => {
     if (!evidence.includes('playwright-results.json')) {
       addError(`${path}.evidence`, 'playwright-temporary pass requires playwright-results.json');
     }
-    if (!evidence.some((evidencePath) => /(?:^|\/)trace\.zip$/.test(evidencePath))) {
-      addError(`${path}.evidence`, 'playwright-temporary pass requires a trace.zip file');
-    }
-    const hasScreenshot = evidenceHasExtension(
-      evidence,
-      new Set(['.png', '.jpg', '.jpeg', '.webp']),
-    );
-    const hasAssertionRecord = evidence.some(
-      (evidencePath) =>
-        /(?:assertion|dom)/i.test(evidencePath) &&
-        new Set(['.json', '.md', '.txt', '.html']).has(extname(evidencePath).toLowerCase()),
-    );
-    if (!hasScreenshot && !hasAssertionRecord) {
+    if (!evidenceHasExtension(evidence, new Set(['.png']))) {
       addError(
         `${path}.evidence`,
-        'playwright-temporary pass requires a screenshot or explicit assertion/DOM record',
+        'playwright-temporary pass requires an owner-bound focused PNG screenshot',
       );
     }
   }
   if (status === 'pass' && driver === 'agent-browser') {
-    const hasScreenshot = evidenceHasExtension(
-      evidence,
-      new Set(['.png', '.jpg', '.jpeg', '.webp']),
-    );
-    const hasDomRecord = evidence.some(
-      (evidencePath) =>
-        /dom/i.test(evidencePath) &&
-        new Set(['.json', '.md', '.txt', '.html']).has(extname(evidencePath).toLowerCase()),
-    );
+    const hasScreenshot = evidenceHasExtension(evidence, new Set(['.png']));
+    const domEvidencePath = `evidence/dom/${checkId}.json`;
+    const hasDomRecord = evidence.includes(domEvidencePath);
     if (!hasScreenshot && !hasDomRecord) {
-      addError(`${path}.evidence`, 'agent-browser pass requires a screenshot or DOM record');
+      addError(
+        `${path}.evidence`,
+        `agent-browser pass requires a valid image or ${domEvidencePath}`,
+      );
+    }
+    if (hasDomRecord) {
+      let expectedDomUrl = '';
+      const plannedTargetUrl = plannedChecks.get(checkId)?.target?.url;
+      if (typeof plannedTargetUrl === 'string' && canonicalPlanBaseUrl) {
+        try {
+          const parsedExpectedUrl = new URL(plannedTargetUrl, canonicalPlanBaseUrl);
+          if (parsedExpectedUrl.hostname === 'nginx-browser-check') {
+            parsedExpectedUrl.hostname = 'localhost';
+          }
+          expectedDomUrl = parsedExpectedUrl.toString();
+        } catch {
+          // The plan validation above records the invalid target URL.
+        }
+      }
+      evidenceValidationTasks.push(
+        validateAgentBrowserDomEvidence(domEvidencePath, checkId, expectedDomUrl),
+      );
     }
   }
   if (status === 'fail' && evidence.length === 0 && driver !== 'existing-test') {
@@ -1969,10 +3085,25 @@ rawResults.forEach((rawCheckResult, index) => {
       );
     } else if (issueRecord.checkId !== checkId) {
       addError(`${path}.issues[${issueIndex}]`, `belongs to check ${issueRecord.checkId}`);
-    } else if (issueRecord.classification === 'product-defect' && status !== 'fail') {
+    } else if (issueRecord.classification === 'product-defect') {
+      if (status !== 'fail') {
+        addError(
+          `${path}.issues[${issueIndex}]`,
+          'a product-defect issue requires the owning objective check to have fail status',
+        );
+      }
+    } else if (
+      [
+        'test-data-defect',
+        'check-script-defect',
+        'environment-defect',
+        'specification-gap',
+      ].includes(issueRecord.classification) &&
+      !['blocked', 'not_run'].includes(status)
+    ) {
       addError(
         `${path}.issues[${issueIndex}]`,
-        'a product-defect issue requires the owning objective check to have fail status',
+        'an unresolved tooling, data, environment, or specification issue requires blocked or not_run status',
       );
     }
   });
@@ -2005,14 +3136,95 @@ const executedTemporaryResultRecords = temporaryResultRecords.filter(([, checkRe
 const temporaryEvidenceExists = temporaryResultRecords.some(
   ([, checkResult]) => Array.isArray(checkResult.evidence) && checkResult.evidence.length > 0,
 );
+const temporaryEvidenceCitations = [];
+for (const [checkId, checkResult] of temporaryResultRecords) {
+  for (const evidencePath of Array.isArray(checkResult.evidence) ? checkResult.evidence : []) {
+    temporaryEvidenceCitations.push({ checkId, evidencePath, source: 'result' });
+  }
+}
+for (const issueRecord of issueRecords.values()) {
+  if (plannedChecks.get(issueRecord.checkId)?.driver !== 'playwright-temporary') {
+    continue;
+  }
+  for (const evidencePath of Array.isArray(issueRecord.evidence) ? issueRecord.evidence : []) {
+    temporaryEvidenceCitations.push({
+      checkId: issueRecord.checkId,
+      evidencePath,
+      source: `issue ${issueRecord.id}`,
+    });
+  }
+}
+
+if (browserExecutionErrorExists && playwrightResultsExists) {
+  addError('.browser-check-execution-error.json', 'must not coexist with playwright-results.json');
+}
+if (browserExecutionErrorExists && executionArtifactManifestExists) {
+  addError(
+    '.browser-check-execution-error.json',
+    'must not coexist with .browser-check-artifacts.json',
+  );
+}
+
+const artifactManifestValidationPromise = executionArtifactManifestExists
+  ? validateExecutionArtifactManifest()
+  : undefined;
+if (artifactManifestValidationPromise) {
+  evidenceValidationTasks.push(
+    artifactManifestValidationPromise.then((manifest) => {
+      if (!manifest.paths.has('playwright-results.json')) {
+        addError('.browser-check-artifacts.json.files', 'must include playwright-results.json');
+      }
+      for (const { checkId, evidencePath, source } of temporaryEvidenceCitations) {
+        if (!manifest.paths.has(evidencePath)) {
+          addError(
+            `.browser-check-artifacts.json.files`,
+            `must include temporary-browser evidence ${evidencePath} cited by ${source} for ${checkId}`,
+          );
+        }
+      }
+    }),
+  );
+}
+if (
+  !browserExecutionErrorExists &&
+  (playwrightResultsExists || reportCitedByResult || temporaryEvidenceExists) &&
+  !executionArtifactManifestExists
+) {
+  addError(
+    '.browser-check-artifacts.json',
+    'is required for Playwright reports and temporary-browser evidence',
+  );
+}
+if (browserExecutionErrorExists) {
+  for (const { checkId, evidencePath } of temporaryEvidenceCitations) {
+    if (evidencePath !== '.browser-check-execution-error.json') {
+      addError(
+        `result.json.results.${checkId}.evidence`,
+        'a global pre-report failure may cite only .browser-check-execution-error.json',
+      );
+    }
+  }
+  evidenceValidationTasks.push(validateGlobalExecutionError(plannedChecks, resultRecords));
+}
+
 const shouldValidatePlaywrightReport =
-  playwrightResultsExists ||
-  browserClaimExists ||
-  reportCitedByResult ||
-  executedTemporaryResultRecords.length > 0;
+  !browserExecutionErrorExists &&
+  (playwrightResultsExists ||
+    browserClaimExists ||
+    executionArtifactManifestExists ||
+    reportCitedByResult ||
+    executedTemporaryResultRecords.length > 0);
 const requiresBrowserPostflight =
-  playwrightResultsExists || reportCitedByResult || temporaryEvidenceExists;
-const requiresBrowserClaim = shouldValidatePlaywrightReport || temporaryEvidenceExists;
+  !browserExecutionErrorExists &&
+  (playwrightResultsExists ||
+    executionArtifactManifestExists ||
+    reportCitedByResult ||
+    temporaryEvidenceExists);
+const requiresBrowserClaim =
+  shouldValidatePlaywrightReport ||
+  temporaryEvidenceExists ||
+  executionArtifactManifestExists ||
+  browserExecutionErrorExists;
 
 if (shouldValidatePlaywrightReport) {
   evidenceValidationTasks.push(validatePlaywrightReport(plannedChecks, resultRecords));
@@ -2040,20 +3252,35 @@ if (browserClaimExists) {
       canonicalPlanBaseUrl,
       plannedUseAuthState,
       planEnvironmentValues,
+      expectedDatabaseRuntime,
       requiresPostflight: requiresBrowserPostflight,
+      forbidsPostflight: browserExecutionErrorExists,
       temporaryResultRecords,
       hasPlaywrightReport: playwrightResultsExists,
+      artifactManifestValidationPromise,
     }),
   );
 }
-if ((playwrightResultsExists || browserClaimExists) && temporaryResultRecords.length === 0) {
+if (
+  (playwrightResultsExists ||
+    browserClaimExists ||
+    executionArtifactManifestExists ||
+    browserExecutionErrorExists) &&
+  temporaryResultRecords.length === 0
+) {
   addError(
     'result.json.results',
     'Playwright execution artifacts require a playwright-temporary result',
   );
 }
 for (const [checkId, checkResult] of temporaryResultRecords) {
-  if (checkResult.status === 'not_run' && (playwrightResultsExists || browserClaimExists)) {
+  if (
+    checkResult.status === 'not_run' &&
+    (playwrightResultsExists ||
+      browserClaimExists ||
+      executionArtifactManifestExists ||
+      browserExecutionErrorExists)
+  ) {
     addError(
       `result.json.results.${checkId}.status`,
       'not_run must not coexist with a Playwright report or execution claim',
@@ -2166,8 +3393,8 @@ for (const value of [...scopeAffectedFiles, ...scopeRoutes]) {
 for (const command of existingTestCommands) {
   requireProjectionValue('plan.md', command, 'existing-test command');
 }
+markdownSection('plan.md', '## Delegated Work', /^#{1,2}\s/);
 for (const [key, heading] of [
-  ['delegatedWork', '## Delegated Work'],
   ['unnecessaryChecks', '## Unnecessary Checks'],
   ['assumptions', '## Assumptions'],
   ['specificationGaps', '## Specification Gaps'],
@@ -2178,6 +3405,35 @@ for (const [key, heading] of [
       addError('plan.md', `must project ${key} under ${heading}: ${value}`);
     }
   }
+}
+for (const [itemId, item] of delegatedWorkItems) {
+  const expectedDelegatedWorkRow = [
+    itemId,
+    item.type,
+    item.priority,
+    String(item.requiredForVerdict),
+    item.status,
+    item.target,
+    item.reason,
+  ];
+  const matchingRows = markdownTableRows('plan.md').filter((cells) => cells[0] === itemId);
+  if (
+    matchingRows.length !== 1 ||
+    matchingRows[0]?.length !== 7 ||
+    expectedDelegatedWorkRow.some((value, index) => matchingRows[0]?.[index] !== value)
+  ) {
+    addError('plan.md', `must contain one exact delegated-work row for ${itemId}`);
+  }
+  const itemSection = checkSection('plan.md', itemId);
+  for (const evidencePath of Array.isArray(item.evidence) ? item.evidence : []) {
+    if (
+      !itemSection.includes(evidencePath) &&
+      !itemSection.includes(evidencePath.replaceAll('|', '\\|'))
+    ) {
+      addError('plan.md', `must project delegated-work evidence under ${itemId}: ${evidencePath}`);
+    }
+  }
+  requireProjectionValue('review.md', itemId, 'reviewed delegated work ID');
 }
 requireProjectionValue('result.md', resultChangeId, 'change ID');
 requireProjectionValue('result.md', runId, 'run ID');
@@ -2314,6 +3570,7 @@ requireProjectionValue(
 );
 
 const allowedCheckIds = new Set(plannedChecks.keys());
+const allowedDelegatedWorkIds = new Set(delegatedWorkItems.keys());
 for (const filename of projectionFiles) {
   rejectUnknownIds(
     filename,
@@ -2327,6 +3584,12 @@ for (const filename of projectionFiles) {
     new Set(issueRecords.keys()),
     'issue ID',
   );
+  rejectUnknownIds(
+    filename,
+    new RegExp(DELEGATED_WORK_ID_PATTERN_SOURCE, 'g'),
+    allowedDelegatedWorkIds,
+    'delegated work ID',
+  );
 }
 rejectUnknownIds(
   'issues.md',
@@ -2339,6 +3602,12 @@ rejectUnknownIds(
   /(?<![A-Za-z0-9-])CVI-\d{14}-\d{3}(?![A-Za-z0-9-])/g,
   new Set(issueRecords.keys()),
   'issue ID',
+);
+rejectUnknownIds(
+  'issues.md',
+  new RegExp(DELEGATED_WORK_ID_PATTERN_SOURCE, 'g'),
+  allowedDelegatedWorkIds,
+  'delegated work ID',
 );
 
 for (const issueRecord of issueRecords.values()) {
@@ -2367,36 +3636,51 @@ if (verdictHeadingCount !== 1 || verdictMatches.length !== 1) {
   const unresolvedResults = rawResults.filter(
     (checkResult) => isRecord(checkResult) && ['blocked', 'not_run'].includes(checkResult.status),
   );
-  const conditionalPassIsSupported = unresolvedResults.every((checkResult) => {
-    const plannedCheck = plannedChecks.get(checkResult.checkId);
-    return plannedCheck?.driver === 'human' || plannedCheck?.priority === 'P3';
-  });
-  if (summary.fail > 0 && verdict !== 'fail') {
+  const unresolvedRequiredDelegatedWork = [...delegatedWorkItems.values()].filter(
+    (item) => item.requiredForVerdict === true && item.status !== 'completed',
+  );
+  const unresolvedHighPriorityDelegatedWork = unresolvedRequiredDelegatedWork.filter((item) =>
+    ['P0', 'P1', 'P2'].includes(item.priority),
+  );
+  const conditionalPassIsSupported =
+    unresolvedResults.every((checkResult) => {
+      const plannedCheck = plannedChecks.get(checkResult.checkId);
+      return plannedCheck?.driver === 'human' || plannedCheck?.priority === 'P3';
+    }) && unresolvedRequiredDelegatedWork.every((item) => item.priority === 'P3');
+  const hasUnresolvedWork =
+    summary.blocked > 0 || summary.notRun > 0 || unresolvedRequiredDelegatedWork.length > 0;
+  if (browserExecutionErrorExists && verdict !== 'incomplete') {
+    addError(
+      'review.md',
+      'verdict must be incomplete when a global pre-report browser execution error exists',
+    );
+  } else if (unresolvedHighPriorityDelegatedWork.length > 0 && verdict !== 'incomplete') {
+    addError(
+      'review.md',
+      'verdict must be incomplete while required P0-P2 delegated work is not completed',
+    );
+  } else if (summary.fail > 0 && verdict !== 'fail') {
     addError('review.md', 'verdict must be fail when one or more checks failed');
   } else if (
     summary.fail === 0 &&
-    (summary.blocked > 0 || summary.notRun > 0) &&
+    hasUnresolvedWork &&
     !['conditional-pass', 'incomplete'].includes(verdict)
   ) {
     addError(
       'review.md',
-      'verdict must be conditional-pass or incomplete while blocked or not-run checks remain',
+      'verdict must be conditional-pass or incomplete while required work remains unresolved',
     );
   } else if (verdict === 'conditional-pass' && !conditionalPassIsSupported) {
     addError(
       'review.md',
-      'conditional-pass permits only human or P3 blocked/not-run checks; use incomplete otherwise',
+      'conditional-pass permits only human or P3 unresolved checks and delegated work; use incomplete otherwise',
     );
-  } else if (
-    summary.fail === 0 &&
-    summary.blocked === 0 &&
-    summary.notRun === 0 &&
-    verdict !== 'pass'
-  ) {
-    addError('review.md', 'verdict must be pass when no failed, blocked, or not-run checks remain');
+  } else if (summary.fail === 0 && !hasUnresolvedWork && verdict !== 'pass') {
+    addError('review.md', 'verdict must be pass when no failed or unresolved work remains');
   }
 }
 
+await rejectRawTraceArtifacts();
 await Promise.all(evidenceValidationTasks);
 
 if (errors.length > 0) {

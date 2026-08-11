@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, readFileSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+import { frontendAssetsFingerprint } from './.codex/skills/run-change-verification/scripts/browser-check-assets.mjs';
 import { revisionSnapshot } from './.codex/skills/run-change-verification/scripts/revision-fingerprint.mjs';
 
 type Revision = {
@@ -18,6 +19,7 @@ type RunClaim = {
   runDir?: unknown;
   planHash?: unknown;
   generatedSourceHash?: unknown;
+  frontendAssetsHash?: unknown;
   planRevision?: unknown;
   preflightRevision?: unknown;
   runtime?: unknown;
@@ -25,6 +27,10 @@ type RunClaim = {
 
 type RuntimeSettings = {
   baseUrl: string;
+  appEnvironment: 'testing';
+  databaseConnection: 'mysql' | 'sqlite';
+  databaseIdentifierHash: string;
+  dependenciesFingerprint?: string;
   useAuthState: boolean;
   browser: 'chromium';
   locale: 'ja-JP';
@@ -35,7 +41,12 @@ type RuntimeSettings = {
 const shaPattern = /^[0-9a-f]{40}$/;
 const fingerprintPattern = /^sha256:[0-9a-f]{64}$/;
 const safeGitRefPattern = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
-const allowedBaseUrlHosts = new Set(['localhost', '127.0.0.1', '[::1]', 'nginx']);
+const allowedBaseUrlHosts = new Set(['localhost', '127.0.0.1', '[::1]', 'nginx-browser-check']);
+const trustedRevisionEnvironment = {
+  baseSha: 'BROWSER_CHECK_TRUSTED_BASE_SHA',
+  headSha: 'BROWSER_CHECK_TRUSTED_HEAD_SHA',
+  worktreeFingerprint: 'BROWSER_CHECK_TRUSTED_WORKTREE_FINGERPRINT',
+} as const;
 
 function isRevision(value: unknown): value is Revision {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -60,6 +71,54 @@ function revisionsEqual(left: Revision, right: Revision): boolean {
   );
 }
 
+function trustedRevisionFromEnvironment(isDocker: boolean): Revision | undefined {
+  const revision = Object.fromEntries(
+    Object.entries(trustedRevisionEnvironment).map(([key, environmentName]) => [
+      key,
+      process.env[environmentName],
+    ]),
+  );
+  const suppliedNames = Object.values(trustedRevisionEnvironment).filter(
+    (environmentName) => process.env[environmentName] !== undefined,
+  );
+  if (!isDocker) {
+    if (suppliedNames.length > 0) {
+      throw new Error(
+        `${suppliedNames.join(', ')} must be absent in host mode because Git is verified directly`,
+      );
+    }
+    return undefined;
+  }
+  if (suppliedNames.length !== Object.keys(trustedRevisionEnvironment).length) {
+    throw new Error(
+      `${Object.values(trustedRevisionEnvironment).join(', ')} are all required in Docker mode`,
+    );
+  }
+  if (!isRevision(revision)) {
+    throw new Error(
+      'The trusted Docker revision must contain exact lowercase base/head SHAs and a sha256 worktree fingerprint',
+    );
+  }
+  return revision;
+}
+
+function trustedDependenciesFingerprintFromEnvironment(isDocker: boolean): string | undefined {
+  const environmentName = 'BROWSER_CHECK_TRUSTED_DEPENDENCIES_FINGERPRINT';
+  const fingerprint = process.env[environmentName];
+  if (!isDocker) {
+    if (fingerprint !== undefined) {
+      throw new Error(
+        `${environmentName} must be absent in host mode because dependencies are used directly`,
+      );
+    }
+    return undefined;
+  }
+  if (!fingerprint || !fingerprintPattern.test(fingerprint)) {
+    throw new Error(`${environmentName} must be a lowercase sha256 fingerprint in Docker mode`);
+  }
+  return fingerprint;
+}
+
 function isSafeBaseRef(value: unknown): value is string {
   return (
     typeof value === 'string' &&
@@ -70,10 +129,7 @@ function isSafeBaseRef(value: unknown): value is string {
   );
 }
 
-function canonicalBaseUrl(
-  value: unknown,
-  label: string,
-): { canonical: string; isDocker: boolean; parsed: URL } {
+function canonicalBaseUrl(value: unknown, label: string): { canonical: string; isDocker: boolean } {
   if (typeof value !== 'string' || value.trim() === '') {
     throw new Error(`${label} must be a non-empty URL`);
   }
@@ -83,20 +139,29 @@ function canonicalBaseUrl(
   } catch {
     throw new Error(`${label} must be a valid URL`);
   }
-  if (!['http:', 'https:'].includes(parsed.protocol)) {
-    throw new Error(`${label} must use http or https`);
+  if (parsed.protocol !== 'http:') {
+    throw new Error(`${label} must use HTTP for the dedicated testing runtime`);
   }
   if (parsed.username || parsed.password || parsed.search || parsed.hash) {
     throw new Error(`${label} must not contain credentials, a query string, or a fragment`);
   }
-  const isDocker = parsed.hostname === 'nginx';
+  const isDocker = parsed.hostname === 'nginx-browser-check';
   if (!allowedBaseUrlHosts.has(parsed.hostname)) {
-    throw new Error(`${label} must target localhost, loopback, or Docker nginx`);
+    throw new Error(`${label} must target localhost, loopback, or Docker nginx-browser-check`);
+  }
+  if (isDocker && value !== 'http://nginx-browser-check:80') {
+    throw new Error(`${label} must be exactly http://nginx-browser-check:80 in Docker mode`);
+  }
+  if (!isDocker) {
+    const port = Number(parsed.port);
+    if (!parsed.port || !Number.isInteger(port) || port < 1024 || port > 65535) {
+      throw new Error(`${label} must use an explicit unprivileged port in host mode`);
+    }
   }
   if (isDocker) {
     parsed.hostname = 'localhost';
   }
-  return { canonical: parsed.toString(), isDocker, parsed };
+  return { canonical: parsed.toString(), isDocker };
 }
 
 function isRuntimeSettings(value: unknown): value is RuntimeSettings {
@@ -104,12 +169,29 @@ function isRuntimeSettings(value: unknown): value is RuntimeSettings {
     return false;
   }
   const runtime = value as Partial<RuntimeSettings>;
-  const expectedKeys = runtime.useAuthState
-    ? ['authStateHash', 'baseUrl', 'browser', 'locale', 'timezone', 'useAuthState']
-    : ['baseUrl', 'browser', 'locale', 'timezone', 'useAuthState'];
+  const expectedKeys = [
+    'appEnvironment',
+    'baseUrl',
+    'browser',
+    'databaseConnection',
+    'databaseIdentifierHash',
+    'locale',
+    'timezone',
+    'useAuthState',
+    ...(runtime.useAuthState ? ['authStateHash'] : []),
+    ...(runtime.databaseConnection === 'mysql' ? ['dependenciesFingerprint'] : []),
+  ];
   return (
     Object.keys(runtime).sort().join(',') === expectedKeys.sort().join(',') &&
     typeof runtime.baseUrl === 'string' &&
+    runtime.appEnvironment === 'testing' &&
+    (runtime.databaseConnection === 'mysql' || runtime.databaseConnection === 'sqlite') &&
+    typeof runtime.databaseIdentifierHash === 'string' &&
+    fingerprintPattern.test(runtime.databaseIdentifierHash) &&
+    (runtime.databaseConnection === 'mysql'
+      ? typeof runtime.dependenciesFingerprint === 'string' &&
+        fingerprintPattern.test(runtime.dependenciesFingerprint)
+      : runtime.dependenciesFingerprint === undefined) &&
     typeof runtime.useAuthState === 'boolean' &&
     runtime.browser === 'chromium' &&
     runtime.locale === 'ja-JP' &&
@@ -123,6 +205,10 @@ function isRuntimeSettings(value: unknown): value is RuntimeSettings {
 function runtimesEqual(left: RuntimeSettings, right: RuntimeSettings): boolean {
   return (
     left.baseUrl === right.baseUrl &&
+    left.appEnvironment === right.appEnvironment &&
+    left.databaseConnection === right.databaseConnection &&
+    left.databaseIdentifierHash === right.databaseIdentifierHash &&
+    left.dependenciesFingerprint === right.dependenciesFingerprint &&
     left.useAuthState === right.useAuthState &&
     left.browser === right.browser &&
     left.locale === right.locale &&
@@ -177,6 +263,9 @@ function assertNoSymlinkDescendants(path: string): void {
   if (pathStat.isSymbolicLink()) {
     throw new Error(`run directories and files must not be symlinks: ${path}`);
   }
+  if (pathStat.isFile() && pathStat.nlink !== 1) {
+    throw new Error(`run files must not be hard-linked: ${path}`);
+  }
   if (pathStat.isDirectory()) {
     readdirSync(path).forEach((entry) => assertNoSymlinkDescendants(resolve(path, entry)));
   }
@@ -192,10 +281,13 @@ if (!existsSync(generatedDir) || !statSync(generatedDir).isDirectory()) {
 function collectGeneratedChecks(path: string, checks: string[] = []): string[] {
   for (const entry of readdirSync(path)) {
     const entryPath = resolve(path, entry);
-    const entryStat = statSync(entryPath);
+    const entryStat = lstatSync(entryPath);
+    if (entryStat.isSymbolicLink()) {
+      throw new Error(`generated entries must not be symlinks: ${entryPath}`);
+    }
     if (entryStat.isDirectory()) {
       collectGeneratedChecks(entryPath, checks);
-    } else if (!entryStat.isFile() || !entry.endsWith('.check.spec.ts')) {
+    } else if (!entryStat.isFile() || entryStat.nlink !== 1 || !entry.endsWith('.check.spec.ts')) {
       throw new Error(`generated may contain only *.check.spec.ts source files: ${entryPath}`);
     } else {
       checks.push(entryPath);
@@ -228,7 +320,8 @@ const planPath = resolve(realRunDir, 'plan.json');
 if (
   !existsSync(planPath) ||
   lstatSync(planPath).isSymbolicLink() ||
-  !statSync(planPath).isFile() ||
+  !lstatSync(planPath).isFile() ||
+  lstatSync(planPath).nlink !== 1 ||
   realpathSync(planPath) !== planPath
 ) {
   throw new Error('The browser-check plan is missing or invalid');
@@ -258,28 +351,80 @@ if (plan.schemaVersion !== '1.0' || !isSafeBaseRef(baseRef) || !isRevision(plan.
 }
 const appEnvironment = plan.environment?.appEnvironment;
 if (
-  typeof appEnvironment !== 'string' ||
-  appEnvironment.trim() === '' ||
-  ['prod', 'production', 'live'].includes(appEnvironment.trim().toLowerCase()) ||
+  appEnvironment !== 'testing' ||
   plan.environment?.browser !== 'chromium' ||
   plan.environment?.locale !== 'ja-JP' ||
   plan.environment?.timezone !== 'Asia/Tokyo'
 ) {
   throw new Error(
-    'plan.environment must be non-production with browser=chromium, locale=ja-JP, and timezone=Asia/Tokyo',
+    'plan.environment must use appEnvironment=testing, browser=chromium, locale=ja-JP, and timezone=Asia/Tokyo',
   );
 }
 const planRevision = plan.revision;
 const planHash = `sha256:${createHash('sha256').update(planSource).digest('hex')}`;
 const generatedSourceHash = generatedSourceFingerprint();
+const workspaceRelativeRunDir = relative(realWorkspaceRoot, realRunDir).split(sep).join('/');
+const expectedRunLocalAssetWorkspace = `${workspaceRelativeRunDir}/runtime/assets`;
+const assetWorkspaceInput = process.env.BROWSER_CHECK_ASSET_WORKSPACE?.trim();
+if (assetWorkspaceInput && assetWorkspaceInput !== expectedRunLocalAssetWorkspace) {
+  throw new Error(
+    `BROWSER_CHECK_ASSET_WORKSPACE must equal the run-owned ${expectedRunLocalAssetWorkspace}`,
+  );
+}
+const assetWorkspaceRoot = assetWorkspaceInput
+  ? resolve(realWorkspaceRoot, expectedRunLocalAssetWorkspace)
+  : realWorkspaceRoot;
+if (
+  lstatSync(assetWorkspaceRoot).isSymbolicLink() ||
+  !lstatSync(assetWorkspaceRoot).isDirectory() ||
+  realpathSync(assetWorkspaceRoot) !== assetWorkspaceRoot
+) {
+  throw new Error('The browser-check asset workspace must be a real run-owned directory');
+}
 const plannedBaseUrl = canonicalBaseUrl(plan.environment?.baseUrl, 'plan.environment.baseUrl');
-const runtimeBaseUrl = canonicalBaseUrl(
-  process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:8000',
-  'PLAYWRIGHT_BASE_URL',
+const trustedDependenciesFingerprint = trustedDependenciesFingerprintFromEnvironment(
+  plannedBaseUrl.isDocker,
 );
+const frontendAssetsHash = frontendAssetsFingerprint(
+  assetWorkspaceRoot,
+  planRevision,
+  undefined,
+  trustedDependenciesFingerprint,
+);
+const runtimeBaseUrlInput = process.env.PLAYWRIGHT_BASE_URL;
+if (!runtimeBaseUrlInput) {
+  throw new Error('PLAYWRIGHT_BASE_URL is required');
+}
+const runtimeBaseUrl = canonicalBaseUrl(runtimeBaseUrlInput, 'PLAYWRIGHT_BASE_URL');
 if (plannedBaseUrl.canonical !== runtimeBaseUrl.canonical) {
   throw new Error('PLAYWRIGHT_BASE_URL must match plan.environment.baseUrl');
 }
+if (plannedBaseUrl.isDocker !== runtimeBaseUrl.isDocker) {
+  throw new Error('PLAYWRIGHT_BASE_URL must use the same host runtime as the plan');
+}
+const databaseConnection = process.env.BROWSER_CHECK_DATABASE_CONNECTION?.trim();
+if (databaseConnection !== 'sqlite' && databaseConnection !== 'mysql') {
+  throw new Error('BROWSER_CHECK_DATABASE_CONNECTION must be sqlite or mysql');
+}
+if (
+  (runtimeBaseUrl.isDocker && databaseConnection !== 'mysql') ||
+  (!runtimeBaseUrl.isDocker && databaseConnection !== 'sqlite')
+) {
+  throw new Error('The database connection must match the dedicated host or Docker runtime');
+}
+const rawDatabaseIdentifier = process.env.BROWSER_CHECK_DATABASE_IDENTIFIER;
+if (!rawDatabaseIdentifier || rawDatabaseIdentifier.trim() === '') {
+  throw new Error('BROWSER_CHECK_DATABASE_IDENTIFIER is required');
+}
+const expectedDatabaseIdentifier = runtimeBaseUrl.isDocker
+  ? 'mysql:mysql-browser-check/browser_check'
+  : `sqlite:${relative(realWorkspaceRoot, realRunDir).split(sep).join('/')}/runtime/browser-check.sqlite`;
+if (rawDatabaseIdentifier !== expectedDatabaseIdentifier) {
+  throw new Error('BROWSER_CHECK_DATABASE_IDENTIFIER does not identify the dedicated runtime');
+}
+const databaseIdentifierHash = `sha256:${createHash('sha256')
+  .update(rawDatabaseIdentifier)
+  .digest('hex')}`;
 const plannedUseAuthState = plan.environment?.useAuthState ?? false;
 if (typeof plannedUseAuthState !== 'boolean') {
   throw new Error('plan.environment.useAuthState must be boolean when provided');
@@ -289,19 +434,22 @@ if (!['true', 'false'].includes(authStatePreference)) {
   throw new Error('BROWSER_CHECK_USE_AUTH_STATE must be true or false when provided');
 }
 const useAuthState = authStatePreference === 'true';
-if (useAuthState !== plannedUseAuthState) {
-  throw new Error('BROWSER_CHECK_USE_AUTH_STATE must match plan.environment.useAuthState');
+if (useAuthState || plannedUseAuthState) {
+  throw new Error(
+    'Reusable auth state is unsupported; authenticate explicitly inside each temporary check',
+  );
 }
-const authStatePath = resolve(realWorkspaceRoot, 'playwright/.auth/user.json');
+const authStatePath = resolve(realRunDir, 'auth/user.json');
 let authStateHash: string | undefined;
 if (useAuthState) {
   if (
     !existsSync(authStatePath) ||
     lstatSync(authStatePath).isSymbolicLink() ||
-    !statSync(authStatePath).isFile() ||
+    !lstatSync(authStatePath).isFile() ||
+    lstatSync(authStatePath).nlink !== 1 ||
     realpathSync(authStatePath) !== authStatePath
   ) {
-    throw new Error('BROWSER_CHECK_USE_AUTH_STATE=true requires an immutable workspace auth file');
+    throw new Error('BROWSER_CHECK_USE_AUTH_STATE=true requires a run-local auth/user.json file');
   }
   authStateHash = `sha256:${createHash('sha256')
     .update(readFileSync(authStatePath))
@@ -309,6 +457,12 @@ if (useAuthState) {
 }
 const runtime: RuntimeSettings = {
   baseUrl: runtimeBaseUrl.canonical,
+  appEnvironment: 'testing',
+  databaseConnection,
+  databaseIdentifierHash,
+  ...(trustedDependenciesFingerprint
+    ? { dependenciesFingerprint: trustedDependenciesFingerprint }
+    : {}),
   useAuthState,
   browser: 'chromium',
   locale: 'ja-JP',
@@ -324,7 +478,9 @@ if (!runToken) {
 if (
   !existsSync(claimPath) ||
   lstatSync(claimPath).isSymbolicLink() ||
-  !statSync(claimPath).isFile()
+  !lstatSync(claimPath).isFile() ||
+  lstatSync(claimPath).nlink !== 1 ||
+  realpathSync(claimPath) !== claimPath
 ) {
   throw new Error('The browser-check run claim is missing or invalid');
 }
@@ -341,6 +497,7 @@ if (
   runClaim.runDir !== realRunDir ||
   runClaim.planHash !== planHash ||
   runClaim.generatedSourceHash !== generatedSourceHash ||
+  runClaim.frontendAssetsHash !== frontendAssetsHash ||
   !isRevision(runClaim.planRevision) ||
   !revisionsEqual(runClaim.planRevision, planRevision) ||
   !isRevision(runClaim.preflightRevision) ||
@@ -353,7 +510,9 @@ if (
 
 let currentRevision: Revision;
 try {
-  currentRevision = revisionSnapshot(baseRef, realWorkspaceRoot) as Revision;
+  currentRevision =
+    trustedRevisionFromEnvironment(runtimeBaseUrl.isDocker) ??
+    (revisionSnapshot(baseRef, realWorkspaceRoot) as Revision);
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
   throw new Error(`The browser-check Git revision could not be resolved: ${message}`);
@@ -365,11 +524,8 @@ if (!isRevision(currentRevision) || !revisionsEqual(currentRevision, planRevisio
 // Generated checks inherit the verified canonical path instead of the untrusted input path.
 process.env.BROWSER_CHECK_RUN_DIR = realRunDir;
 
-const parsedBaseURL = runtimeBaseUrl.parsed;
 const isDocker = runtimeBaseUrl.isDocker;
 const browserBaseURL = runtimeBaseUrl.canonical;
-const webServerPort = parsedBaseURL.port || (parsedBaseURL.protocol === 'https:' ? '443' : '80');
-const webServerHost = parsedBaseURL.hostname === '[::1]' ? '::1' : parsedBaseURL.hostname;
 
 export default defineConfig({
   testDir: resolve(realRunDir, 'generated'),
@@ -392,16 +548,16 @@ export default defineConfig({
 
   use: {
     baseURL: browserBaseURL,
-    trace: 'on',
-    screenshot: 'on',
-    video: 'retain-on-failure',
+    trace: 'off',
+    screenshot: 'off',
+    video: 'off',
     serviceWorkers: 'block',
     locale: 'ja-JP',
     timezoneId: 'Asia/Tokyo',
     ...(isDocker
       ? {
           launchOptions: {
-            args: ['--host-resolver-rules=MAP localhost nginx'],
+            args: ['--host-resolver-rules=MAP localhost nginx-browser-check'],
           },
         }
       : {}),
@@ -417,13 +573,14 @@ export default defineConfig({
     },
   ],
 
-  ...(isDocker || parsedBaseURL.protocol === 'https:'
+  ...(isDocker
     ? {}
     : {
         webServer: {
-          command: `php artisan serve --host=${webServerHost} --port=${webServerPort}`,
-          url: parsedBaseURL.origin,
-          reuseExistingServer: !process.env.CI,
+          command:
+            'node .codex/skills/run-change-verification/scripts/start-browser-check-server.mjs',
+          url: browserBaseURL,
+          reuseExistingServer: false,
           timeout: 120000,
         },
       }),

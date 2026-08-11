@@ -49,6 +49,8 @@ Identify:
 Search existing unit, feature, component, permanent E2E, E2E specification, helper, fixture, and seeder assets.
 
 Record whether each existing check actually covers the changed contract. Avoid duplicating sufficient coverage merely to add another lane.
+Existing Page Objects may inform locator and behavior analysis, but temporary checks must never
+import, call, or execute them or their helper graph.
 
 ### 3. Classify test responsibility
 
@@ -83,6 +85,14 @@ Use exactly one value:
 - `not-required`
 
 Model proposed lower-level tests and permanent E2E work as delegated recommendations; do not invent new driver values.
+Record each proposal in the required structured `delegatedWorkItems` array. Use a stable
+`DW-{normalized-change-id}-{three-digit-sequence}` ID, exact type and priority, whether it gates the
+verdict, its current terminal status, a concrete target and reason, and same-run evidence paths.
+Use `requiredForVerdict: false` with `not_required` for recommendations that do not gate this run.
+A completed required item must cite the exact structured
+`evidence/delegated/{delegated-work-id}.json` execution record; a note or contract file is not
+completion evidence. An unresolved required P0-P2 item makes the
+run incomplete.
 
 ### 6. Select an evaluation mode
 
@@ -110,7 +120,7 @@ Without a formal rule, keep qualities such as natural layout, pleasant animation
 
 ### 8. Define proportional evidence
 
-Select evidence appropriate to the driver and risk. Do not request screenshots mechanically when command output, DOM state, network evidence, or a trace is more probative.
+Select evidence appropriate to the driver and risk. Do not request screenshots mechanically when command output, DOM state, or sanitized network evidence is more probative. Raw Playwright traces are prohibited because they can retain session headers.
 
 For a human check only, add plan-level `evidenceWaiverReason` when the environment forbids capture and the waiver is defensible. Omit it by default. A later result cannot introduce waiver permission that the plan did not grant.
 
@@ -126,7 +136,7 @@ Recommend permanent E2E consideration only when a stable, business-critical flow
 
 Use change-only `agent-browser` for exploratory UI, responsive layout, focus, keyboard behavior, browser diagnostics, or one-off investigation.
 
-Use `playwright-temporary` when steps and expectations are deterministic, assertions and trace evidence are useful, repetition during the change is likely, and permanent maintenance is unjustified.
+Use `playwright-temporary` when steps and expectations are deterministic, Web-first assertions and focused evidence are useful, repetition during the change is likely, and permanent maintenance is unjustified.
 
 Use `human` for real devices, CAPTCHA, external identity, real email or notification, inaccessible environments, subjective approval, or required legal/business judgment.
 
@@ -166,6 +176,15 @@ BC-{normalized-change-id}-{three-digit-sequence}
 
 Use `planned` only as a nonterminal plan status. It is not an allowed `result.json` status.
 
+Delegated work uses:
+
+```text
+DW-{normalized-change-id}-{three-digit-sequence}
+```
+
+Follow the artifact contract's exact delegated-work schema, canonical table, and per-item evidence
+sections. Do not use the obsolete free-form `delegatedWork` string array.
+
 ## Quality Gate
 
 Before finishing, confirm:
@@ -177,5 +196,7 @@ Before finishing, confirm:
 - required evidence is stated;
 - human-only work is not assigned to automation;
 - change-only work is not silently permanent;
+- delegated work has exact structured fields, defensible verdict gating, and a revision-bound execution record for every
+  completed required item;
 - specification gaps and assumptions are visible;
 - IDs are unique and stable within the change.

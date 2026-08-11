@@ -18,11 +18,14 @@ Mark a check `pass` only when every objective expected result is addressed and t
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `existing-test`        | Exact command, selected test file or filter, exit code, and result summary                                                            |
 | `agent-browser`        | URL plus a focused screenshot or recorded DOM state; console or network evidence when relevant                                        |
-| `playwright-temporary` | Playwright JSON result, trace, and either a successful screenshot or explicit assertion output                                        |
+| `playwright-temporary` | Playwright JSON result and an owner-bound focused PNG screenshot                                                                         |
 | `human`                | Executor, execution time, environment or device, actual result, and supplied evidence or an explicit permitted evidence-waiver reason |
 | `not-required`         | Analysis rationale; use status `not_required`, not pass                                                                               |
 
 An evidence file must be readable, relevant to the expected result, and attributable to the current run. A path alone is not proof when the referenced content is unrelated or contradictory.
+Image evidence must have a valid signature and nonzero dimensions; renaming text to an image
+extension is invalid. An `agent-browser` DOM alternative uses the exact
+`evidence/dom/{check-id}.json` schema from the artifact contract rather than an arbitrary text file.
 
 Record existing-test command details in `results[].testExecution` and passing human metadata in `results[].humanExecution`, as defined by the artifact contract. These structured fields keep JSON authoritative; Markdown command logs and human notes are projections and supporting evidence.
 
@@ -30,11 +33,12 @@ Record existing-test command details in `results[].testExecution` and passing hu
 
 - Store evidence below the current run directory.
 - Record paths relative to the run directory using forward slashes.
+- Reject symlinks, path aliases, and generic contract files presented as evidence.
 - Never record absolute workstation or container paths in `plan.json` or `result.json`.
 - Do not reference a prior run as current pass evidence.
 - Keep Playwright automatic output under `artifacts/` and its JSON and HTML reporters at the run root.
 - Use `evidence/` for intentionally captured screenshots, console, network, and notes.
-- Use `traces/` only for explicitly exported trace files; a trace may remain under `artifacts/` when Playwright generated it there.
+- Raw Playwright trace archives are prohibited because request headers can contain session cookies.
 
 ## Screenshots
 
@@ -49,17 +53,21 @@ Use lowercase stages such as `before`, `after`, `error`, or `viewport-390x844`.
 - Capture before and after when a state transition matters.
 - Prefer the smallest region that proves the result while retaining enough context to identify it.
 - Add a text or DOM record when an image alone cannot prove the result.
-- Do not request a screenshot mechanically when a command log, assertion, network record, or trace is more probative.
+- Do not request a screenshot mechanically for non-Playwright drivers when a command log, DOM record, or sanitized network record is more probative. A passing `playwright-temporary` check is the exception: it requires one owner-bound focused PNG in addition to the Playwright JSON report.
 
-## Playwright Traces, Screenshots, and Video
+## Playwright Screenshots and Sensitive Automatic Capture
 
 Temporary Playwright uses:
 
-- `trace: 'on'`;
-- `screenshot: 'on'`;
-- `video: 'retain-on-failure'`.
+- `trace: 'off'`;
+- `screenshot: 'off'`;
+- `video: 'off'`.
 
-Keep successful traces because change-only verification may require positive evidence. Treat trace and screenshot capture as supporting evidence, not substitutes for Web-first assertions.
+Capture only focused, explicitly planned screenshots beneath `evidence/screenshots/`. Raw traces,
+automatic screenshots, and video are disabled because they cannot be inspected or redacted before
+the wrapper hashes the immutable manifest. Treat screenshots as supporting evidence, not
+substitutes for Web-first assertions. If focused console or network evidence is required, sanitize
+it before writing the evidence file.
 
 The HTML report is a diagnostic projection. The JSON report and `result.json` remain the machine-readable execution records.
 
@@ -85,12 +93,21 @@ unrelated failing spec invalidates an overall pass; it must never be hidden by s
 successful leaf.
 
 Discover and reconcile temporary execution independently of evidence citations. An existing
-`playwright-results.json`, `.browser-check-run.json`, or executed temporary result activates report
-validation, so removing `playwright-results.json` from `results[].evidence` cannot bypass leaf,
-root-error, or statistics checks. A `not_run` temporary result must not coexist with a report or
-claim. Execution artifacts and executed results require the wrapper claim, and any report or
-temporary evidence requires an integrity-complete postflight whose hashes, revision, runtime, and
-exit code agree with the final artifacts.
+`playwright-results.json`, `.browser-check-run.json`, `.browser-check-artifacts.json`, or executed
+temporary result activates execution validation, so removing `playwright-results.json` from
+`results[].evidence` cannot bypass leaf, root-error, statistics, or manifest checks. A `not_run`
+temporary result must not coexist with execution artifacts or a claim. Every ordinary temporary
+evidence citation must appear in the exact wrapper manifest, whose recorded path, size, and SHA-256
+must match every file under the allowed execution roots. The claim postflight binds the raw
+manifest bytes. Execution artifacts and executed results require the wrapper claim, and any report
+or temporary evidence requires an integrity-complete postflight whose hashes, revision, runtime,
+database identity, and exit code agree with the final artifacts.
+
+When the wrapper cannot produce a trustworthy report, it may instead write the strict global
+`.browser-check-execution-error.json` record. It must name every planned temporary check; all of
+those results stay `blocked` with blocker metadata and the review remains `incomplete`. This path
+uses the valid preflight claim but no report, manifest, or postflight. Reject coexistence rather
+than treating a partial report as global-error evidence.
 
 ## Console and Network Evidence
 
@@ -136,16 +153,22 @@ Before saving or retaining evidence:
 - remove passwords, session tokens, API keys, cookies, authorization headers, and personal information;
 - avoid production accounts, data, and environments entirely;
 - crop or redact unrelated sensitive content;
-- inspect trace, network, and storage-state artifacts because they may contain cookies or page data;
+- inspect network and storage-state artifacts because they may contain cookies or page data;
 - do not commit evidence under the ignored run directory.
 
 If redaction would destroy probative value, mark the check blocked or document an approved evidence-waiver reason. Never preserve secrets merely to obtain pass evidence.
 
 ## CI Retention
 
-When change verification runs in CI, upload the complete run directory as a restricted artifact with the repository's appropriate retention policy. Do not make CI execution automatic as part of an ordinary local run and do not edit CI unless explicitly requested.
+A CI browser smoke used only as a quality gate may discard a successful run after validation. If a
+CI run is cited as review evidence, upload its sanitized contract artifacts intentionally with the
+repository's restricted retention policy; runtime state and authentication files are never
+evidence and must remain excluded. Failure-only diagnostic upload is not proof of a successful
+run. Do not make CI execution automatic as part of an ordinary local run and do not edit CI unless
+explicitly requested.
 
-Validate and sanitize evidence before upload. Retention does not change the append-only or same-run rules.
+Validate and sanitize evidence before upload. Retention does not change the append-only or same-run
+rules.
 
 ## Unsupported Evidence
 
@@ -155,6 +178,6 @@ Reject or downgrade pass when:
 - evidence belongs to another run;
 - the screenshot does not show the expected state;
 - only navigation or absence of exceptions was observed;
-- trace, console, or network data contradicts the claim;
+- console or network data contradicts the claim;
 - the expectation is subjective or unspecified;
 - human executor or environment details are fabricated or absent.

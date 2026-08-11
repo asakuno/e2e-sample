@@ -9,7 +9,9 @@ if [ "$OS_NAME" = "Linux" ]; then
     mkdir "/home/$USER_NAME" 2>/dev/null || echo "/home/$USER_NAME already exists."
     chown -R "$USER_NAME:$GROUP_NAME" "/home/$USER_NAME"
 fi
-whoami
+if ! whoami; then
+    echo "uid=$(id -u) gid=$(id -g)"
+fi
 
 
 if [ "${1#-}" != "$1" ]; then

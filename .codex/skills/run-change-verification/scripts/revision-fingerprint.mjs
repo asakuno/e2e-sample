@@ -16,10 +16,29 @@ function pathStaysInside(parentPath, candidatePath) {
   );
 }
 
+export function revisionGitEnvironment(sourceEnvironment = process.env) {
+  const environment = {
+    GIT_CONFIG_COUNT: '2',
+    GIT_CONFIG_KEY_0: 'core.excludesFile',
+    GIT_CONFIG_KEY_1: 'core.attributesFile',
+    GIT_CONFIG_NOSYSTEM: '1',
+    GIT_CONFIG_VALUE_0: '/dev/null',
+    GIT_CONFIG_VALUE_1: '/dev/null',
+    GIT_OPTIONAL_LOCKS: '0',
+  };
+  for (const name of ['LANG', 'LC_ALL', 'PATH', 'TMPDIR']) {
+    if (sourceEnvironment[name] !== undefined) {
+      environment[name] = sourceEnvironment[name];
+    }
+  }
+  return environment;
+}
+
 function runGit(workspaceRoot, args, encoding) {
   const result = spawnSync('git', args, {
     cwd: workspaceRoot,
     encoding,
+    env: revisionGitEnvironment(),
     maxBuffer: 50 * 1024 * 1024,
   });
   if (result.status !== 0) {
@@ -33,6 +52,17 @@ function runGit(workspaceRoot, args, encoding) {
 
 export function currentGitRevision(workspace = process.cwd()) {
   const workspaceRoot = realpathSync(workspace);
+  const indexEntries = String(runGit(workspaceRoot, ['ls-files', '-v', '-z'], 'utf8'))
+    .split('\0')
+    .filter(Boolean);
+  const hiddenIndexEntry = indexEntries.find(
+    (entry) => entry.length < 3 || entry[1] !== ' ' || entry[0] !== 'H',
+  );
+  if (hiddenIndexEntry) {
+    throw new Error(
+      `tracked files must not use assume-unchanged, skip-worktree, or noncanonical index flags: ${hiddenIndexEntry.slice(2)}`,
+    );
+  }
   const headSha = String(
     runGit(workspaceRoot, ['rev-parse', '--verify', 'HEAD^{commit}'], 'utf8'),
   ).trim();

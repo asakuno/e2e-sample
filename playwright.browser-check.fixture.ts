@@ -10,12 +10,52 @@ type BrowserCheckFixtures = {
   originGuard: void;
 };
 
-const configuredBaseURL = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:8000');
-if (configuredBaseURL.hostname === 'nginx') {
+const configuredBaseUrlValue = process.env.PLAYWRIGHT_BASE_URL;
+if (!configuredBaseUrlValue) {
+  throw new Error('PLAYWRIGHT_BASE_URL is required');
+}
+const configuredBaseURL = new URL(configuredBaseUrlValue);
+const isDockerRuntime = configuredBaseURL.hostname === 'nginx-browser-check';
+if (
+  !['localhost', '127.0.0.1', '[::1]', 'nginx-browser-check'].includes(configuredBaseURL.hostname)
+) {
+  throw new Error(
+    'PLAYWRIGHT_BASE_URL must target loopback or the dedicated nginx-browser-check service',
+  );
+}
+if (
+  configuredBaseURL.username ||
+  configuredBaseURL.password ||
+  configuredBaseURL.search ||
+  configuredBaseURL.hash
+) {
+  throw new Error('PLAYWRIGHT_BASE_URL must not include credentials, a query, or a fragment');
+}
+if (isDockerRuntime && configuredBaseUrlValue !== 'http://nginx-browser-check:80') {
+  throw new Error('Docker PLAYWRIGHT_BASE_URL must be exactly http://nginx-browser-check:80');
+}
+if (!isDockerRuntime) {
+  const port = Number(configuredBaseURL.port);
+  if (!configuredBaseURL.port || !Number.isInteger(port) || port < 1024 || port > 65535) {
+    throw new Error('Host PLAYWRIGHT_BASE_URL must use an explicit unprivileged port');
+  }
+}
+if (isDockerRuntime) {
   configuredBaseURL.hostname = 'localhost';
 }
-if (!['http:', 'https:'].includes(configuredBaseURL.protocol)) {
-  throw new Error('PLAYWRIGHT_BASE_URL must use http or https');
+if (configuredBaseURL.protocol !== 'http:') {
+  throw new Error('PLAYWRIGHT_BASE_URL must use HTTP for the dedicated testing runtime');
+}
+const databaseConnection = process.env.BROWSER_CHECK_DATABASE_CONNECTION?.trim();
+if (
+  (isDockerRuntime && databaseConnection !== 'mysql') ||
+  (!isDockerRuntime && databaseConnection !== 'sqlite')
+) {
+  throw new Error('BROWSER_CHECK_DATABASE_CONNECTION must match the dedicated runtime');
+}
+const databaseIdentifier = process.env.BROWSER_CHECK_DATABASE_IDENTIFIER;
+if (!databaseIdentifier || databaseIdentifier.trim() === '') {
+  throw new Error('BROWSER_CHECK_DATABASE_IDENTIFIER is required');
 }
 const allowedOrigin = configuredBaseURL.origin;
 

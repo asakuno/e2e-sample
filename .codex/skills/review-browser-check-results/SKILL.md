@@ -16,7 +16,8 @@ Read:
 - [`artifact-contract.md`](../run-change-verification/references/artifact-contract.md);
 - [`evidence-policy.md`](../run-change-verification/references/evidence-policy.md);
 - the current `plan.json`, `plan.md`, `result.json`, `result.md`, and `issues.md`;
-- Playwright JSON, screenshots, traces, console, and network evidence;
+- wrapper claim, execution-artifact manifest or global execution-error record, Playwright JSON,
+  focused screenshots and sanitized console or network evidence;
 - supplied human records when present;
 - relevant specifications and changed implementation.
 
@@ -34,6 +35,11 @@ Confirm every planned check has exactly one current result. Flag:
 - mismatched change or run identity;
 - inconsistent summary counts.
 
+Also account for every structured `delegatedWorkItems` entry. Confirm exact IDs and fields,
+revision-bound `evidence/delegated/{delegated-work-id}.json` execution record for completed required
+work, and the status of every verdict-gating item. A
+required P0-P2 item that is not completed keeps the review incomplete.
+
 ### 2. Validate pass evidence
 
 A pass is valid only when:
@@ -41,7 +47,12 @@ A pass is valid only when:
 - expected results are objective and specification-grounded;
 - the actual result addresses every expected result;
 - all required evidence exists and belongs to the same run;
-- no console, network, trace, screenshot, or log evidence contradicts it.
+- no console, network, screenshot, or log evidence contradicts it.
+
+For temporary Playwright evidence, verify the wrapper manifest lists every cited and emitted file,
+that its sizes and hashes match the bytes, and that claim postflight binds the raw manifest. Read
+existing Page Objects only as locator and behavior references; never import or execute them from a
+temporary check.
 
 Downgrade an unsupported objective pass to `blocked` or `not_run` as appropriate and explain the
 correction. Use `observation` only when the plan already classifies the check with
@@ -68,6 +79,10 @@ Require each blocked or not-run result to state:
 - whether the dependency is environment, data, specification, permission, or human execution;
 - exactly what is needed to complete it.
 
+When a strict global pre-report execution-error record exists, require every planned temporary
+check to be blocked with blocker metadata, reject any report or postflight coexistence, and keep the
+verdict `incomplete`.
+
 ### 5. Validate issue classification
 
 Distinguish:
@@ -93,6 +108,9 @@ Use exactly one verdict:
 - `conditional-pass`: no blocking product defect remains, but explicit low-risk or human checks remain;
 - `fail`: a blocking product defect or acceptance failure remains;
 - `incomplete`: required checks are blocked, not run, missing, or unsupported.
+
+Required unresolved P0-P2 delegated work and a global pre-report execution error also require
+`incomplete`. Only unresolved required P3 work may participate in `conditional-pass`.
 
 ## Output
 
@@ -126,6 +144,7 @@ Update `result.json` only to correct the current run's unsupported status or cla
 Finish when:
 
 - every planned check is accounted for exactly once;
+- every delegated work item is accounted for and completed required execution evidence is valid;
 - unsupported statuses are corrected;
 - issue classifications and priorities are defensible;
 - summary counts match current results;
