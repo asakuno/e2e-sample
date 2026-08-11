@@ -112,6 +112,28 @@ function readBoundedRegularJson(path, label, maximumBytes = 16 * 1024 * 1024) {
   }
 }
 
+function readBoundedRegularText(path, label, maximumBytes = 1024 * 1024) {
+  const beforeStat = lstatSync(path);
+  if (
+    beforeStat.isSymbolicLink() ||
+    !beforeStat.isFile() ||
+    beforeStat.nlink !== 1 ||
+    beforeStat.size > maximumBytes
+  ) {
+    throw new Error(`${label} must be a bounded regular file`);
+  }
+  const contents = readFileSync(path);
+  const afterStat = lstatSync(path);
+  if (
+    afterStat.ino !== beforeStat.ino ||
+    afterStat.size !== beforeStat.size ||
+    afterStat.mtimeMs !== beforeStat.mtimeMs
+  ) {
+    throw new Error(`${label} changed while it was read`);
+  }
+  return contents.toString('utf8');
+}
+
 function runNode(scriptPath, arguments_, environment, timeout) {
   const result = spawnSync(process.execPath, [scriptPath, ...arguments_], {
     cwd: workspaceRoot,
@@ -1151,6 +1173,127 @@ function assertCanonicalHostPath(path, label) {
   }
 }
 
+export function dockerComposeBindOptionsAreFailClosed(bind) {
+  if (bind === null || typeof bind !== 'object' || Array.isArray(bind)) {
+    return false;
+  }
+  const keys = Object.keys(bind);
+  return keys.length === 0 || (keys.length === 1 && bind.create_host_path === false);
+}
+
+const browserCheckFailClosedBindTargets = Object.freeze({
+  'mysql-browser-check': Object.freeze(['/etc/mysql/my.cnf']),
+  'app-browser-check': Object.freeze([
+    '/app',
+    '/app/public/build',
+    '/app/vendor',
+    '/app/.env',
+    '/app/.env.testing',
+    '/app/.env.local',
+    '/app/.env.production',
+    '/app/.env.production.local',
+    '/app/.npmrc',
+    '/app/.git/config',
+    '/usr/local/etc/php/conf.d/php.ini',
+    '/usr/local/etc/php-fpm.d/www.conf',
+  ]),
+  'nginx-browser-check': Object.freeze([
+    '/app/public',
+    '/app/public/build',
+    '/etc/nginx/nginx.conf',
+  ]),
+  'playwright-browser-check': Object.freeze([
+    '/app',
+    '/app/public/build',
+    '/app/node_modules',
+    '/app/.env',
+    '/app/.env.testing',
+    '/app/.env.local',
+    '/app/.env.production',
+    '/app/.env.production.local',
+    '/app/.npmrc',
+    '/app/.git/config',
+  ]),
+});
+
+export function assertBrowserCheckComposeSourceIsFailClosed(composeSource) {
+  if (typeof composeSource !== 'string') {
+    throw new Error('Docker browser-check Compose source must be text');
+  }
+  const lines = composeSource.split(/\r?\n/);
+
+  for (const [serviceName, expectedTargets] of Object.entries(browserCheckFailClosedBindTargets)) {
+    const errorMessage = `Docker browser-check service ${serviceName} must explicitly disable host path creation for every bind mount`;
+    const serviceHeader = `  ${serviceName}:`;
+    const serviceIndexes = lines
+      .map((line, index) => (line === serviceHeader ? index : -1))
+      .filter((index) => index !== -1);
+    if (serviceIndexes.length !== 1) {
+      throw new Error(errorMessage);
+    }
+
+    const serviceStart = serviceIndexes[0];
+    let serviceEnd = lines.length;
+    for (let index = serviceStart + 1; index < lines.length; index += 1) {
+      if (/^(?:  [A-Za-z0-9_.-]+|[A-Za-z0-9_.-]+):\s*$/.test(lines[index])) {
+        serviceEnd = index;
+        break;
+      }
+    }
+    const serviceLines = lines.slice(serviceStart + 1, serviceEnd);
+    const volumeHeaderIndexes = serviceLines
+      .map((line, index) => (line === '    volumes:' ? index : -1))
+      .filter((index) => index !== -1);
+    if (volumeHeaderIndexes.length !== 1) {
+      throw new Error(errorMessage);
+    }
+
+    const volumesStart = volumeHeaderIndexes[0] + 1;
+    let volumesEnd = serviceLines.length;
+    for (let index = volumesStart; index < serviceLines.length; index += 1) {
+      if (/^    \S/.test(serviceLines[index])) {
+        volumesEnd = index;
+        break;
+      }
+    }
+    const volumeLines = serviceLines.slice(volumesStart, volumesEnd);
+    const itemIndexes = volumeLines
+      .map((line, index) => (line.startsWith('      - ') ? index : -1))
+      .filter((index) => index !== -1);
+    if (itemIndexes.length !== expectedTargets.length) {
+      throw new Error(errorMessage);
+    }
+
+    const actualTargets = [];
+    for (const [itemIndex, blockStart] of itemIndexes.entries()) {
+      const blockEnd = itemIndexes[itemIndex + 1] ?? volumeLines.length;
+      const block = volumeLines.slice(blockStart, blockEnd);
+      const targetMatch = /^        target: (\/\S+)$/.exec(block[2] ?? '');
+      if (
+        block.length !== 6 ||
+        block[0] !== '      - type: bind' ||
+        !/^        source: \S.*$/.test(block[1] ?? '') ||
+        !targetMatch ||
+        block[3] !== '        read_only: true' ||
+        block[4] !== '        bind:' ||
+        block[5] !== '          create_host_path: false'
+      ) {
+        throw new Error(errorMessage);
+      }
+      actualTargets.push(targetMatch[1]);
+    }
+
+    const sortedActualTargets = actualTargets.toSorted();
+    const sortedExpectedTargets = [...expectedTargets].toSorted();
+    if (
+      sortedActualTargets.length !== sortedExpectedTargets.length ||
+      sortedActualTargets.some((target, index) => target !== sortedExpectedTargets[index])
+    ) {
+      throw new Error(errorMessage);
+    }
+  }
+}
+
 function assertExactBuild(service, serviceName, expectedContext, expectedArguments) {
   const build = service.build;
   assertCanonicalHostPath(expectedContext, `${serviceName} build context`);
@@ -1190,7 +1333,7 @@ function assertExactVolumes(service, serviceName, expectedVolumes) {
       Object.keys(volume).some(
         (key) => !new Set(['type', 'source', 'target', 'read_only', 'bind']).has(key),
       ) ||
-      (volume.bind && Object.keys(volume.bind).length > 0)
+      !dockerComposeBindOptionsAreFailClosed(volume.bind)
     ) {
       throw new Error(
         `Docker browser-check service ${serviceName} changed the exact ${target} mount`,
@@ -1733,7 +1876,12 @@ export async function runDockerBrowserCheck(
     dockerEnvironment.BROWSER_CHECK_NODE_MODULES_DIR = nodeModulesDirectory;
     dockerEnvironment.BROWSER_CHECK_VENDOR_DIR = vendorDirectory;
     const dockerUser = `${process.getuid?.() ?? 1000}:${process.getgid?.() ?? 1000}`;
-    const composePath = realpathSync(resolve(workspaceRoot, 'compose.yml'));
+    const composeCandidatePath = resolve(workspaceRoot, 'compose.yml');
+    assertCanonicalHostPath(composeCandidatePath, 'Compose file');
+    const composePath = realpathSync(composeCandidatePath);
+    assertBrowserCheckComposeSourceIsFailClosed(
+      readBoundedRegularText(composePath, 'Docker browser-check Compose source'),
+    );
     const composeEnvironmentPath = realpathSync(
       resolve(workspaceRoot, '.docker/local/browser-check/empty.env'),
     );

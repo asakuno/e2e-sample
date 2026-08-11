@@ -6,6 +6,7 @@ import {
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   realpathSync,
   rmSync,
   writeFileSync,
@@ -15,8 +16,10 @@ import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
+  assertBrowserCheckComposeSourceIsFailClosed,
   dependencyStateFingerprint,
   dependencyManifestSetId,
+  dockerComposeBindOptionsAreFailClosed,
   dockerEndpointIsLocal,
   dockerPlaywrightExecutionTimeout,
   dockerWrapperCompletionKind,
@@ -57,6 +60,71 @@ void test('Docker endpoint guard accepts only local daemon transports', () => {
   assert.equal(dockerEndpointIsLocal('https://localhost:2376'), true);
   assert.equal(dockerEndpointIsLocal('ssh://builder@example.com'), false);
   assert.equal(dockerEndpointIsLocal('tcp://192.0.2.10:2375'), false);
+});
+
+void test('Docker Compose bind options disable implicit host path creation exactly', () => {
+  assert.equal(dockerComposeBindOptionsAreFailClosed({ create_host_path: false }), true);
+  assert.equal(dockerComposeBindOptionsAreFailClosed({}), true);
+  assert.equal(dockerComposeBindOptionsAreFailClosed(undefined), false);
+  assert.equal(dockerComposeBindOptionsAreFailClosed(null), false);
+  assert.equal(dockerComposeBindOptionsAreFailClosed([]), false);
+  assert.equal(dockerComposeBindOptionsAreFailClosed(''), false);
+  assert.equal(dockerComposeBindOptionsAreFailClosed(0), false);
+  assert.equal(dockerComposeBindOptionsAreFailClosed({ create_host_path: true }), false);
+  assert.equal(
+    dockerComposeBindOptionsAreFailClosed({
+      create_host_path: false,
+      propagation: 'rshared',
+    }),
+    false,
+  );
+  assert.equal(dockerComposeBindOptionsAreFailClosed({ selinux: 'z' }), false);
+});
+
+void test('Browser-check Compose source disables host path creation for every bind mount', () => {
+  const composeSource = readFileSync(
+    resolve(dirname(scriptPath), '../../../../compose.yml'),
+    'utf8',
+  );
+  assert.doesNotThrow(() => assertBrowserCheckComposeSourceIsFailClosed(composeSource));
+
+  const implicitCreationSource = composeSource.replace(
+    '          create_host_path: false',
+    '          create_host_path: true',
+  );
+  assert.notEqual(implicitCreationSource, composeSource);
+  assert.throws(
+    () => assertBrowserCheckComposeSourceIsFailClosed(implicitCreationSource),
+    /must explicitly disable host path creation for every bind mount/,
+  );
+
+  const mysqlLongBind = [
+    '      - type: bind',
+    '        source: ./.docker/local/mysql/my.cnf',
+    '        target: /etc/mysql/my.cnf',
+    '        read_only: true',
+    '        bind:',
+    '          create_host_path: false',
+  ].join('\n');
+  const shortSyntaxSource = composeSource.replace(
+    mysqlLongBind,
+    '      - "./.docker/local/mysql/my.cnf:/etc/mysql/my.cnf:ro"',
+  );
+  assert.notEqual(shortSyntaxSource, composeSource);
+  assert.throws(
+    () => assertBrowserCheckComposeSourceIsFailClosed(shortSyntaxSource),
+    /must explicitly disable host path creation for every bind mount/,
+  );
+
+  const extraBindOptionSource = composeSource.replace(
+    '          create_host_path: false',
+    '          create_host_path: false\n          propagation: rshared',
+  );
+  assert.notEqual(extraBindOptionSource, composeSource);
+  assert.throws(
+    () => assertBrowserCheckComposeSourceIsFailClosed(extraBindOptionSource),
+    /must explicitly disable host path creation for every bind mount/,
+  );
 });
 
 void test('Docker build prepares cache mountpoints below read-only node_modules', () => {

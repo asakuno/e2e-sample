@@ -165,7 +165,12 @@ services:
     platform: linux/amd64
     build: ".docker/local/mysql"
     volumes:
-      - ".docker/local/mysql/my.cnf:/etc/mysql/my.cnf:ro"
+      - type: bind
+        source: ./.docker/local/mysql/my.cnf
+        target: /etc/mysql/my.cnf
+        read_only: true
+        bind:
+          create_host_path: false
     tmpfs:
       - /var/lib/mysql
     cpus: 2.0
@@ -207,18 +212,78 @@ services:
         php artisan db:seed --class=StockAnalysisDemoSeeder --force --env=testing &&
         exec php-fpm
     volumes:
-      - "${BROWSER_CHECK_SOURCE_DIR:-.}:/app:ro"
-      - "${BROWSER_CHECK_BUILD_DIR:-./public/build}:/app/public/build:ro"
-      - "${BROWSER_CHECK_VENDOR_DIR:-./vendor}:/app/vendor:ro"
-      - "./.docker/local/browser-check/empty.env:/app/.env:ro"
-      - "./.docker/local/browser-check/empty.env:/app/.env.testing:ro"
-      - "./.docker/local/browser-check/empty.env:/app/.env.local:ro"
-      - "./.docker/local/browser-check/empty.env:/app/.env.production:ro"
-      - "./.docker/local/browser-check/empty.env:/app/.env.production.local:ro"
-      - "./.docker/local/browser-check/empty.env:/app/.npmrc:ro"
-      - "./.docker/local/browser-check/empty.env:/app/.git/config:ro"
-      - "./.docker/local/php/php.ini:/usr/local/etc/php/conf.d/php.ini:ro"
-      - "./.docker/local/php-fpm/www.conf:/usr/local/etc/php-fpm.d/www.conf:ro"
+      - type: bind
+        source: "${BROWSER_CHECK_SOURCE_DIR:-.}"
+        target: /app
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${BROWSER_CHECK_BUILD_DIR:-./public/build}"
+        target: /app/public/build
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${BROWSER_CHECK_VENDOR_DIR:-./vendor}"
+        target: /app/vendor
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env.testing
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env.local
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env.production
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env.production.local
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.npmrc
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.git/config
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/php/php.ini
+        target: /usr/local/etc/php/conf.d/php.ini
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/php-fpm/www.conf
+        target: /usr/local/etc/php-fpm.d/www.conf
+        read_only: true
+        bind:
+          create_host_path: false
     tmpfs:
       - /app/bootstrap/cache:mode=1777
       - /app/storage:mode=1777
@@ -351,9 +416,24 @@ services:
   nginx-browser-check:
     build: ".docker/local/nginx"
     volumes:
-      - ${BROWSER_CHECK_SOURCE_DIR:-.}/public:/app/public:ro
-      - ${BROWSER_CHECK_BUILD_DIR:-./public/build}:/app/public/build:ro
-      - ./.docker/local/nginx/nginx.browser-check.conf:/etc/nginx/nginx.conf:ro
+      - type: bind
+        source: "${BROWSER_CHECK_SOURCE_DIR:-.}/public"
+        target: /app/public
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${BROWSER_CHECK_BUILD_DIR:-./public/build}"
+        target: /app/public/build
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/nginx/nginx.browser-check.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+        bind:
+          create_host_path: false
     depends_on:
       app-browser-check:
         condition: service_healthy
@@ -380,16 +460,66 @@ services:
         GROUP_ID: ${GROUP_ID:-1000}
     working_dir: /app
     volumes:
-      - "${BROWSER_CHECK_SOURCE_DIR:-.}:/app:ro"
-      - "${BROWSER_CHECK_BUILD_DIR:-./public/build}:/app/public/build:ro"
-      - "${BROWSER_CHECK_NODE_MODULES_DIR:-./node_modules}:/app/node_modules:ro"
-      - "./.docker/local/browser-check/empty.env:/app/.env:ro"
-      - "./.docker/local/browser-check/empty.env:/app/.env.testing:ro"
-      - "./.docker/local/browser-check/empty.env:/app/.env.local:ro"
-      - "./.docker/local/browser-check/empty.env:/app/.env.production:ro"
-      - "./.docker/local/browser-check/empty.env:/app/.env.production.local:ro"
-      - "./.docker/local/browser-check/empty.env:/app/.npmrc:ro"
-      - "./.docker/local/browser-check/empty.env:/app/.git/config:ro"
+      - type: bind
+        source: "${BROWSER_CHECK_SOURCE_DIR:-.}"
+        target: /app
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${BROWSER_CHECK_BUILD_DIR:-./public/build}"
+        target: /app/public/build
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${BROWSER_CHECK_NODE_MODULES_DIR:-./node_modules}"
+        target: /app/node_modules
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env.testing
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env.local
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env.production
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env.production.local
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.npmrc
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.git/config
+        read_only: true
+        bind:
+          create_host_path: false
     read_only: true
     tmpfs:
       - /tmp:mode=1777
