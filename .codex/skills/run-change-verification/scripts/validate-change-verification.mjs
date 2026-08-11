@@ -3649,16 +3649,20 @@ if (verdictHeadingCount !== 1 || verdictMatches.length !== 1) {
     }) && unresolvedRequiredDelegatedWork.every((item) => item.priority === 'P3');
   const hasUnresolvedWork =
     summary.blocked > 0 || summary.notRun > 0 || unresolvedRequiredDelegatedWork.length > 0;
-  if (browserExecutionErrorExists && verdict !== 'incomplete') {
-    addError(
-      'review.md',
-      'verdict must be incomplete when a global pre-report browser execution error exists',
-    );
-  } else if (unresolvedHighPriorityDelegatedWork.length > 0 && verdict !== 'incomplete') {
-    addError(
-      'review.md',
-      'verdict must be incomplete while required P0-P2 delegated work is not completed',
-    );
+  if (browserExecutionErrorExists) {
+    if (verdict !== 'incomplete') {
+      addError(
+        'review.md',
+        'verdict must be incomplete when a global pre-report browser execution error exists',
+      );
+    }
+  } else if (unresolvedHighPriorityDelegatedWork.length > 0) {
+    if (verdict !== 'incomplete') {
+      addError(
+        'review.md',
+        'verdict must be incomplete while required P0-P2 delegated work is not completed',
+      );
+    }
   } else if (summary.fail > 0 && verdict !== 'fail') {
     addError('review.md', 'verdict must be fail when one or more checks failed');
   } else if (

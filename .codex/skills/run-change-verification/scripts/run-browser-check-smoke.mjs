@@ -565,6 +565,22 @@ function appendDependencyTreeFingerprint(fingerprint, rootDirectory, label) {
     for (const entry of readdirSync(directoryPath).sort()) {
       const relativePath = relativeDirectory ? `${relativeDirectory}/${entry}` : entry;
       if (label === 'node_modules' && ['.vite', '.vite-temp'].includes(relativePath)) {
+        const cacheDirectory = resolve(directoryPath, entry);
+        const beforeStat = lstatSync(cacheDirectory);
+        const cacheEntries = beforeStat.isDirectory() ? readdirSync(cacheDirectory) : [];
+        const afterStat = lstatSync(cacheDirectory);
+        if (
+          beforeStat.isSymbolicLink() ||
+          !beforeStat.isDirectory() ||
+          realpathSync(cacheDirectory) !== cacheDirectory ||
+          cacheEntries.length !== 0 ||
+          afterStat.ino !== beforeStat.ino ||
+          afterStat.mtimeMs !== beforeStat.mtimeMs
+        ) {
+          throw new Error(
+            `Docker browser-check ${relativePath} cache mountpoint must be an empty canonical directory`,
+          );
+        }
         continue;
       }
       const entryPath = resolve(directoryPath, entry);
@@ -915,6 +931,34 @@ export function trustedDependencyState(sourceWorkspace, markerWorkspace = worksp
     nodeModulesDirectory: realpathSync(nodeModulesDirectory),
     vendorDirectory: realpathSync(vendorDirectory),
   };
+}
+
+export function prepareDockerNodeModulesCacheMountpoints(nodeModulesDirectory) {
+  const canonicalNodeModulesDirectory = realpathSync(nodeModulesDirectory);
+  const nodeModulesStat = lstatSync(canonicalNodeModulesDirectory);
+  if (
+    nodeModulesStat.isSymbolicLink() ||
+    !nodeModulesStat.isDirectory() ||
+    canonicalNodeModulesDirectory !== nodeModulesDirectory
+  ) {
+    throw new Error('Docker browser-check node_modules must be a canonical directory');
+  }
+
+  for (const directoryName of ['.vite', '.vite-temp']) {
+    const mountpoint = resolve(canonicalNodeModulesDirectory, directoryName);
+    if (!existsSync(mountpoint)) {
+      mkdirSync(mountpoint, { mode: 0o700 });
+    }
+    const mountpointStat = lstatSync(mountpoint);
+    if (
+      mountpointStat.isSymbolicLink() ||
+      !mountpointStat.isDirectory() ||
+      realpathSync(mountpoint) !== mountpoint ||
+      readdirSync(mountpoint).length !== 0
+    ) {
+      throw new Error(`Docker browser-check ${directoryName} cache mountpoint is unsafe`);
+    }
+  }
 }
 
 export function dockerPlaywrightExecutionTimeout(checkCount) {
@@ -1445,8 +1489,8 @@ export function verifyRenderedDockerConfiguration(
     build.tmpfs,
     [
       '/tmp:mode=1777',
-      '/workspace/node_modules/.vite:mode=1777',
-      '/workspace/node_modules/.vite-temp:mode=1777',
+      '/app/node_modules/.vite:mode=1777',
+      '/app/node_modules/.vite-temp:mode=1777',
     ],
     'browser-check-build tmpfs',
   );
@@ -1548,7 +1592,7 @@ export function verifyRenderedDockerConfiguration(
     app.entrypoint !== null ||
     app.working_dir !== '/app' ||
     app.read_only !== true ||
-    build.working_dir !== '/workspace' ||
+    build.working_dir !== '/app' ||
     playwright.working_dir !== '/app' ||
     build.read_only !== true ||
     playwright.read_only !== true ||
@@ -1685,6 +1729,7 @@ export async function runDockerBrowserCheck(
     const trustedDependencies = trustedDependencyState(runtimeWorkspace, workspaceRoot);
     const { nodeModulesDirectory, vendorDirectory } = trustedDependencies;
     dependenciesFingerprint = trustedDependencies.dependenciesFingerprint;
+    prepareDockerNodeModulesCacheMountpoints(nodeModulesDirectory);
     dockerEnvironment.BROWSER_CHECK_NODE_MODULES_DIR = nodeModulesDirectory;
     dockerEnvironment.BROWSER_CHECK_VENDOR_DIR = vendorDirectory;
     const dockerUser = `${process.getuid?.() ?? 1000}:${process.getgid?.() ?? 1000}`;
@@ -1748,15 +1793,15 @@ export async function runDockerBrowserCheck(
         '--user',
         dockerUser,
         '--volume',
-        `${buildWorkspace}:/workspace:rw`,
+        `${buildWorkspace}:/app:rw`,
         '--volume',
-        `${nodeModulesDirectory}:/workspace/node_modules:ro`,
+        `${nodeModulesDirectory}:/app/node_modules:ro`,
         '--volume',
-        `${vendorDirectory}:/workspace/vendor:ro`,
+        `${vendorDirectory}:/app/vendor:ro`,
         '-e',
         'NPM_CONFIG_CACHE=/tmp/browser-check-npm-cache',
         '-e',
-        'NPM_CONFIG_USERCONFIG=/workspace/.npmrc',
+        'NPM_CONFIG_USERCONFIG=/app/.npmrc',
         '-e',
         'XDG_CACHE_HOME=/tmp/browser-check-cache',
         'browser-check-build',
@@ -1808,6 +1853,7 @@ export async function runDockerBrowserCheck(
     );
 
     const verifyIsolatedConfiguration = String.raw`
+require '/app/vendor/autoload.php';
 $app = require '/app/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 $isEmpty = static fn ($value): bool => $value === null || $value === '';
@@ -1933,10 +1979,10 @@ echo "Docker browser-check application configuration is isolated.\n";
       dockerEnvironment,
       dockerPlaywrightTimeout,
     );
-    const completedClaim = readBoundedRegularJson(
-      resolve(realRunDirectory, '.browser-check-run.json'),
-      'Docker browser-check claim',
-    );
+    const completedClaimPath = resolve(realRunDirectory, '.browser-check-run.json');
+    const completedClaim = existsSync(completedClaimPath)
+      ? readBoundedRegularJson(completedClaimPath, 'Docker browser-check claim')
+      : undefined;
     const executionErrorPath = resolve(realRunDirectory, '.browser-check-execution-error.json');
     const executionError = existsSync(executionErrorPath)
       ? readBoundedRegularJson(executionErrorPath, 'Docker browser-check global execution error')
@@ -1998,7 +2044,7 @@ async function runSmoke() {
   const databaseIdentifier = isDockerMode
     ? 'mysql:mysql-browser-check/browser_check'
     : `sqlite:${runDirRelative}/runtime/browser-check.sqlite`;
-  const screenshotEvidencePath = `evidence/screenshots/${checkId}-${runId}.png`;
+  const screenshotEvidencePath = `evidence/screenshots/${checkId}.${runId}.png`;
   const screenshotSourcePath = `${runDirRelative}/${screenshotEvidencePath}`;
   const revision = revisionSnapshot(baseRef, workspaceRoot);
 

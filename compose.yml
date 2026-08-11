@@ -297,12 +297,12 @@ services:
 
   browser-check-build:
     build: ".docker/local/php"
-    working_dir: /workspace
+    working_dir: /app
     read_only: true
     tmpfs:
       - /tmp:mode=1777
-      - /workspace/node_modules/.vite:mode=1777
-      - /workspace/node_modules/.vite-temp:mode=1777
+      - /app/node_modules/.vite:mode=1777
+      - /app/node_modules/.vite-temp:mode=1777
     cpus: 2.0
     mem_limit: 2g
     pids_limit: 256

@@ -16,7 +16,11 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { delimiter, isAbsolute, relative, resolve, sep } from 'node:path';
-import { dependencyManifestSetId, dependencyStateFingerprint } from './run-browser-check-smoke.mjs';
+import {
+  dependencyManifestSetId,
+  dependencyStateFingerprint,
+  prepareDockerNodeModulesCacheMountpoints,
+} from './run-browser-check-smoke.mjs';
 
 const INSTALL_TIMEOUT_MS = 10 * 60 * 1000;
 const TERMINATION_GRACE_MS = 5_000;
@@ -208,6 +212,8 @@ try {
     cleanWorkspace,
   );
 
+  prepareDockerNodeModulesCacheMountpoints(realpathSync(resolve(cleanWorkspace, 'node_modules')));
+
   const cleanFingerprint = dependencyStateFingerprint(
     cleanWorkspace,
     resolve(cleanWorkspace, 'node_modules'),
@@ -215,6 +221,7 @@ try {
   );
   if (existsSync(dependencyRoot)) {
     requireDependencyDirectory(dependencyRoot, 'Existing browser-check dependency root');
+    prepareDockerNodeModulesCacheMountpoints(realpathSync(resolve(dependencyRoot, 'node_modules')));
     const existingFingerprint = dependencyStateFingerprint(
       dependencyRoot,
       resolve(dependencyRoot, 'node_modules'),

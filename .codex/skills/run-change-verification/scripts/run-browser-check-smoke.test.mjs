@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
@@ -11,6 +20,7 @@ import {
   dockerEndpointIsLocal,
   dockerPlaywrightExecutionTimeout,
   dockerWrapperCompletionKind,
+  prepareDockerNodeModulesCacheMountpoints,
   runDockerProcess,
   trustedDependencyState,
 } from './run-browser-check-smoke.mjs';
@@ -47,6 +57,41 @@ void test('Docker endpoint guard accepts only local daemon transports', () => {
   assert.equal(dockerEndpointIsLocal('https://localhost:2376'), true);
   assert.equal(dockerEndpointIsLocal('ssh://builder@example.com'), false);
   assert.equal(dockerEndpointIsLocal('tcp://192.0.2.10:2375'), false);
+});
+
+void test('Docker build prepares cache mountpoints below read-only node_modules', () => {
+  const fixture = mkdtempSync(resolve(tmpdir(), 'browser-check-cache-mountpoints-'));
+  try {
+    const nodeModulesPath = resolve(fixture, 'node_modules');
+    mkdirSync(nodeModulesPath);
+    const nodeModules = realpathSync(nodeModulesPath);
+
+    prepareDockerNodeModulesCacheMountpoints(nodeModules);
+    prepareDockerNodeModulesCacheMountpoints(nodeModules);
+
+    for (const directoryName of ['.vite', '.vite-temp']) {
+      const mountpoint = resolve(nodeModules, directoryName);
+      assert.equal(existsSync(mountpoint), true);
+      assert.equal(lstatSync(mountpoint).isDirectory(), true);
+    }
+
+    rmSync(resolve(nodeModules, '.vite'), { recursive: true });
+    writeFileSync(resolve(nodeModules, '.vite'), 'unsafe\n');
+    assert.throws(
+      () => prepareDockerNodeModulesCacheMountpoints(nodeModules),
+      /\.vite cache mountpoint is unsafe/,
+    );
+
+    rmSync(resolve(nodeModules, '.vite'));
+    mkdirSync(resolve(nodeModules, '.vite'));
+    writeFileSync(resolve(nodeModules, '.vite/cache.json'), '{}\n');
+    assert.throws(
+      () => prepareDockerNodeModulesCacheMountpoints(nodeModules),
+      /\.vite cache mountpoint is unsafe/,
+    );
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
 });
 
 void test('Docker subprocess timeout escalates from SIGTERM to SIGKILL', async () => {
@@ -146,9 +191,11 @@ void test('dependency fingerprint rejects installed npm content that disagrees w
       version: '0.9.0',
     });
     writeJson(resolve(vendor, 'composer/installed.json'), { packages: [] });
+    const canonicalNodeModules = realpathSync(nodeModules);
+    const canonicalVendor = realpathSync(vendor);
 
     assert.throws(
-      () => dependencyStateFingerprint(source, nodeModules, vendor),
+      () => dependencyStateFingerprint(source, canonicalNodeModules, canonicalVendor),
       /Installed npm package contents do not match lock metadata/,
     );
     writeJson(resolve(nodeModules, 'example/package.json'), {
@@ -156,7 +203,22 @@ void test('dependency fingerprint rejects installed npm content that disagrees w
       version: '1.0.0',
     });
     writeFileSync(resolve(nodeModules, 'example/index.js'), 'export default 1;\n');
-    const beforeMutation = dependencyStateFingerprint(source, nodeModules, vendor);
+    prepareDockerNodeModulesCacheMountpoints(canonicalNodeModules);
+    const beforeMutation = dependencyStateFingerprint(
+      source,
+      canonicalNodeModules,
+      canonicalVendor,
+    );
+    writeFileSync(resolve(nodeModules, '.vite/cache.json'), '{}\n');
+    assert.throws(
+      () => dependencyStateFingerprint(source, canonicalNodeModules, canonicalVendor),
+      /\.vite cache mountpoint must be an empty canonical directory/,
+    );
+    rmSync(resolve(nodeModules, '.vite/cache.json'));
+    assert.equal(
+      dependencyStateFingerprint(source, canonicalNodeModules, canonicalVendor),
+      beforeMutation,
+    );
     writeJson(resolve(fixture, 'storage/framework/browser-check-dependencies.json'), {
       schemaVersion: '2.0',
       dependencyRoot: dependencyRootRelative,
@@ -164,7 +226,7 @@ void test('dependency fingerprint rejects installed npm content that disagrees w
     });
     assert.equal(trustedDependencyState(source, fixture).dependenciesFingerprint, beforeMutation);
     writeFileSync(resolve(nodeModules, 'example/index.js'), 'export default 2;\n');
-    const afterMutation = dependencyStateFingerprint(source, nodeModules, vendor);
+    const afterMutation = dependencyStateFingerprint(source, canonicalNodeModules, canonicalVendor);
     assert.notEqual(afterMutation, beforeMutation);
     assert.throws(
       () => trustedDependencyState(source, fixture),

@@ -297,7 +297,7 @@ function passingPlaywrightReport(checkId) {
 function configurePassingPlaywrightFixture(fixture) {
   const check = fixture.plan.checks[0];
   const checkResult = fixture.result.results[0];
-  const screenshotPath = `evidence/screenshots/${check.id}-planned.png`;
+  const screenshotPath = `evidence/screenshots/${check.id}.planned.png`;
   check.lifecycle = 'change-only';
   check.driver = 'playwright-temporary';
   check.evidence = ['Playwright JSON', 'screenshot'];
@@ -808,30 +808,26 @@ async function prepareValidatorGit() {
   const fakeGitPath = resolve(fakeGitDirectory, 'git');
   const fakeGitSource = `#!/usr/bin/env node
 const arguments_ = process.argv.slice(2);
+let output;
 if (arguments_[0] === 'rev-parse' && arguments_[1] === '--verify') {
   if (arguments_[2] === 'HEAD^{commit}') {
-    process.stdout.write(${JSON.stringify(`${validatorFixtureRevision.headSha}\n`)});
-    process.exit(0);
+    output = ${JSON.stringify(`${validatorFixtureRevision.headSha}\n`)};
+  } else if (arguments_[2] === ${JSON.stringify(`${fixtureBaseRef}^{commit}`)}) {
+    output = ${JSON.stringify(`${validatorFixtureRevision.baseSha}\n`)};
   }
-  if (arguments_[2] === ${JSON.stringify(`${fixtureBaseRef}^{commit}`)}) {
-    process.stdout.write(${JSON.stringify(`${validatorFixtureRevision.baseSha}\n`)});
-    process.exit(0);
-  }
+} else if (arguments_[0] === 'diff') {
+  output = Buffer.from(${JSON.stringify(validatorTrackedDiffBase64)}, 'base64');
+} else if (arguments_[0] === 'status') {
+  output = Buffer.from(${JSON.stringify(validatorStatusBase64)}, 'base64');
+} else if (arguments_[0] === 'ls-files' && arguments_[1] === '-v' && arguments_[2] === '-z') {
+  output = Buffer.from(${JSON.stringify(validatorIndexBase64)}, 'base64');
 }
-if (arguments_[0] === 'diff') {
-  process.stdout.write(Buffer.from(${JSON.stringify(validatorTrackedDiffBase64)}, 'base64'));
-  process.exit(0);
+if (output !== undefined) {
+  process.stdout.write(output);
+} else {
+  process.stderr.write('Unsupported validator-contract Git invocation: ' + JSON.stringify(arguments_) + '\\n');
+  process.exitCode = 2;
 }
-if (arguments_[0] === 'status') {
-  process.stdout.write(Buffer.from(${JSON.stringify(validatorStatusBase64)}, 'base64'));
-  process.exit(0);
-}
-if (arguments_[0] === 'ls-files' && arguments_[1] === '-v' && arguments_[2] === '-z') {
-  process.stdout.write(Buffer.from(${JSON.stringify(validatorIndexBase64)}, 'base64'));
-  process.exit(0);
-}
-process.stderr.write('Unsupported validator-contract Git invocation: ' + JSON.stringify(arguments_) + '\\n');
-process.exit(2);
 `;
   await writeFile(fakeGitPath, fakeGitSource, { mode: 0o755 });
 
@@ -2324,7 +2320,7 @@ await test('change-verification validator contract matrix', async (t) => {
         await writeFile(
           resolve(
             staleRunDirectory,
-            `evidence/screenshots/${checkIdFor(basename(dirname(staleRunDirectory)))}-planned.png`,
+            `evidence/screenshots/${checkIdFor(basename(dirname(staleRunDirectory)))}.planned.png`,
           ),
           'tampered screenshot\n',
         );
@@ -2428,13 +2424,13 @@ await test('change-verification validator contract matrix', async (t) => {
       );
       const owningCheckId = checkIdFor(basename(dirname(runDirectory)));
       await symlink(
-        `${owningCheckId}-planned.png`,
-        resolve(runDirectory, `evidence/screenshots/${owningCheckId}-planned-link.png`),
+        `${owningCheckId}.planned.png`,
+        resolve(runDirectory, `evidence/screenshots/${owningCheckId}.planned-link.png`),
       );
 
       assertInvalid(
         runValidator(runDirectory),
-        /execution output must not be a symlink: evidence\/screenshots\/.*-planned-link\.png/,
+        /execution output must not be a symlink: evidence\/screenshots\/.*\.planned-link\.png/,
       );
     });
 
@@ -3089,7 +3085,7 @@ await test('change-verification validator contract matrix', async (t) => {
       const reportValidation = runValidator(reportRunDirectory);
       assertInvalid(
         reportValidation,
-        /playwright-results\.json: must be a regular file, not a symlink/,
+        /playwright-results\.json: must be a regular file with no symlink or hard-link aliases/,
       );
       assert.match(
         reportValidation.stderr,
@@ -3099,7 +3095,7 @@ await test('change-verification validator contract matrix', async (t) => {
       const claimValidation = runValidator(claimRunDirectory);
       assertInvalid(
         claimValidation,
-        /\.browser-check-run\.json: must be a regular file, not a symlink/,
+        /\.browser-check-run\.json: must be a regular file with no link aliases/,
       );
       assert.match(
         claimValidation.stderr,

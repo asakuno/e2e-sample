@@ -82,7 +82,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 * @see Http/Controllers/Web/WatchlistPageController.php:54
 * @route '/watchlists/{watchlist}'
 */
-export const update = (args: { watchlist: number | { id: number } } | [watchlist: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+export const update = (args: { watchlist: string | number | { id: string | number } } | [watchlist: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: update.url(args, options),
     method: 'patch',
 })
@@ -97,7 +97,7 @@ update.definition = {
 * @see Http/Controllers/Web/WatchlistPageController.php:54
 * @route '/watchlists/{watchlist}'
 */
-update.url = (args: { watchlist: number | { id: number } } | [watchlist: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+update.url = (args: { watchlist: string | number | { id: string | number } } | [watchlist: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { watchlist: args }
     }
@@ -130,7 +130,7 @@ update.url = (args: { watchlist: number | { id: number } } | [watchlist: number 
 * @see Http/Controllers/Web/WatchlistPageController.php:54
 * @route '/watchlists/{watchlist}'
 */
-update.patch = (args: { watchlist: number | { id: number } } | [watchlist: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
+update.patch = (args: { watchlist: string | number | { id: string | number } } | [watchlist: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'patch'> => ({
     url: update.url(args, options),
     method: 'patch',
 })
@@ -140,7 +140,7 @@ update.patch = (args: { watchlist: number | { id: number } } | [watchlist: numbe
 * @see Http/Controllers/Web/WatchlistPageController.php:71
 * @route '/watchlists/{watchlist}'
 */
-export const destroy = (args: { watchlist: number | { id: number } } | [watchlist: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+export const destroy = (args: { watchlist: string | number | { id: string | number } } | [watchlist: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
@@ -155,7 +155,7 @@ destroy.definition = {
 * @see Http/Controllers/Web/WatchlistPageController.php:71
 * @route '/watchlists/{watchlist}'
 */
-destroy.url = (args: { watchlist: number | { id: number } } | [watchlist: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
+destroy.url = (args: { watchlist: string | number | { id: string | number } } | [watchlist: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { watchlist: args }
     }
@@ -188,7 +188,7 @@ destroy.url = (args: { watchlist: number | { id: number } } | [watchlist: number
 * @see Http/Controllers/Web/WatchlistPageController.php:71
 * @route '/watchlists/{watchlist}'
 */
-destroy.delete = (args: { watchlist: number | { id: number } } | [watchlist: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
+destroy.delete = (args: { watchlist: string | number | { id: string | number } } | [watchlist: string | number | { id: string | number } ] | string | number | { id: string | number }, options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
     url: destroy.url(args, options),
     method: 'delete',
 })
