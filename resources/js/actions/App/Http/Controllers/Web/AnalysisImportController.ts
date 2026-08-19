@@ -4,7 +4,7 @@ import { queryParams, type RouteQueryOptions, type RouteDefinition, applyUrlDefa
 * @see Http/Controllers/Web/AnalysisImportController.php:24
 * @route '/analysis/{analysisBatch}/imports'
 */
-export const store = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const store = (args: { analysisBatch: string | number | { public_id: string | number } } | [analysisBatch: string | number | { public_id: string | number } ] | string | number | { public_id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(args, options),
     method: 'post',
 })
@@ -19,7 +19,7 @@ store.definition = {
 * @see Http/Controllers/Web/AnalysisImportController.php:24
 * @route '/analysis/{analysisBatch}/imports'
 */
-store.url = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions) => {
+store.url = (args: { analysisBatch: string | number | { public_id: string | number } } | [analysisBatch: string | number | { public_id: string | number } ] | string | number | { public_id: string | number }, options?: RouteQueryOptions) => {
     if (typeof args === 'string' || typeof args === 'number') {
         args = { analysisBatch: args }
     }
@@ -52,7 +52,7 @@ store.url = (args: { analysisBatch: string | { public_id: string } } | [analysis
 * @see Http/Controllers/Web/AnalysisImportController.php:24
 * @route '/analysis/{analysisBatch}/imports'
 */
-store.post = (args: { analysisBatch: string | { public_id: string } } | [analysisBatch: string | { public_id: string } ] | string | { public_id: string }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+store.post = (args: { analysisBatch: string | number | { public_id: string | number } } | [analysisBatch: string | number | { public_id: string | number } ] | string | number | { public_id: string | number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: store.url(args, options),
     method: 'post',
 })
@@ -62,7 +62,7 @@ store.post = (args: { analysisBatch: string | { public_id: string } } | [analysi
 * @see Http/Controllers/Web/AnalysisImportController.php:42
 * @route '/analysis/{analysisBatch}/imports/{analysisImport}/reprepare'
 */
-export const reprepare = (args: { analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } } | [analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const reprepare = (args: { analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } } | [analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: reprepare.url(args, options),
     method: 'post',
 })
@@ -77,7 +77,7 @@ reprepare.definition = {
 * @see Http/Controllers/Web/AnalysisImportController.php:42
 * @route '/analysis/{analysisBatch}/imports/{analysisImport}/reprepare'
 */
-reprepare.url = (args: { analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } } | [analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } ], options?: RouteQueryOptions) => {
+reprepare.url = (args: { analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } } | [analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } ], options?: RouteQueryOptions) => {
     if (Array.isArray(args)) {
         args = {
             analysisBatch: args[0],
@@ -107,7 +107,7 @@ reprepare.url = (args: { analysisBatch: string | { public_id: string }, analysis
 * @see Http/Controllers/Web/AnalysisImportController.php:42
 * @route '/analysis/{analysisBatch}/imports/{analysisImport}/reprepare'
 */
-reprepare.post = (args: { analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } } | [analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+reprepare.post = (args: { analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } } | [analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: reprepare.url(args, options),
     method: 'post',
 })
@@ -117,7 +117,7 @@ reprepare.post = (args: { analysisBatch: string | { public_id: string }, analysi
 * @see Http/Controllers/Web/AnalysisImportController.php:64
 * @route '/analysis/{analysisBatch}/imports/{analysisImport}/commit'
 */
-export const commit = (args: { analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } } | [analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const commit = (args: { analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } } | [analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: commit.url(args, options),
     method: 'post',
 })
@@ -132,7 +132,7 @@ commit.definition = {
 * @see Http/Controllers/Web/AnalysisImportController.php:64
 * @route '/analysis/{analysisBatch}/imports/{analysisImport}/commit'
 */
-commit.url = (args: { analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } } | [analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } ], options?: RouteQueryOptions) => {
+commit.url = (args: { analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } } | [analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } ], options?: RouteQueryOptions) => {
     if (Array.isArray(args)) {
         args = {
             analysisBatch: args[0],
@@ -162,7 +162,7 @@ commit.url = (args: { analysisBatch: string | { public_id: string }, analysisImp
 * @see Http/Controllers/Web/AnalysisImportController.php:64
 * @route '/analysis/{analysisBatch}/imports/{analysisImport}/commit'
 */
-commit.post = (args: { analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } } | [analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+commit.post = (args: { analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } } | [analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: commit.url(args, options),
     method: 'post',
 })
@@ -172,7 +172,7 @@ commit.post = (args: { analysisBatch: string | { public_id: string }, analysisIm
 * @see Http/Controllers/Web/AnalysisImportController.php:89
 * @route '/analysis/{analysisBatch}/imports/{analysisImport}/replace'
 */
-export const replace = (args: { analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } } | [analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+export const replace = (args: { analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } } | [analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: replace.url(args, options),
     method: 'post',
 })
@@ -187,7 +187,7 @@ replace.definition = {
 * @see Http/Controllers/Web/AnalysisImportController.php:89
 * @route '/analysis/{analysisBatch}/imports/{analysisImport}/replace'
 */
-replace.url = (args: { analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } } | [analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } ], options?: RouteQueryOptions) => {
+replace.url = (args: { analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } } | [analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } ], options?: RouteQueryOptions) => {
     if (Array.isArray(args)) {
         args = {
             analysisBatch: args[0],
@@ -217,7 +217,7 @@ replace.url = (args: { analysisBatch: string | { public_id: string }, analysisIm
 * @see Http/Controllers/Web/AnalysisImportController.php:89
 * @route '/analysis/{analysisBatch}/imports/{analysisImport}/replace'
 */
-replace.post = (args: { analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } } | [analysisBatch: string | { public_id: string }, analysisImport: number | { id: number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
+replace.post = (args: { analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } } | [analysisBatch: string | number | { public_id: string | number }, analysisImport: string | number | { id: string | number } ], options?: RouteQueryOptions): RouteDefinition<'post'> => ({
     url: replace.url(args, options),
     method: 'post',
 })

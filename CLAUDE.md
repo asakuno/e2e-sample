@@ -88,6 +88,7 @@ docker compose exec app npm run test:coverage
 | `storybook-guidelines` | Storybook ストーリー作成規約 |
 | `playwright-guidelines` | E2Eテスト仕様書作成とPlaywrightテストコード生成 |
 | `ui-design-guidelines` | UI/UX 原則、アクセシビリティ |
+| `product-ui-slop-audit` | 明示依頼時のread-only Anti AI Slop・視覚的ドリフト監査 |
 | `backend-coding-guidelines` | UseCase、Repository、DTO パターン |
 | `backend-test-guidelines` | PHPUnit テスト規約 |
 | `backend-architecture-guidelines` | 7層設計、レイヤー分離、TypeScript型生成 |
@@ -96,6 +97,10 @@ docker compose exec app npm run test:coverage
 #### 実装時の Skill 参照
 
 実装フェーズでは、対応する Skill を参照して詳細なガイドラインを確認すること。
+
+- Explicit anti-AI-slop audits use `product-ui-slop-audit` after `screen-design-process` / `ui-design-guidelines` as applicable.
+- Do not run it automatically for every frontend task.
+- Audit and implementation must remain separate tasks unless the user asks for both.
 
 | フェーズ | 領域 | 参照 Skill |
 |---------|------|-----------|

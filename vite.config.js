@@ -7,7 +7,9 @@ import path from 'node:path';
 
 export default defineConfig({
   plugins: [
-    wayfinder(),
+    wayfinder({
+      command: 'php artisan wayfinder:generate --env=local',
+    }),
     laravel({
       input: ['resources/css/app.css', 'resources/js/app.tsx'],
       ssr: 'resources/js/ssr.tsx',

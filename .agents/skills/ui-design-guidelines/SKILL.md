@@ -5,6 +5,10 @@ description: Comprehensive UI/UX design guidelines covering visual design (typog
 
 # UI/UX Design Guidelines
 
+For an explicit anti-AI-slop, visual cliché, excessive-card, or design-system
+visual drift audit, load `product-ui-slop-audit` after this skill. Do not duplicate
+its named-finding report in the general UI/UX review.
+
 ## Required References
 
 このスキルを読み込んだ後、以下のファイルをReadツールで読み込むこと。

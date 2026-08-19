@@ -142,8 +142,8 @@ services:
 
   playwright:
     build:
-      context: .
-      dockerfile: .docker/local/playwright/Dockerfile
+      context: .docker/local/playwright
+      dockerfile: Dockerfile
       args:
         USER_ID: ${USER_ID:-1000}
         GROUP_ID: ${GROUP_ID:-1000}
@@ -160,3 +160,397 @@ services:
     init: true
     profiles:
       - e2e
+
+  mysql-browser-check:
+    platform: linux/amd64
+    build: ".docker/local/mysql"
+    volumes:
+      - type: bind
+        source: ./.docker/local/mysql/my.cnf
+        target: /etc/mysql/my.cnf
+        read_only: true
+        bind:
+          create_host_path: false
+    tmpfs:
+      - /var/lib/mysql
+    cpus: 2.0
+    mem_limit: 1g
+    pids_limit: 256
+    environment:
+      MYSQL_DATABASE: browser_check
+      MYSQL_USER: browser_check
+      MYSQL_PASSWORD: browser_check_testing_only
+      MYSQL_ROOT_PASSWORD: browser_check_root_testing_only
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "MYSQL_PWD=\"$${MYSQL_PASSWORD}\" mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} --silent",
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    profiles:
+      - browser-check
+    networks:
+      - browser-check
+
+  app-browser-check:
+    build: ".docker/local/php"
+    working_dir: /app
+    read_only: true
+    command:
+      - /bin/sh
+      - -lc
+      - >-
+        mkdir -p bootstrap/cache storage/app/private storage/app/public
+        storage/framework/cache/data storage/framework/sessions
+        storage/framework/views storage/logs &&
+        chmod -R 0777 bootstrap/cache storage &&
+        php artisan migrate:fresh --force --env=testing &&
+        php artisan db:seed --class=StockAnalysisDemoSeeder --force --env=testing &&
+        exec php-fpm
+    volumes:
+      - type: bind
+        source: "${BROWSER_CHECK_SOURCE_DIR:-.}"
+        target: /app
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${BROWSER_CHECK_BUILD_DIR:-./public/build}"
+        target: /app/public/build
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${BROWSER_CHECK_VENDOR_DIR:-./vendor}"
+        target: /app/vendor
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env.testing
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env.local
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env.production
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env.production.local
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.npmrc
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.git/config
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/php/php.ini
+        target: /usr/local/etc/php/conf.d/php.ini
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/php-fpm/www.conf
+        target: /usr/local/etc/php-fpm.d/www.conf
+        read_only: true
+        bind:
+          create_host_path: false
+    tmpfs:
+      - /app/bootstrap/cache:mode=1777
+      - /app/storage:mode=1777
+      - /tmp:mode=1777
+      - /usr/local/var/run:mode=1777
+      - /var/log/php:mode=1777
+    cpus: 2.0
+    mem_limit: 1g
+    pids_limit: 256
+    ulimits:
+      fsize:
+        soft: 268435456
+        hard: 268435456
+      nofile:
+        soft: 4096
+        hard: 4096
+    environment:
+      APP_ENV: testing
+      APP_DEBUG: "false"
+      APP_KEY: "base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      APP_URL: http://localhost
+      DB_CONNECTION: mysql
+      DB_HOST: mysql-browser-check
+      DB_PORT: "3306"
+      DB_DATABASE: browser_check
+      DB_USERNAME: browser_check
+      DB_PASSWORD: browser_check_testing_only
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MARKET_DATA_DISPLAY_SOURCE: demo
+      SESSION_DRIVER: database
+      SESSION_CONNECTION: mysql
+      SESSION_COOKIE: browser_check_session
+      SESSION_DOMAIN: "null"
+      SESSION_ENCRYPT: "true"
+      SESSION_SECURE_COOKIE: "false"
+      SESSION_SAME_SITE: lax
+      LOG_CHANNEL: stderr
+      MAIL_MAILER: array
+      MAIL_HOST: 127.0.0.1
+      MAIL_PORT: "9"
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: "9"
+      MEMCACHED_HOST: 127.0.0.1
+      AWS_ACCESS_KEY_ID: ""
+      AWS_SECRET_ACCESS_KEY: ""
+      AWS_SESSION_TOKEN: ""
+      AWS_EC2_METADATA_DISABLED: "true"
+      ALPHA_VANTAGE_API_KEY: ""
+      ALPHA_VANTAGE_BASE_URL: http://127.0.0.1:9
+      OPENAI_API_KEY: ""
+      OPENAI_BASE_URL: http://127.0.0.1:9
+      INERTIA_SSR_ENABLED: "false"
+      INERTIA_SSR_URL: http://127.0.0.1:9
+      BROWSER_CHECK_DATABASE_CONNECTION: mysql
+      BROWSER_CHECK_DATABASE_IDENTIFIER: mysql:mysql-browser-check/browser_check
+    depends_on:
+      mysql-browser-check:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "php",
+          "-r",
+          "exit(@fsockopen('127.0.0.1', 9000) ? 0 : 1);",
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    profiles:
+      - browser-check
+    networks:
+      - browser-check
+
+  browser-check-build:
+    build: ".docker/local/php"
+    working_dir: /app
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+      - /app/node_modules/.vite:mode=1777
+      - /app/node_modules/.vite-temp:mode=1777
+    cpus: 2.0
+    mem_limit: 2g
+    pids_limit: 256
+    ulimits:
+      fsize:
+        soft: 268435456
+        hard: 268435456
+      nofile:
+        soft: 4096
+        hard: 4096
+    environment:
+      APP_ENV: testing
+      APP_DEBUG: "false"
+      APP_KEY: "base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      APP_URL: http://localhost
+      DB_CONNECTION: mysql
+      DB_HOST: mysql-browser-check
+      DB_PORT: "3306"
+      DB_DATABASE: browser_check
+      DB_USERNAME: browser_check
+      DB_PASSWORD: browser_check_testing_only
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      MARKET_DATA_DISPLAY_SOURCE: demo
+      MAIL_MAILER: array
+      MAIL_HOST: 127.0.0.1
+      MAIL_PORT: "9"
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: "9"
+      MEMCACHED_HOST: 127.0.0.1
+      AWS_ACCESS_KEY_ID: ""
+      AWS_SECRET_ACCESS_KEY: ""
+      AWS_SESSION_TOKEN: ""
+      AWS_EC2_METADATA_DISABLED: "true"
+      ALPHA_VANTAGE_API_KEY: ""
+      ALPHA_VANTAGE_BASE_URL: http://127.0.0.1:9
+      OPENAI_API_KEY: ""
+      OPENAI_BASE_URL: http://127.0.0.1:9
+      INERTIA_SSR_ENABLED: "false"
+      INERTIA_SSR_URL: http://127.0.0.1:9
+    profiles:
+      - browser-check
+    networks:
+      - browser-check
+
+  nginx-browser-check:
+    build: ".docker/local/nginx"
+    volumes:
+      - type: bind
+        source: "${BROWSER_CHECK_SOURCE_DIR:-.}/public"
+        target: /app/public
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${BROWSER_CHECK_BUILD_DIR:-./public/build}"
+        target: /app/public/build
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/nginx/nginx.browser-check.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      app-browser-check:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t && kill -0 $$(cat /var/run/nginx.pid)"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+    cpus: 1.0
+    mem_limit: 256m
+    pids_limit: 64
+    profiles:
+      - browser-check
+    networks:
+      - browser-check
+
+  playwright-browser-check:
+    build:
+      context: .docker/local/playwright
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    working_dir: /app
+    volumes:
+      - type: bind
+        source: "${BROWSER_CHECK_SOURCE_DIR:-.}"
+        target: /app
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${BROWSER_CHECK_BUILD_DIR:-./public/build}"
+        target: /app/public/build
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${BROWSER_CHECK_NODE_MODULES_DIR:-./node_modules}"
+        target: /app/node_modules
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env.testing
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env.local
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env.production
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.env.production.local
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.npmrc
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./.docker/local/browser-check/empty.env
+        target: /app/.git/config
+        read_only: true
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+    environment:
+      PLAYWRIGHT_BASE_URL: http://nginx-browser-check:80
+      BROWSER_CHECK_DATABASE_CONNECTION: mysql
+      BROWSER_CHECK_DATABASE_IDENTIFIER: mysql:mysql-browser-check/browser_check
+      GIT_OPTIONAL_LOCKS: "0"
+      GIT_CONFIG_COUNT: "1"
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: /app
+    depends_on:
+      nginx-browser-check:
+        condition: service_healthy
+    shm_size: 2gb
+    cpus: 2.0
+    mem_limit: 3g
+    pids_limit: 512
+    ulimits:
+      fsize:
+        soft: 536870912
+        hard: 536870912
+      nofile:
+        soft: 4096
+        hard: 4096
+    init: true
+    profiles:
+      - browser-check
+    networks:
+      - browser-check
+
+networks:
+  browser-check:
+    internal: true
